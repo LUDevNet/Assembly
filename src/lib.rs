@@ -1,0 +1,22 @@
+//#[macro_use]
+extern crate nom;
+extern crate encoding;
+
+pub mod core;
+pub mod fdb;
+
+#[cfg(test)]
+mod tests {
+    use crate::fdb::core::Schema;
+
+    #[test]
+    fn it_works() {
+        assert_eq!(2 + 2, 4);
+    }
+
+    #[test]
+    fn test_schema() {
+        let schema = Schema::new();
+        assert_eq!(schema.table("Test").is_none(), true);
+    }
+}

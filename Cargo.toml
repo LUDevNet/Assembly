@@ -1,0 +1,9 @@
+[package]
+name = "assembly"
+version = "0.1.0"
+authors = ["Xiphoseer"]
+edition = "2018"
+
+[dependencies]
+nom = "^4.2"
+encoding = "^0.2"
