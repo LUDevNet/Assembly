@@ -46,7 +46,7 @@ pub enum LoadError {
 }
 
 // Trait to load data from an FDB file
-trait TryFromFDB<A>
+pub trait TryFromFDB<A>
 where A: Read + Seek, Self: Sized {
     type Error;
     type Header;

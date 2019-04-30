@@ -1,7 +1,7 @@
 [package]
 name = "assembly"
-version = "0.1.0"
-authors = ["Xiphoseer"]
+version = "0.1.1"
+authors = ["Xiphoseer <daniel.g.seiler+lugh"]
 edition = "2018"
 description = "Rust library for LU tools"
 license = "MIT"
