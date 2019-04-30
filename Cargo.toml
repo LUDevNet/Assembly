@@ -3,6 +3,8 @@ name = "assembly"
 version = "0.1.0"
 authors = ["Xiphoseer"]
 edition = "2018"
+description = "Rust library for LU tools"
+license = "MIT"
 
 [dependencies]
 nom = "^4.2"
