@@ -6,8 +6,14 @@ use std::collections::HashMap;
 pub struct ZonePathsVersion(u32);
 
 /// Version of this path data
-#[derive(Clone, Debug, FromPrimitive, ToPrimitive)]
+#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive)]
 pub struct PathVersion(u32);
+
+impl PathVersion {
+    pub fn min(self, val: u32) -> bool {
+        return self.0 >= val;
+    }
+}
 
 /// Type of this path
 #[derive(Debug, FromPrimitive, ToPrimitive)]
@@ -79,19 +85,21 @@ pub enum PropertyAchievementRequired {
 #[derive(Debug)]
 pub struct PathDataProperty {
     /// Unknown value
-    pub unknown1: u32,
+    pub value_1: u32,
     /// Rental price
     pub price: u32,
     /// Rental time
     pub rental_time: u32,
     /// World that this property is attached to
     pub associated_map: WorldID,
+    /// Unknown value
+    pub value_2: u32,
     /// Display name of the property
     pub display_name: String,
     /// Display description
     pub display_description: String,
     /// Unknown value
-    pub unknown2: u32,
+    pub value_3: u32,
     /// Limit to the number of clones in one instance
     pub clone_limit: u32,
     /// Multiplier for reputation
@@ -112,7 +120,7 @@ pub struct PathDataCamera {
     /// Following path
     pub next_path: String,
     /// Unknown
-    pub unknown1: Option<u8>,
+    pub value_1: Option<u8>,
 }
 
 /// General data for a spawner path
@@ -164,7 +172,7 @@ pub struct PathWaypointMovingPlatform {
     pub lock_player: bool,
     pub speed: f32,
     pub wait: f32,
-    pub sounds: PathWaypointMovingPlatformSounds,
+    pub sounds: Option<PathWaypointMovingPlatformSounds>,
 }
 
 /// Data for a property (border) path waypoint
@@ -223,37 +231,46 @@ pub type WaypointConfig = HashMap<String, String>;
 /// Path Waypoint
 #[derive(Debug)]
 pub struct PathWaypoint<WaypointType> {
-    position: Vector3f,
-    data: WaypointType,
+    pub position: Vector3f,
+    pub data: WaypointType,
 }
 
 /// Wrapper for all general path data
 #[derive(Debug)]
 pub struct PathVariant<DataType, WaypointType> {
-    version: PathVersion,
-    path_name: String,
-    something: u32,
-    path_behavior: PathComposition,
-    path_data: DataType,
-    waypoints: Vec<PathWaypoint<WaypointType>>
+    pub version: PathVersion,
+    pub path_name: String,
+    pub value_1: u32,
+    pub path_composition: PathComposition,
+    pub path_data: DataType,
+    pub waypoints: Vec<PathWaypoint<WaypointType>>
 }
+
+pub type PathVariantMovement = PathVariant<PathDataMovement,PathWaypointMovement>;
+pub type PathVariantMovingPlatform = PathVariant<PathDataMovingPlatform, PathWaypointMovingPlatform>;
+pub type PathVariantProperty = PathVariant<PathDataProperty, PathWaypointProperty>;
+pub type PathVariantCamera = PathVariant<PathDataCamera, PathWaypointCamera>;
+pub type PathVariantSpawner = PathVariant<PathDataSpawner, PathWaypointSpawner>;
+pub type PathVariantShowcase = PathVariant<PathDataShowcase, PathWaypointShowcase>;
+pub type PathVariantRace = PathVariant<PathDataRace, PathWaypointRace>;
+pub type PathVariantRail = PathVariant<PathDataRail, PathWaypointRail>;
 
 /// Enum of all path variants
 #[derive(Debug)]
 pub enum Path {
-    Movement(PathVariant<PathDataMovement,PathWaypointMovement>),
-    MovingPlatform(PathVariant<PathDataMovingPlatform, PathWaypointMovingPlatform>),
-    Property(PathVariant<PathDataProperty, PathWaypointProperty>),
-    Camera(PathVariant<PathDataCamera, PathWaypointCamera>),
-    Spawner(PathVariant<PathDataSpawner, PathWaypointSpawner>),
-    Showcase(PathVariant<PathDataShowcase, PathWaypointShowcase>),
-    Race(PathVariant<PathDataRace, PathWaypointRace>),
-    Rail(PathVariant<PathDataRail, PathWaypointRail>),
+    Movement(PathVariantMovement),
+    MovingPlatform(PathVariantMovingPlatform),
+    Property(PathVariantProperty),
+    Camera(PathVariantCamera),
+    Spawner(PathVariantSpawner),
+    Showcase(PathVariantShowcase),
+    Race(PathVariantRace),
+    Rail(PathVariantRail),
 }
 
 /// All paths in a zone
 #[derive(Debug)]
 pub struct ZonePaths {
-    version: ZonePathsVersion,
-    paths: Vec<Path>,
+    pub version: ZonePathsVersion,
+    pub paths: Vec<Path>,
 }

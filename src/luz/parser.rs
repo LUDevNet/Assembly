@@ -1,7 +1,8 @@
 use std::convert::TryFrom;
 use nom::{le_u8, le_u32, le_u64};
 use crate::core::parser::{
-    parse_world_id, parse_vec3f, parse_quat
+    parse_world_id, parse_vec3f, parse_quat,
+    parse_u32_bool, parse_u8_string,
 };
 use crate::core::types::{Placement3D};
 use super::core::{
@@ -28,14 +29,6 @@ named_args!(pub parse_scene_count(version: FileVersion)<usize>,
         true => map_res!(le_u32, usize::try_from) |
         false => map_res!(le_u8, usize::try_from)
     )
-);
-
-named!(pub parse_u8_string<String>,
-    map_res!(map!(length_bytes!(le_u8), Vec::from), String::from_utf8)
-);
-
-named!(pub parse_u32_bool<bool>,
-    alt!(value!(false, tag!([0; 4])) | value!(true, le_u32))
 );
 
 named!(parse_scene_ref<SceneRef>,
@@ -84,19 +77,20 @@ named_args!(parse_scene_transitions(version: FileVersion)<Option<Vec<SceneTransi
 
 named!(pub parse_zone_file<ZoneFile>,
     do_parse!(
-        a: parse_file_version >>
-        b: call!(parse_file_revision,a) >>
+        file_version: parse_file_version >>
+        b: call!(parse_file_revision, file_version) >>
         c: parse_world_id >>
-        d: call!(parse_spawn_point, a) >>
-        e: call!(parse_scene_count, a) >>
+        d: call!(parse_spawn_point, file_version) >>
+        e: call!(parse_scene_count, file_version) >>
         f: count!(parse_scene_ref, e) >>
         g: parse_u8_string >>
         h: parse_u8_string >>
         i: parse_u8_string >>
         j: parse_u8_string >>
-        k: call!(parse_scene_transitions, a) >>
+        k: call!(parse_scene_transitions, file_version) >>
+        l: cond!(file_version.min(0x23), length_count!(le_u32, le_u8)) >>
         (ZoneFile{
-            file_version: a,
+            file_version,
             file_revision: b,
             world_id: c,
             spawn_point: d,
@@ -108,7 +102,7 @@ named!(pub parse_zone_file<ZoneFile>,
             map_description: j,
 
             scene_transitions: k,
-            path_data: Some(Vec::new()),
+            path_data: l,
         })
     )
 );

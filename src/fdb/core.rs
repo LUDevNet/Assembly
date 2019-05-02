@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+/// Value datatypes used in the database
 #[derive(Debug)]
 pub enum ValueType {
     Nothing,
@@ -42,6 +43,7 @@ impl From<u32> for ValueType {
     }
 }
 
+/// A database single field
 #[derive(Debug)]
 pub enum Field {
     Nothing,
@@ -67,6 +69,7 @@ impl From<Field> for ValueType {
     }
 }
 
+/// A sequence of fields
 #[derive(Debug)]
 pub struct Row(Vec<Field>);
 
@@ -87,6 +90,7 @@ impl Row {
     }
 }
 
+/// A container of rows with the same hash value
 pub struct Bucket(pub Vec<Row>);
 
 impl Bucket {
@@ -99,6 +103,7 @@ impl Bucket {
     }
 }
 
+/// Name and default type for one field in each row
 #[derive(Debug)]
 pub struct Column {
     name: String,
@@ -111,6 +116,7 @@ impl From<(&str, ValueType)> for Column {
     }
 }
 
+/// A list of buckets and thus collection of rows with a name
 #[allow(dead_code)]
 pub struct Table {
     name: String,
@@ -140,6 +146,7 @@ impl Table {
     }
 }
 
+/// A collection of tables
 pub struct Schema {
     tables: BTreeMap<String, Table>,
 }

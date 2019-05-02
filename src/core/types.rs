@@ -34,7 +34,7 @@ pub struct Placement3D {
     pub rot: Quaternion,
 }
 
-/// Alias for [u32](u32) that represents a world map from the resources
+/// Alias for u32 that represents a world map from the resources
 #[derive(Debug, Clone, FromPrimitive, ToPrimitive, PartialEq)]
 pub struct WorldID(u32);
 

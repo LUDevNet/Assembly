@@ -1,6 +1,6 @@
 [package]
 name = "assembly"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Xiphoseer"]
 edition = "2018"
 description = "Library for files/resources for LU related software"

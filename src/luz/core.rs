@@ -12,6 +12,10 @@ impl FileVersion {
     pub fn id(&self) -> u32 {
         self.0
     }
+
+    pub fn min(&self, val: u32) -> bool {
+        self.0 >= val
+    }
 }
 
 impl From<u32> for FileVersion {
