@@ -1,8 +1,10 @@
 [package]
 name = "assembly"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Xiphoseer"]
 edition = "2018"
+homepage = "https://xiphoseer.github.io"
+repository = "https://github.com/xiphoseer/assembly_rs"
 description = "Library for files/resources for LU related software"
 license = "MIT"
 
