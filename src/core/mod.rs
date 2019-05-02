@@ -1,5 +1,3 @@
 // This module implements core traits for this library
-
-pub trait FromFile {
-
-}
+pub mod types;
+pub mod parser;

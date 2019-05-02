@@ -1,11 +1,28 @@
 [package]
 name = "assembly"
 version = "0.1.1"
-authors = ["Xiphoseer <daniel.g.seiler+lugh"]
+authors = ["Xiphoseer"]
 edition = "2018"
-description = "Rust library for LU tools"
+description = "Library for files/resources for LU related software"
 license = "MIT"
 
 [dependencies]
-nom = "^4.2"
 encoding = "^0.2"
+num-traits = "0.2"
+num-derive = "0.2"
+
+[dependencies.nom]
+version = "^4.2"
+features = []
+
+[[bin]]
+name="assembly-engineer"
+path="src/bin/engineer/main.rs"
+
+[[bin]]
+name="assembly-inventor"
+path="src/bin/inventor/main.rs"
+
+[[bin]]
+name="assembly-summoner"
+path="src/bin/summoner/main.rs"
