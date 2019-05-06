@@ -1,3 +1,5 @@
+//! # Common datastructures and methods
+//!
 //! This module implements core traits for this library
 
 /// The general types used all over the place

@@ -1,15 +1,41 @@
+//! # The data structures for representing the file/database.
+//!
+//! An FDB file is layed out as a hash map. The top level is a list
+//! of tables, lexically ordered by their name (all uppercase names
+//! before all lowercase ones).
+//!
+//! Each table consists of an array of Buckets, where each bucket
+//! Corresponds to one hash value of the primary column.
+//!
+//! Each bucket consists of a list of rows. These rows may be sorted
+//! in ascending order of primary keys, but that is not fully verified.
+//!
+//! Each row contains a vector of fields, with a data type and respective
+//! data.
+//!
+//! Each Table has a list of columns with the names and default data
+//! Types corresponding to the layout of each row.
+
 use std::collections::BTreeMap;
 
 /// Value datatypes used in the database
 #[derive(Debug)]
 pub enum ValueType {
+    /// The NULL value
     Nothing,
+    /// A 32-bit signed integer
     Integer,
+    /// A 32-bit IEEE floating point number
     Float,
+    /// A long string
     Text,
+    /// A boolean
     Boolean,
+    /// A 64 bit integer
     BigInt,
+    /// A short string
     VarChar,
+    /// An unknown value
     Unknown(u32),
 }
 
@@ -44,7 +70,7 @@ impl From<u32> for ValueType {
 }
 
 /// A database single field
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Field {
     Nothing,
     Integer(i32),
@@ -55,8 +81,8 @@ pub enum Field {
     VarChar(String),
 }
 
-impl From<Field> for ValueType {
-    fn from(val: Field) -> Self {
+impl From<&Field> for ValueType {
+    fn from(val: &Field) -> Self {
         match val {
             Field::Nothing => ValueType::Nothing,
             Field::Integer(_) => ValueType::Integer,
@@ -88,25 +114,41 @@ impl Row {
     pub fn fields(self) -> Vec<Field> {
         self.0
     }
+
+    pub fn fields_ref(&self) -> &Vec<Field> {
+        &self.0
+    }
 }
 
 /// A container of rows with the same hash value
 pub struct Bucket(pub Vec<Row>);
 
 impl Bucket {
+    /// Create a new empty bucket
     pub fn new() -> Bucket {
         Bucket(Vec::new())
     }
 
+    /// Get the rows of the bucket
     pub fn rows(self) -> Vec<Row> {
         self.0
+    }
+
+    /// Get a reference to the rows from a reference to a bucket
+    pub fn rows_ref(&self) -> &Vec<Row> {
+        &self.0
+    }
+
+    /// Get a mutable reference to the rows from a reference to a bucket
+    pub fn rows_mut(&mut self) -> &mut Vec<Row> {
+        &mut self.0
     }
 }
 
 /// Name and default type for one field in each row
 #[derive(Debug)]
 pub struct Column {
-    name: String,
+    pub name: String,
     field_type: ValueType,
 }
 
@@ -116,50 +158,90 @@ impl From<(&str, ValueType)> for Column {
     }
 }
 
+/// A list of columns with types and a name
+pub struct TableDef {
+    pub columns: Vec<Column>,
+    pub name: String,
+}
+
+/// An array of buckets, and a collection of rows
+pub struct TableData {
+    pub buckets: Vec<Bucket>,
+}
+
+impl TableData {
+    pub fn new() -> Self {
+        TableData{buckets: Vec::new()}
+    }
+}
+
 /// A list of buckets and thus collection of rows with a name
 #[allow(dead_code)]
 pub struct Table {
-    name: String,
-    buckets: Vec<Bucket>,
-    columns: Vec<Column>,
+    definition: TableDef,
+    data: TableData,
 }
 
 impl Table {
-    pub fn new(name: String, buckets: Vec<Bucket>, columns: Vec<Column>) -> Self {
-        Table {
-            name: name,
-            buckets: buckets,
-            columns: columns,
-        }
+    pub fn from(definition: TableDef, data: TableData) -> Self {
+        Table { definition, data }
+    }
+
+    pub fn new(definition: TableDef) -> Self {
+        let data = TableData::new();
+        Table { definition, data }
     }
 
     pub fn buckets(self) -> Vec<Bucket> {
-        self.buckets
+        self.data.buckets
+    }
+
+    pub fn buckets_ref(&self) -> &Vec<Bucket> {
+        &self.data.buckets
     }
 
     pub fn columns(self) -> Vec<Column> {
-        self.columns
+        self.definition.columns
     }
 
-    pub fn name(self) -> String {
-        self.name
+    pub fn columns_ref(&self) -> &Vec<Column> {
+        &self.definition.columns
+    }
+
+    pub fn name(&self) -> &str {
+        self.definition.name.as_ref()
     }
 }
 
-/// A collection of tables
+/// # An ordered map of tables
+///
+/// A schema is an ordered map of tables. It represents a full
+/// relational database and is the root struct type in this module.
 pub struct Schema {
-    tables: BTreeMap<String, Table>,
+    /// The tables in this schema
+    pub tables: BTreeMap<String, Table>,
 }
 
 impl Schema {
+    /// Create a new empty schema
     pub fn new() -> Schema {
         Schema {
             tables: BTreeMap::new(),
         }
     }
 
+    /// Get a reference to the table of that name it it exists
     pub fn table(&self, name: &str) -> Option<&Table> {
         self.tables.get(name)
+    }
+
+    /// Get a mutable reference to the table of that name it it exists
+    pub fn table_mut(&mut self, name: &str) -> Option<&mut Table> {
+        self.tables.get_mut(name)
+    }
+
+    pub fn table_count(&self) -> usize {
+        self.tables.len()
     }
 }
 
@@ -167,7 +249,7 @@ impl From<Vec<Table>> for Schema {
     fn from(tables: Vec<Table>) -> Self {
         let mut tree = BTreeMap::new();
         for table in tables {
-            tree.insert(table.name.clone(), table);
+            tree.insert(table.name().to_string(), table);
         }
         Schema { tables: tree }
     }

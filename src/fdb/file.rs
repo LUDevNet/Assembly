@@ -4,7 +4,7 @@ pub struct FDBHeader {
     pub table_header_list_addr: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug,Copy,Clone)]
 pub struct FDBTableHeader {
     pub table_def_header_addr: u32,
     pub table_data_header_addr: u32,
@@ -17,7 +17,7 @@ pub struct FDBTableDefHeader {
     pub column_header_list_addr: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug,Copy,Clone)]
 pub struct FDBColumnHeader {
     pub column_data_type: u32,
     pub column_name_addr: u32,
@@ -29,7 +29,7 @@ pub struct FDBTableDataHeader {
     pub bucket_header_list_addr: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug,Copy,Clone)]
 pub struct FDBBucketHeader {
     pub row_header_list_head_addr: u32,
 }

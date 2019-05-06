@@ -1,3 +1,4 @@
+//! # The database (`*.fdb`) file format used for the core database (`CDClient`)
 //!
 //! The game client is published with a copy of the core game database. This copy
 //! resides in `/res/CDClient.fdb` in an unpacked client. The file uses a custom
@@ -14,7 +15,6 @@
 //! }
 //! ```
 
-/// The data structures for representing the file/database.
 pub mod core;
 /// Implementations for iterators on the data structures.
 pub mod iter;
@@ -24,3 +24,9 @@ pub mod io;
 pub mod file;
 /// Parser functions for reading an FDB file.
 pub mod parser;
+
+pub mod reader;
+
+pub mod sysdiagram;
+
+pub use self::core::Schema;

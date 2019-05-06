@@ -1,6 +1,6 @@
 [package]
 name = "assembly"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Xiphoseer"]
 edition = "2018"
 homepage = "https://xiphoseer.github.io"
@@ -9,9 +9,12 @@ description = "Library for files/resources for LU related software"
 license = "MIT"
 
 [dependencies]
-encoding = "^0.2"
+encoding = "0.2"
 num-traits = "0.2"
 num-derive = "0.2"
+getopts = "0.2"
+base64 = "0.10"
+cfb = "0.3.1"
 
 [dependencies.nom]
 version = "^4.2"

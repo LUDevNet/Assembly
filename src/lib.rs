@@ -7,12 +7,10 @@ extern crate num_derive;
 extern crate nom;
 extern crate encoding;
 
-/// Core types and parsers.
 pub mod core;
-/// Loading CoreDataBase from a FileDataBase.
 pub mod fdb;
-/// Loading zone data from a LEGO Universe Zone file.
 pub mod luz;
+pub mod lvl;
 
 #[cfg(test)]
 mod tests {

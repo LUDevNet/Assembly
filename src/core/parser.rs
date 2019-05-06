@@ -66,6 +66,10 @@ named!(pub parse_u32_wstring<String>,
     )
 );
 
+named_args!(pub parse_string_u16(i: u16)<String>,
+    map_res!(map!(length_bytes!(value!(i)), Vec::from), String::from_utf8)
+);
+
 named!(pub parse_u8_string<String>,
     map_res!(map!(length_bytes!(le_u8), Vec::from), String::from_utf8)
 );
