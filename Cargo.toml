@@ -1,6 +1,6 @@
 [package]
 name = "assembly"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Xiphoseer"]
 edition = "2018"
 homepage = "https://xiphoseer.github.io"

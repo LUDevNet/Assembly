@@ -1,7 +1,7 @@
 extern crate getopts;
 use std::io::{BufReader, Error as IoError};
 use std::fs::File;
-use assembly::fdb::core::{Schema, Field, ValueType};
+use assembly::fdb::core::{Field};
 use assembly::fdb::io::{SchemaLoader, LoaderConfigImpl, LoadError};
 use assembly::fdb::sysdiagram::core::SysDiagram;
 use assembly::fdb::sysdiagram::io::LoadError as SysDiagramError;
@@ -14,10 +14,8 @@ use std::env;
 enum MainError {
     Io(IoError),
     Load(LoadError),
-    WrongData(Field),
     SysDiagram(SysDiagramError),
     TableNotFound,
-    NotImplemented,
 }
 
 impl From<IoError> for MainError {
