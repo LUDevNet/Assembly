@@ -11,6 +11,7 @@ pub mod core;
 pub mod fdb;
 pub mod luz;
 pub mod lvl;
+pub mod pki;
 
 #[cfg(test)]
 mod tests {

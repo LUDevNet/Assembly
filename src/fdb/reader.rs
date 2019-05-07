@@ -56,13 +56,11 @@ pub struct FDBRowHeaderAddrIterator<'it_ref, 'it_data, T> {
 
 impl<'a,T> DatabaseFile<'a, T>
 where T: Seek + BufRead {
+    /// Open a file from a stream
     pub fn open<'b: 'a>(inner: &'b mut T) -> Self {
         DatabaseFile{inner}
     }
-}
 
-impl<'a, T> DatabaseFile<'a, T>
-where T: Seek + BufRead {
     /// Read a string from the file
     pub fn get_string(&mut self, addr: u32) -> FileResult<String> {
         let mut string: Vec<u8> = Vec::new();

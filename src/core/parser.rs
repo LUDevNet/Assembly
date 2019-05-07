@@ -74,6 +74,10 @@ named!(pub parse_u8_string<String>,
     map_res!(map!(length_bytes!(le_u8), Vec::from), String::from_utf8)
 );
 
+named!(pub parse_u32_string<String>,
+    map_res!(map!(length_bytes!(le_u32), Vec::from), String::from_utf8)
+);
+
 named!(pub parse_u32_bool<bool>,
     alt!(value!(false, tag!([0; 4])) | value!(true, le_u32))
 );
