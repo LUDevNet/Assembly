@@ -3,46 +3,15 @@
 //! This module provides a struct which can be used to access
 //! a FDB file in any order the user desires.
 
-use std::io::{BufRead, Read, Seek, SeekFrom, Error as IoError};
+use std::io::{BufRead, Read, Seek, SeekFrom};
 use std::convert::TryFrom;
 
+use crate::core::reader::{FileError, FileResult};
 use super::file::*;
 use super::parser;
 
-use nom::{Context,ErrorKind, Err as NomError};
 use encoding::{Encoding, DecoderTrap};
 use encoding::all::WINDOWS_1252;
-
-
-#[derive(Debug)]
-pub enum FileError {
-    Read(IoError),
-    Seek(IoError),
-    Count(std::num::TryFromIntError),
-    Incomplete,
-    ParseError(ErrorKind),
-    StringEncoding(String),
-    ParseFailure,
-}
-
-impl From<NomError<&[u8]>> for FileError {
-    fn from(e: NomError<&[u8]>) -> FileError {
-        match e {
-            // Need to translate the error here, as this lives longer than the input
-            nom::Err::Incomplete(_) => FileError::Incomplete,
-            nom::Err::Error(Context::Code(_,k)) => FileError::ParseError(k),
-            nom::Err::Failure(_) => FileError::ParseFailure,
-        }
-    }
-}
-
-impl From<std::borrow::Cow<'_, str>> for FileError {
-    fn from(e: std::borrow::Cow<'_, str>) -> Self {
-        FileError::StringEncoding(String::from(e))
-    }
-}
-
-type FileResult<T> = Result<T, FileError>;
 
 /// Represents an FDB file via an encapsulated reader
 pub struct DatabaseFile<'a, T> {

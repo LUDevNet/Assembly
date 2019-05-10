@@ -1,24 +1,18 @@
 use std::{fs, io};
-use std::io::{Seek, /*SeekFrom,*/ BufRead, BufReader};
+use std::io::{Seek, BufRead, BufReader};
 use std::convert::TryFrom;
-use super::reader::{DatabaseFile, FileError as DBFileError};
+use super::reader::{DatabaseFile};
 use super::core::*;
 use super::file::{
-    //FDBHeader,
     FDBTableHeader,
-    //FDBTableHeaderList,
     FDBTableDefHeader,
     FDBColumnHeader,
-    //FDBColumnHeaderList,
     FDBTableDataHeader,
     FDBBucketHeader,
-    //FDBBucketHeaderList,
     FDBRowHeader,
-    //FDBRowHeaderList,
-    //FDBRowHeaderListEntry,
     FDBFieldData,
-    //FDBFieldDataList,
 };
+use crate::core::reader::{FileError};
 use nom;
 
 #[derive(Debug)]
@@ -28,7 +22,7 @@ pub enum LoadError {
     Read(io::Error),
     StringEncoding(String),
     Count(std::num::TryFromIntError),
-    File(DBFileError),
+    File(FileError),
     UnknownType(u32),
     Incomplete,
     ParseError,
@@ -49,8 +43,8 @@ impl From<nom::Err<&[u8]>> for LoadError {
     }
 }
 
-impl From<DBFileError> for LoadError {
-    fn from(e: DBFileError) -> LoadError {
+impl From<FileError> for LoadError {
+    fn from(e: FileError) -> LoadError {
         LoadError::File(e)
     }
 }

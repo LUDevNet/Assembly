@@ -1,3 +1,5 @@
+//! # The general types used all over the place
+
 /// Position in three dimensional space
 #[derive(Copy, Clone, Debug)]
 pub struct Vector3f {

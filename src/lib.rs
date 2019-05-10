@@ -12,6 +12,7 @@ pub mod fdb;
 pub mod luz;
 pub mod lvl;
 pub mod pki;
+pub mod pk;
 
 #[cfg(test)]
 mod tests {

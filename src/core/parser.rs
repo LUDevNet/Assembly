@@ -1,3 +1,4 @@
+//! # Parser methods for the general types
 use nom::{le_f32, le_u32, le_u8};
 use num_traits::FromPrimitive;
 use encoding::{Encoding, DecoderTrap, all::UTF_16LE};
