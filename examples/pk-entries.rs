@@ -32,7 +32,13 @@ where T: BufRead + Seek, {
                 let left = entries.get_entry(data.left);
                 print_entries(entries, left);
             }
-            println!("{:?}", data);
+            println!("{:10} {:9} {:9} {} {}",
+                data.crc,
+                data.orig_file_size,
+                data.compr_file_size,
+                data.orig_file_hash,
+                data.compr_file_hash
+            );
             {
                 let right = entries.get_entry(data.right);
                 print_entries(entries, right);
@@ -57,7 +63,6 @@ fn main() -> Result<(),MainError> {
         let mut pack = PackFile::open(&mut reader);
 
         let header = pack.get_header()?;
-        println!("{}, {}", header.file_list_base_addr, header.value_1);
 
         let mut entries = pack.get_entry_accessor(header.file_list_base_addr)?;
         let root = entries.get_root_entry();
