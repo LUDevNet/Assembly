@@ -3,7 +3,13 @@
 use super::file::{PKHeader, PKEntry};
 use super::parser;
 use crate::core::reader::{FileResult, FileError};
-use std::io::{Seek, BufRead, SeekFrom};
+use crate::sd0::stream::{SegmentedStream, SegmentedError};
+use std::io::{Read, Seek, BufRead, SeekFrom};
+use std::io::{Result as IoResult, Error as IoError, ErrorKind};
+use std::convert::TryFrom;
+use std::error::Error;
+use std::marker::{Send,Sync};
+use std::fmt::{Display, Formatter, Error as FmtError};
 
 /// A low level pack file reader
 pub struct PackFile<'a, T> {
@@ -15,6 +21,19 @@ pub struct PackEntryAccessor<'b, 'a, T> {
     base_addr: u32,
     count: u32,
     file: &'b mut PackFile<'a, T>,
+}
+
+/// A low level read for a file
+pub struct PackStreamReader<'b, 'a, T> {
+    base_addr: u32,
+    offset: u32,
+    size: u32,
+    file: &'b mut PackFile<'a, T>,
+}
+
+#[derive(Debug)]
+pub enum StreamError {
+    Segmented(SegmentedError),
 }
 
 impl<'a,T> PackFile<'a,T>
@@ -57,7 +76,6 @@ where T: Seek + BufRead {
         self.inner.seek(SeekFrom::Start(u64::from(addr))).map_err(FileError::Seek)?;
         self.inner.read_exact(&mut count_bytes).map_err(FileError::Read)?;
         let count = u32::from_le_bytes(count_bytes);
-        println!("{}", count);
         Ok(PackEntryAccessor::<'b,'a>{base_addr: addr + 4, count, file: self})
     }
 
@@ -69,10 +87,40 @@ where T: Seek + BufRead {
         let (_rest, entry_list) = parser::parse_pk_entry_list(&bytes)?;
         Ok(entry_list)
     }
+
+    /// Get a boxed reader for the file stream
+    pub fn get_file_stream<'b>(&'b mut self, entry: PKEntry) -> PackStreamReader<'b,'a,T> {
+        let base_addr = entry.file_data_addr;
+        let size = if entry.is_compressed[0] == 0 {
+            entry.orig_file_size
+        } else {
+            entry.compr_file_size
+            //entry.orig_file_size
+        };
+        //println!("{:?}", entry);
+        PackStreamReader::<'b,'a,T>{file: self, base_addr, offset: 0, size}
+    }
+
+    /// Get some object with a read trait representing the data
+    pub fn get_file_data<'c, 'b: 'c>(&'b mut self, entry: PKEntry) -> Result<Box<Read + 'c>, StreamError> {
+        let is_compr = entry.is_compressed[0] > 0;
+        let file_stream = self.get_file_stream(entry);
+        Ok(if is_compr {
+            let compr_stream = SegmentedStream::try_from(file_stream).map_err(StreamError::Segmented)?;
+            Box::new(compr_stream)
+        } else {
+            Box::new(file_stream)
+        })
+    }
 }
 
 impl<'b, 'a, T> PackEntryAccessor<'b, 'a, T>
 where T: Seek + BufRead {
+
+    /// Get a reference to the underlying file
+    pub fn get_file_mut(&'b mut self) -> &'b mut PackFile<'a, T> {
+        self.file
+    }
 
     /// Get the specified entry if inside of count
     pub fn get_entry(&mut self, index: u32) -> Option<FileResult<PKEntry>> {
@@ -88,4 +136,88 @@ where T: Seek + BufRead {
         self.get_entry(self.count / 2)
     }
 
+}
+
+fn other_io_err<'a, E>(e: E) -> IoError
+where E: Into<Box<dyn Error + Send + Sync>>
+{
+    IoError::new(ErrorKind::Other, e)
+}
+
+impl<'b, 'a, T> Read for PackStreamReader<'b, 'a, T>
+where T: Seek + BufRead {
+    fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
+        let pos = u64::from(self.base_addr + self.offset);
+        self.file.inner.seek(SeekFrom::Start(pos))?;
+        let buf_len = buf.len();
+        //println!("P-BUF: {}", buf_len);
+        let offset = usize::try_from(self.offset).map_err(other_io_err)?;
+        //println!("P-OFF: {}", offset);
+        let size = usize::try_from(self.size).map_err(other_io_err)?;
+        //println!("P-SIZ: {}", size);
+        if offset + buf_len > size {
+            let max = size - offset;
+            //println!("P-MAX: {}", max);
+            self.file.inner.read(&mut buf[..max])
+        } else {
+            self.file.inner.read(buf)
+        }.and_then(|n| {
+            //println!("P-RES: {}", n);
+            self.offset += u32::try_from(n).map_err(other_io_err)?; Ok(n)})
+    }
+}
+
+#[derive(Debug)]
+pub enum SeekError {
+    Negative(i64),
+    OutOfBounds(u64, u64),
+}
+
+impl Display for SeekError {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
+        match self {
+            SeekError::Negative(n) => write!(f, "{} < 0", n),
+            SeekError::OutOfBounds(o, s) => write!(f, "{} > {}", o, s),
+        }
+    }
+}
+
+impl Error for SeekError {
+
+}
+
+impl<'b, 'a, T> PackStreamReader<'b, 'a, T>
+where T: Seek + BufRead {
+
+    fn seek_to_pos(&mut self, n: u64) -> IoResult<u64> {
+        if n > self.size.into() {
+            self.offset = self.size;
+            let e = SeekError::OutOfBounds(n, self.size.into());
+            Err(IoError::new(ErrorKind::Other, e))
+        } else {
+            self.offset = u32::try_from(n).map_err(|e| IoError::new(ErrorKind::Other, e))?;
+            Ok(n)
+        }
+    }
+
+    fn seek_to(&mut self, n: i64) -> IoResult<u64> {
+        if n < 0 {
+            self.offset = self.size;
+            let e = SeekError::Negative(n);
+            Err(IoError::new(ErrorKind::Other, e))
+        } else {
+            self.seek_to_pos(u64::try_from(n).map_err(|e| IoError::new(ErrorKind::Other, e))?)
+        }
+    }
+}
+
+impl<'b, 'a, T> Seek for PackStreamReader<'b, 'a, T>
+where T: Seek + BufRead {
+    fn seek(&mut self, to: SeekFrom) -> IoResult<u64> {
+        match to {
+            SeekFrom::Start(n) => self.seek_to_pos(n),
+            SeekFrom::Current(n) => self.seek_to(i64::from(self.offset) + n),
+            SeekFrom::End(n) => self.seek_to(i64::from(self.size) + n),
+        }
+    }
 }

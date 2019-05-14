@@ -31,7 +31,7 @@ named!(pub parse_pk_entry<PKEntry>,
         compr_file_hash: map!(count_fixed!(u8, le_u8, 32), ascii_from_bytes) >>
         take!(4) >>
         file_data_addr: le_u32 >>
-        is_compressed: le_u32 >>
+        is_compressed: count_fixed!(u8, le_u8, 4) >>
         (PKEntry{
             crc, left, right,
             orig_file_size, orig_file_hash,

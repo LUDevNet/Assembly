@@ -22,5 +22,5 @@ pub struct PKEntry {
     pub compr_file_hash: String,
 
     pub file_data_addr: u32,
-    pub is_compressed: u32,
+    pub is_compressed: [u8;4],
 }
