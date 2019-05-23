@@ -31,8 +31,8 @@ pub struct SceneRef {
     pub file_name: String,
     /// ID of the scene
     pub id: u32,
-    /// Whether this is an audio scene
-    pub is_audio: bool,
+    /// 0: default, 1: audio
+    pub layer: u32,
     /// Name of the scene
     pub name: String,
 }

@@ -1,31 +1,61 @@
 //! # Data definitions for sysdiagrams
+use ms_oforms::properties::types::{Size, Position};
 
 #[derive(Debug)]
-pub struct TableInfo {
-    //pub head_1: u16,
-    pub head_2: u16,
-    pub head_3: u32,
-    // pub head_4: Option<u32>,
-    // type_length: u16
-    // 0x00 0x80
-    // head_4: u16,
-    pub id: u32,
-    pub value_1: u32,
-    pub value_2a: u8,
-    pub value_2b: u8,
-    pub value_3: u16,
-    // name_length: u16,
-    // 0x00 0x80
-    // value_4: u16,
-    pub info_type: String,
-
-    pub mid_1: u32,
-    pub mid_2: u32,
+pub struct SchGrid {
+    pub d1: u32,
+    pub d2: u32,
+    pub d3: u32,
+    pub d4: u32,
+    pub d5: [u32; 6],
+    pub d6: u32,
+    pub d7: [u32;16],
+    pub d8: [u32;16],
+    pub d9: u32,
+    pub d10: [u32;16],
+    pub d11: [u32;11],
+    pub d12: u32,
+    pub d13: [u32;2],
+    pub d14: Vec<u32>,
+    pub size1: Size,
+    pub size2: Size,
     pub name: String,
+    pub table: String,
+    pub schema: String,
+}
 
-    //pub end_1: u16,
+#[derive(Debug)]
+pub struct Control1 {
+    pub positions: Vec<Position>,
+    pub pos: Position,
+    pub d1: u16,
+    pub d2: [u8; 32],
+    pub d3: u32,
+    pub d4: u32,
+    pub d5: u32,
+    pub d6: u32,
+    pub d7: u32,
+    pub d8: [u8; 6],
+    pub d9: u32,
+}
+
+#[derive(Debug)]
+pub struct Table {
+    pub sch_grid: SchGrid,
+    pub caption: String,
+}
+
+#[derive(Debug)]
+pub struct Relationship {
+    pub control: Control1,
+    pub caption: String,
+    pub from: String,
+    pub to: String,
+    pub name: String,
 }
 
 #[derive(Debug)]
 pub struct SysDiagram {
+    pub tables: Vec<Table>,
+    pub relationships: Vec<Relationship>,
 }

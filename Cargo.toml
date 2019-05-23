@@ -16,6 +16,9 @@ getopts = "0.2"
 base64 = "0.10"
 cfb = "0.3.1"
 flate2 = "0.2"
+bitflags = "1.0"
+nom-methods = "0.1"
+ms-oforms = "0.2"
 
 [dependencies.nom]
 version = "^4.2"

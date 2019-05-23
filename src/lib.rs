@@ -5,7 +5,8 @@
 extern crate num_derive;
 #[macro_use]
 extern crate nom;
-extern crate encoding;
+//#[macro_use]
+extern crate nom_methods;
 
 pub mod core;
 pub mod fdb;

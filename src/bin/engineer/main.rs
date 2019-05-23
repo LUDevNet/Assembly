@@ -1,14 +1,12 @@
 mod sysdiagram;
 mod pki;
 
-use sysdiagram::{main as sysdiagram_main, MainError as SysDiagramError};
 use pki::{main as pki_main, MainError as PkiError};
 use getopts::Options;
 use std::env;
 
 #[derive(Debug)]
 enum CLIError {
-    SysDiagram(SysDiagramError),
     PKI(PkiError),
 }
 
@@ -37,9 +35,7 @@ fn main() -> Result<(), CLIError> {
         print_usage(&program, opts);
         return Ok(());
     };
-    if subcommand == "sysdiagram" {
-        sysdiagram_main(matches.free).map_err(CLIError::SysDiagram)
-    } else if subcommand == "pki" {
+    if subcommand == "pki" {
         pki_main(matches.free).map_err(CLIError::PKI)
     } else {
         print_usage(&program, opts);

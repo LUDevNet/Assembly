@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use nom::{le_u8, le_u32, le_u64};
 use crate::core::parser::{
     parse_world_id, parse_vec3f, parse_quat,
-    parse_u32_bool, parse_u8_string,
+    parse_u8_string,
 };
 use crate::core::types::{Placement3D};
 use super::core::{
@@ -33,17 +33,12 @@ named_args!(pub parse_scene_count(version: FileVersion)<usize>,
 
 named!(parse_scene_ref<SceneRef>,
     do_parse!(
-        a: parse_u8_string >>
-        b: le_u32 >>
-        c: parse_u32_bool >>
-        d: parse_u8_string >>
+        file_name: parse_u8_string >>
+        id: le_u32 >>
+        layer: le_u32 >>
+        name: parse_u8_string >>
         take!(3) >>
-        (SceneRef{
-            file_name: a,
-            id: b,
-            is_audio: c,
-            name: d,
-        })
+        (SceneRef{ file_name, id, layer, name })
     )
 );
 

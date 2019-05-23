@@ -7,6 +7,7 @@ use assembly::fdb::sysdiagram::core::SysDiagram;
 use assembly::fdb::sysdiagram::io::LoadError as SysDiagramError;
 use std::convert::TryFrom;
 use getopts::Options;
+use std::env;
 
 
 #[derive(Debug)]
@@ -51,7 +52,12 @@ fn load_database(filename: &str) -> Result<(), MainError> {
                 match &row.fields_ref()[4] {
                     Field::Text(text) => {
                         let sysdiagram = SysDiagram::try_from(&text[..])?;
-                        println!("{:?}", sysdiagram);
+                        for table in sysdiagram.tables {
+                            println!("{}.{}", table.sch_grid.schema, table.sch_grid.name);
+                        }
+                        for relationship in sysdiagram.relationships {
+                            println!("{:60} {:25} {:25}", relationship.name, relationship.from, relationship.to);
+                        }
                     },
                     data => println!("Wrong data: {:?}", data),
                 }
@@ -67,7 +73,8 @@ fn print_usage(program: &str, opts: Options) {
     print!("{}", opts.usage(&brief));
 }
 
-pub fn main(args: Vec<String>) -> Result<(), MainError> {
+pub fn main() -> Result<(), MainError> {
+    let args: Vec<String> = env::args().collect();
     let program = args[0].clone();
 
     let mut opts = Options::new();
