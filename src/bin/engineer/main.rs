@@ -1,4 +1,3 @@
-mod sysdiagram;
 mod pki;
 
 use pki::{main as pki_main, MainError as PkiError};
