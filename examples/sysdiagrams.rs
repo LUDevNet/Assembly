@@ -52,11 +52,14 @@ fn load_database(filename: &str) -> Result<(), MainError> {
                 match &row.fields_ref()[4] {
                     Field::Text(text) => {
                         let sysdiagram = SysDiagram::try_from(&text[..])?;
-                        for table in sysdiagram.tables {
+                        /*for table in sysdiagram.tables {
                             println!("{}.{}", table.sch_grid.schema, table.sch_grid.name);
                         }
                         for relationship in sysdiagram.relationships {
                             println!("{:60} {:25} {:25}", relationship.name, relationship.from, relationship.to);
+                        }*/
+                        for (key, value) in sysdiagram.dsref_schema_contents.settings.iter() {
+                            println!("{:25}: {}", key, value);
                         }
                     },
                     data => println!("Wrong data: {:?}", data),

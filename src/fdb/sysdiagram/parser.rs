@@ -1,15 +1,29 @@
 // use super::core::*;
 // use crate::core::parser::{parse_string_u16};
 use ms_oforms::properties::types::parser::{parse_size, parse_position};
+//use crate::core::parser::{parse_u32_wstring};
 use encoding::{Encoding, DecoderTrap, all::UTF_16LE};
 use nom::{le_u32, le_u16, le_u8, IResult};
-use super::core::{SchGrid, Control1};
+use super::core::*;
 use std::convert::TryFrom;
+use std::collections::HashMap;
+use nom::types::CompleteStr;
 
 named!(parse_wstring_nt<String>,
     map_res!(
         recognize!(many_till!(le_u16, tag!([0x00, 0x00]))),
         |x: &[u8]| UTF_16LE.decode(&x[..(x.len() - 2)], DecoderTrap::Strict)
+    )
+);
+
+named!(parse_u32_bytes_wstring_nt<String>,
+    do_parse!(
+        len: le_u32 >>
+        string: map_res!(take!(len - 2),
+            |x| UTF_16LE.decode(x, DecoderTrap::Strict)
+        ) >>
+        tag!([0x00, 0x00]) >>
+        (string)
     )
 );
 
@@ -36,6 +50,81 @@ named!(pub parse_relationship<&str, (String, String, String)>,
         (name.to_string(), from.to_string(), to.to_string())
     )
 );
+
+named!(parse_entry<DSRefSchemaEntry>,
+    do_parse!(
+        k1: le_u32 >>
+        table: parse_u32_bytes_wstring_nt >>
+        schema: parse_u32_bytes_wstring_nt >>
+        (DSRefSchemaEntry{k1, table, schema})
+    )
+);
+
+named!(parse_setting<CompleteStr,(String, String)>,
+    map!(
+        separated_pair!(
+            is_not!("="),
+            tag!("="),
+            alt!(
+                do_parse!(
+                    tag!("\"") >>
+                    val: escaped!(is_not!("\""), '\\',  one_of!("\"\\")) >>
+                    tag!("\"") >>
+                    (val)
+                ) |
+                is_not!(";")
+            )
+        ),
+        |(x,y)| (x.to_string(), y.to_string())
+    )
+);
+
+//pub type StringMap = Vec<(String, String)>;
+pub type StringMap = HashMap<String, String>;
+
+named!(parse_connection_string<CompleteStr, StringMap>,
+    fold_many0!(
+        do_parse!(
+            set: parse_setting >>
+            alt!(tag!(";") | eof!()) >>
+            (set)
+        ),
+        HashMap::new(),
+        |mut acc: StringMap, (key, value)| {
+            acc.insert(key, value);
+            acc
+        }
+    )
+);
+
+pub fn get_settings<'a>(val: String) -> Result<StringMap, ()> {
+    parse_connection_string(CompleteStr::from(val.as_str())).map(|y| y.1).map_err(|_| ())
+}
+
+pub fn parse_dsref_schema_contents(input: &[u8]) -> IResult<&[u8], DSRefSchemaContents> {
+    do_parse!(input,
+        _d1: count_fixed!(u8, le_u8, 25) >>
+        len: map!(le_u8, usize::from) >>
+        _d2: count_fixed!(u8, le_u8, 26) >>
+        connection: parse_u32_bytes_wstring_nt >>
+        settings: map_res!(value!(connection), get_settings) >>
+        _d3: le_u32 >>
+        name: parse_u32_bytes_wstring_nt >>
+        tables: count!(parse_entry, len) >>
+        _d4: count_fixed!(u8, le_u8, 22) >>
+        guid: parse_u32_bytes_wstring_nt >>
+        ({
+            //println!("{:?}", d1);
+            //println!("{:?}", d2);
+            //println!("{:08X}", d3);
+            //println!("{:?}", d4);
+
+            DSRefSchemaContents{
+                name, guid, tables, settings
+            }
+        })
+    )
+}
 
 pub fn parse_control1(input: &[u8]) -> IResult<&[u8], Control1> {
     do_parse!(input,

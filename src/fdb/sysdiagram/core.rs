@@ -1,5 +1,6 @@
 //! # Data definitions for sysdiagrams
 use ms_oforms::properties::types::{Size, Position};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct SchGrid {
@@ -39,6 +40,21 @@ pub struct Control1 {
     pub d9: u32,
 }
 
+#[derive(Debug, Clone)]
+pub struct DSRefSchemaEntry {
+    pub k1: u32,
+    pub table: String,
+    pub schema: String,
+}
+
+#[derive(Debug)]
+pub struct DSRefSchemaContents {
+    pub name: String,
+    pub guid: String,
+    pub tables: Vec<DSRefSchemaEntry>,
+    pub settings: HashMap<String, String>,
+}
+
 #[derive(Debug)]
 pub struct Table {
     pub sch_grid: SchGrid,
@@ -58,4 +74,5 @@ pub struct Relationship {
 pub struct SysDiagram {
     pub tables: Vec<Table>,
     pub relationships: Vec<Relationship>,
+    pub dsref_schema_contents: DSRefSchemaContents,
 }

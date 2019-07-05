@@ -1,7 +1,7 @@
 use nom::{le_u32, le_u8};
 use super::file::*;
 
-/// Read a table definition header from a *.fdb file
+// Read a table definition header from a *.fdb file
 named!(pub parse_table_def_header<FDBTableDefHeader>,
     do_parse!(
         a: le_u32 >>

@@ -23,6 +23,7 @@ pub enum LoadError {
     StreamTooLong(std::num::TryFromIntError),
     SiteTooLong(std::num::TryFromIntError),
     BufTooLong(std::num::TryFromIntError),
+    MissingStream(String),
     Incomplete,
     ParseError(ErrorKind),
     ParseFailure,
@@ -93,105 +94,76 @@ impl<T: Read + Seek> TryFromCfb<T> for SysDiagram {
             println!("{}: {}", entry.name(), entry.path().display());
         }
 
-        let form_control_opt = if reader.is_stream("/f") {
+        let form_control = if reader.is_stream("/f") {
             let mut f_stream = reader.open_stream("/f").map_err(LoadError::Cfb)?;
             let f_stream_len = usize::try_from(f_stream.len()).map_err(LoadError::StreamTooLong)?;
             let mut bytes: Vec<u8> = Vec::with_capacity(f_stream_len);
             f_stream.read_to_end(&mut bytes).map_err(LoadError::Cfb)?;
             let (_rest, form_control) = parse_form_control(&bytes[..]).map_err(LoadError::from)?;
-            Some(form_control)
+            Ok(form_control)
         } else {
-            None
-        };
+            Err(LoadError::MissingStream("f".to_string()))
+        }?;
 
-        if let Some(form_control) = form_control_opt {
-            if reader.is_stream("/o") {
-                let mut o_stream = reader.open_stream("/o").map_err(LoadError::Cfb)?;
-                let o_stream_len = usize::try_from(o_stream.len()).map_err(LoadError::StreamTooLong)?;
-                let mut bytes: Vec<u8> = Vec::with_capacity(o_stream_len);
-                o_stream.read_to_end(&mut bytes).map_err(LoadError::Cfb)?;
+        let dsref_schema_contents = if reader.is_stream("/DSREF-SCHEMA-CONTENTS") {
+            let mut r_stream = reader.open_stream("/DSREF-SCHEMA-CONTENTS").map_err(LoadError::Cfb)?;
+            let r_stream_len = usize::try_from(r_stream.len()).map_err(LoadError::StreamTooLong)?;
+            let mut bytes: Vec<u8> = Vec::with_capacity(r_stream_len);
+            r_stream.read_to_end(&mut bytes).map_err(LoadError::Cfb)?;
+            let (_, dsref_schema_contents) = parser::parse_dsref_schema_contents(&bytes[..])?;
+            Ok(dsref_schema_contents)
+        } else {
+            Err(LoadError::MissingStream("DSREF-SCHEMA-CONTENTS".to_string()))
+        }?;
 
-                let mut offset = 0;
-                let mut tables = Vec::new();
-                let mut relationships = Vec::new();
-                for site in &form_control.sites[..] {
-                    match site {
-                        Site::Ole(ref ole_site) => {
-                            let site_len = usize::try_from(ole_site.object_stream_size).map_err(LoadError::SiteTooLong)?;
-                            match ole_site.clsid_cache_index {
-                                Clsid::ClassTable(index) => {
-                                    let caption = ole_site.control_tip_text.clone();
-                                    /*
-                                    println!("===============");
-                                    println!("CLASS [{}] {:#?}", index, form_control.site_classes[usize::from(index)].cls_id);
-                                    println!("{}", ole_site.name);
-                                    println!("{}", ole_site.control_tip_text);
-                                    println!("{:#?}", site_len);
-                                    println!("---------------");
-                                    */
-                                    let data = &bytes[offset..];
-                                    if index == 0 {
-                                        // Table
-                                        let (_, sch_grid) = parser::parse_sch_grid(data)?;
-                                        tables.push(Table{sch_grid, caption});
-                                        /*
-                                        println!("{:?}", sch_grid.schema);
-                                        println!("{:?}", sch_grid.table);
-                                        println!("{:?}", sch_grid.name);
-                                        println!("{:?}", sch_grid.size1);
-                                        println!("{:?}", sch_grid.size2);
-                                        println!(" d1 {:?}", sch_grid.d1);
-                                        println!(" d2 {:?}", sch_grid.d2);
-                                        println!(" d3 {:?}", sch_grid.d3);
-                                        println!(" d4 {:?}", sch_grid.d4);
-                                        println!(" d5 {:?}", sch_grid.d5);
-                                        println!(" d6 {:?}", sch_grid.d6);
-                                        println!(" d7 {:?}", sch_grid.d7);
-                                        println!(" d8 {:?}", sch_grid.d8);
-                                        println!(" d9 {:?}", sch_grid.d9);
-                                        println!("d10 {:?}", sch_grid.d10);
-                                        println!("d11 {:?}", sch_grid.d11);
-                                        println!("d12 {:?}", sch_grid.d12);
-                                        println!("d13 {:?}", sch_grid.d13);
-                                        println!("d14 {:?}", sch_grid.d14);
-                                        */
-                                    } else if index == 1 {
-                                        // Foreign Key
-                                        let (_, control) = parser::parse_control1(data)?;
-                                        let (_, (name, from, to)) = parser::parse_relationship(&caption[..])?;
-                                        relationships.push(Relationship{
-                                            control, caption, name, from, to,
-                                        });
-                                        /*
-                                        println!("{:#?}", control.positions);
-                                        println!("{:?}", control.pos);
-                                        println!(" d1 {:?}", control.d1);
-                                        println!(" d2 {:?}", control.d2);
-                                        println!(" d3 {:?}", control.d3);
-                                        println!(" d4 {:?}", control.d4);
-                                        println!(" d5 {:?}", control.d5);
-                                        println!(" d6 {:?}", control.d6);
-                                        println!(" d7 {:?}", control.d7);
-                                        println!(" d8 {:?}", control.d8);
-                                        println!(" d9 {:?}", control.d9);
-                                        */
-                                    } else if index == 2 {
-                                        // Control?
-                                        // TODO
-                                    }
+        let (tables, relationships) = if reader.is_stream("/o") {
+            let mut o_stream = reader.open_stream("/o").map_err(LoadError::Cfb)?;
+            let o_stream_len = usize::try_from(o_stream.len()).map_err(LoadError::StreamTooLong)?;
+            let mut bytes: Vec<u8> = Vec::with_capacity(o_stream_len);
+            o_stream.read_to_end(&mut bytes).map_err(LoadError::Cfb)?;
+
+            let mut offset = 0;
+            let mut tables = Vec::new();
+            let mut relationships = Vec::new();
+            for site in &form_control.sites[..] {
+                match site {
+                    Site::Ole(ref ole_site) => {
+                        let site_len = usize::try_from(ole_site.object_stream_size).map_err(LoadError::SiteTooLong)?;
+                        match ole_site.clsid_cache_index {
+                            Clsid::ClassTable(index) => {
+                                let caption = ole_site.control_tip_text.clone();
+                                let data = &bytes[offset..];
+                                if index == 0 {
+                                    // Table
+                                    let (_, sch_grid) = parser::parse_sch_grid(data)?;
+                                    tables.push(Table{sch_grid, caption});
+                                } else if index == 1 {
+                                    // Foreign Key
+                                    let (_, control) = parser::parse_control1(data)?;
+                                    let (_, (name, from, to)) = parser::parse_relationship(&caption[..])?;
+                                    relationships.push(Relationship{
+                                        control, caption, name, from, to,
+                                    });
+                                } else if index == 2 {
+                                    // Control?
+                                    // TODO
                                 }
-                                Clsid::Invalid => println!("Invalid Class"),
-                                Clsid::Global(index) => println!("GLOBAL {}", index),
-                            };
-                            offset += site_len;
-                        }
+                            }
+                            Clsid::Invalid => println!("Invalid Class"),
+                            Clsid::Global(index) => println!("GLOBAL {}", index),
+                        };
+                        offset += site_len;
                     }
                 }
-                return Ok(SysDiagram{
-                    tables, relationships,
-                })
             }
-        }
-        Err(LoadError::NotImplemented)
+            Ok((tables, relationships))
+        } else {
+            Err(LoadError::MissingStream("o".to_string()))
+        }?;
+
+        Ok(SysDiagram {
+            tables, relationships,
+            dsref_schema_contents
+        })
     }
 }
