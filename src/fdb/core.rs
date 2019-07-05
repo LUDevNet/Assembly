@@ -17,9 +17,10 @@
 //! Types corresponding to the layout of each row.
 
 use std::collections::BTreeMap;
+use std::fmt;
 
 /// Value datatypes used in the database
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum ValueType {
     /// The NULL value
     Nothing,
@@ -70,7 +71,7 @@ impl From<u32> for ValueType {
 }
 
 /// A database single field
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Field {
     Nothing,
     Integer(i32),
@@ -79,6 +80,20 @@ pub enum Field {
     Boolean(bool),
     BigInt(i64),
     VarChar(String),
+}
+
+impl fmt::Display for Field {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Field::Nothing => write!(f, "NULL"),
+            Field::Integer(i) => write!(f, "{}", i),
+            Field::Float(v) => write!(f, "{}", v),
+            Field::Text(t) => write!(f, "{:?}", t),
+            Field::Boolean(b) => write!(f, "{}", b),
+            Field::BigInt(i) => write!(f, "{}", i),
+            Field::VarChar(v) => write!(f, "{:?}", v),
+        }
+    }
 }
 
 impl From<&Field> for ValueType {
@@ -149,7 +164,7 @@ impl Bucket {
 #[derive(Debug)]
 pub struct Column {
     pub name: String,
-    field_type: ValueType,
+    pub field_type: ValueType,
 }
 
 impl From<(&str, ValueType)> for Column {

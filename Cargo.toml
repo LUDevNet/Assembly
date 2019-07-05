@@ -1,12 +1,13 @@
 [package]
 name = "assembly"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Xiphoseer"]
 edition = "2018"
 homepage = "https://xiphoseer.github.io"
 repository = "https://github.com/xiphoseer/assembly_rs"
 description = "Library for files/resources for LU related software"
 license = "MIT"
+readme = "README.md"
 
 [dependencies]
 encoding = "0.2"
@@ -19,6 +20,8 @@ flate2 = "0.2"
 bitflags = "1.0"
 nom-methods = "0.1"
 ms-oforms = "0.2"
+hsieh-hash = "0.1"
+prettytable-rs = "0.8"
 
 [dependencies.nom]
 version = "^4.2"

@@ -9,3 +9,11 @@ library to read and possibly write files, formats and resources of LEGO Universe
 game files.
 
 [assembly]: https://github.com/xiphoseer/assembly
+
+## Example Tools
+
+Load the table from the database file and print all rows corresponding to the given key:
+
+```sh
+$ cargo run --example fdb-index DB-FILE TABLE KEY
+```

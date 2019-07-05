@@ -6,7 +6,7 @@
 //!
 //! If you just want to load the database from a file, use the following:
 //!
-//! ```rust
+//! ```rust,ignore
 //! use assembly::fdb::core::Schema;
 //!
 //! match Schema::try_from("some/path") {
@@ -24,9 +24,8 @@ pub mod io;
 pub mod file;
 /// Parser functions for reading an FDB file.
 pub mod parser;
-
 pub mod reader;
-
 pub mod sysdiagram;
+pub mod query;
 
 pub use self::core::Schema;

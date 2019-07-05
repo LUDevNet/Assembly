@@ -1,6 +1,6 @@
 use super::core::{Field,Row,Bucket,Table};
 
-type FieldVecIter = std::vec::IntoIter<Field>;
+pub type FieldVecIter = std::vec::IntoIter<Field>;
 
 impl IntoIterator for Row {
     type Item = Field;
@@ -11,7 +11,7 @@ impl IntoIterator for Row {
     }
 }
 
-type FieldRefIter<'a> = std::slice::Iter<'a, Field>;
+pub type FieldRefIter<'a> = std::slice::Iter<'a, Field>;
 
 impl<'a> IntoIterator for &'a Row {
     type Item = &'a Field;
@@ -22,8 +22,8 @@ impl<'a> IntoIterator for &'a Row {
     }
 }
 
-type RowVecIter = ::std::vec::IntoIter<Row>;
-type RowSliceIter<'a> = std::slice::Iter<'a, Row>;
+pub type RowVecIter = ::std::vec::IntoIter<Row>;
+pub type RowSliceIter<'a> = std::slice::Iter<'a, Row>;
 
 impl IntoIterator for Bucket {
     type Item = Row;
@@ -43,9 +43,9 @@ impl<'a> IntoIterator for &'a Bucket {
     }
 }
 
-type TableBucketIter = ::std::vec::IntoIter<Bucket>;
-type BucketRowIterMapper = fn(Bucket) -> RowVecIter;
-type TableRowIter = ::std::iter::FlatMap<TableBucketIter,RowVecIter,BucketRowIterMapper>;
+pub type TableBucketIter = ::std::vec::IntoIter<Bucket>;
+pub type BucketRowIterMapper = fn(Bucket) -> RowVecIter;
+pub type TableRowIter = ::std::iter::FlatMap<TableBucketIter,RowVecIter,BucketRowIterMapper>;
 
 impl IntoIterator for Table {
     type Item = Row;
@@ -56,9 +56,9 @@ impl IntoIterator for Table {
     }
 }
 
-type TableBucketRefIter<'a> = std::slice::Iter<'a, Bucket>;
-type BucketRowRefIterMapper<'a> = fn(&'a Bucket) -> RowSliceIter<'a>;
-type TableRowRefIter<'a> = ::std::iter::FlatMap<TableBucketRefIter<'a>,RowSliceIter<'a>,BucketRowRefIterMapper<'a>>;
+pub type TableBucketRefIter<'a> = std::slice::Iter<'a, Bucket>;
+pub type BucketRowRefIterMapper<'a> = fn(&'a Bucket) -> RowSliceIter<'a>;
+pub type TableRowRefIter<'a> = ::std::iter::FlatMap<TableBucketRefIter<'a>,RowSliceIter<'a>,BucketRowRefIterMapper<'a>>;
 
 impl<'a> IntoIterator for &'a Table {
     type Item = &'a Row;
