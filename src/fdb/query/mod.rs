@@ -1,6 +1,6 @@
 //! ## Query the database
 use hsieh_hash::digest;
-use super::core::{ValueType, Column, Field};
+use super::core::{ValueType, Field};
 
 
 pub struct PrimaryKeyFilter {
@@ -36,12 +36,10 @@ pub fn integer_pk_filter(key: String) -> Result<PrimaryKeyFilter, PKFilterError>
     Ok(PrimaryKeyFilter{hash_value, value: Field::Integer(value)})
 }
 
-impl Column {
-    pub fn pk_filter<T: Into<String>>(&self, key: T) -> Result<PrimaryKeyFilter, PKFilterError> {
-        match self.field_type {
-            ValueType::Text => text_pk_filter(key.into()),
-            ValueType::Integer => integer_pk_filter(key.into()),
-            _ => Err(PKFilterError::UnsupportedType(self.field_type.clone())),
-        }
+pub fn pk_filter<T: Into<String>>(key: T, field_type: ValueType) -> Result<PrimaryKeyFilter, PKFilterError> {
+    match field_type {
+        ValueType::Text => text_pk_filter(key.into()),
+        ValueType::Integer => integer_pk_filter(key.into()),
+        _ => Err(PKFilterError::UnsupportedType(field_type.clone())),
     }
 }

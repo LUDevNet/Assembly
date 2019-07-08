@@ -27,5 +27,6 @@ pub mod parser;
 pub mod reader;
 pub mod sysdiagram;
 pub mod query;
+pub mod builder;
 
 pub use self::core::Schema;

@@ -1,7 +1,11 @@
 extern crate getopts;
 use std::io::{BufReader, Error as IoError};
 use std::fs::File;
-use assembly::fdb::io::{SchemaLoader, LoaderConfigImpl, LoadError};
+use assembly::fdb::core::ValueType;
+use assembly::fdb::reader::{DatabaseFile, DatabaseReader, DatabaseBufReader, DatabaseLifetimeReader};
+use assembly::fdb::builder::{DatabaseBuilder, BuildError};
+use assembly::fdb::query::{pk_filter, PKFilterError};
+use assembly::core::reader::FileError;
 use prettytable::{Table as PTable, Row as PRow, Cell as PCell};
 use getopts::Options;
 use std::env;
@@ -9,7 +13,9 @@ use std::env;
 #[derive(Debug)]
 pub enum MainError {
     Io(IoError),
-    Load(LoadError),
+    Build(BuildError),
+    LowLevel(FileError),
+    InvalidKey(PKFilterError),
     TableNotFound,
 }
 
@@ -19,9 +25,21 @@ impl From<IoError> for MainError {
     }
 }
 
-impl From<LoadError> for MainError {
-    fn from(e: LoadError) -> Self {
-        MainError::Load(e)
+impl From<BuildError> for MainError {
+    fn from(e: BuildError) -> Self {
+        MainError::Build(e)
+    }
+}
+
+impl From<FileError> for MainError {
+    fn from(e: FileError) -> Self {
+        MainError::LowLevel(e)
+    }
+}
+
+impl From<PKFilterError> for MainError {
+    fn from(e: PKFilterError) -> Self {
+        MainError::InvalidKey(e)
     }
 }
 
@@ -29,39 +47,84 @@ fn run(filename: &str, tablename: &str, key: &str) -> Result<(), MainError> {
     //println!("Loading tables... (this may take a while)");
     let file = File::open(filename)?;
     let mut reader = BufReader::new(file);
-    let config = LoaderConfigImpl {
-        table_data_policy: |def| def.name == tablename,
-    };
-    let mut loader = SchemaLoader::open(&mut reader, config);
-    let schema = loader.try_load_schema()?;
 
-    match schema.table(tablename) {
-        Some(table) => {
-            let pk_filter = table.columns_ref()[0].pk_filter(key).unwrap();
-            let hash = pk_filter.hash();
+    let mut loader = DatabaseFile::open(&mut reader);
 
-            let buckets = table.buckets_ref();
-            let index = hash as usize % buckets.len();
+    let h = loader.get_header()?;
+    let thl = loader.get_table_header_list(h)?;
 
-            let mut count = 0;
-            let mut output = PTable::new();
-            output.set_format(*prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
-            output.set_titles(PRow::new(table.columns_ref().iter().map(|c| PCell::new(&c.name)).collect()));
+    let thlv: Vec<_> = thl.into();
+    let mut iter = thlv.iter();
 
-            for row in buckets[index].rows_ref() {
-                if pk_filter.filter(&row.fields_ref()[0]) {
-                    output.add_row(PRow::new(row.fields_ref().iter().map(|f| PCell::new(&f.to_string())).collect()));
-                    count += 1;
+    let (_tn, tdh, tth) = loop {
+        match iter.next() {
+            Some(th) => {
+                let tdh = loader.get_table_def_header(th.table_def_header_addr)?;
+                let name = loader.get_string(tdh.table_name_addr)?;
+
+                if name == tablename {
+                    let tth = loader.get_table_data_header(th.table_data_header_addr)?;
+                    break Ok((name, tdh, tth));
                 }
-            }
+            },
+            None => break Err(MainError::TableNotFound)
+        }
+    }?;
 
-            output.printstd();
-            println!("Printed {} row(s)", count);
-
-            Ok(())
-        },
-        None => Err(MainError::TableNotFound),
+    let chl = loader.get_column_header_list(&tdh)?;
+    let chlv: Vec<_> = chl.into();
+    let mut cnl = Vec::with_capacity(tdh.column_count as usize);
+    for ch in chlv.iter() {
+        let cn = loader.get_string(ch.column_name_addr)?;
+        cnl.push(PCell::new(&cn));
     }
+
+    let value_type = ValueType::from(chlv[0].column_data_type);
+    let filter = pk_filter(key, value_type)?;
+
+    let bc = tth.bucket_count;
+
+    let bhlv: Vec<_> = loader.get_bucket_header_list(&tth)?.into();
+    let hash = filter.hash();
+
+    let bh = bhlv[(hash % bc) as usize];
+    let rhlha = bh.row_header_list_head_addr;
+
+    let rhi = loader.get_row_header_addr_iterator(rhlha);
+
+    let mut count = 0;
+    let mut output = PTable::new();
+    output.set_format(*prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
+    output.set_titles(PRow::new(cnl));
+
+    for orha in rhi.collect::<Vec<_>>() {
+        let rha = orha?;
+        let rh = loader.get_row_header(rha)?;
+
+        let fdlv: Vec<_> = loader.get_field_data_list(rh)?.into();
+
+
+        let ff = loader.try_load_field(&fdlv[0])?;
+        if filter.filter(&ff) {
+            let mut fv = Vec::with_capacity(fdlv.len());
+            fv.push(PCell::new(&ff.to_string()));
+
+            for fd in &fdlv[1..] {
+                let f = loader.try_load_field(&fd)?;
+                fv.push(PCell::new(&f.to_string()));
+
+            }
+            count += 1;
+            output.add_row(PRow::new(fv));
+        }
+
+
+    }
+
+    output.printstd();
+    println!("Printed {} row(s)", count);
+
+    Ok(())
 }
 
 fn print_usage(program: &str, opts: Options) {

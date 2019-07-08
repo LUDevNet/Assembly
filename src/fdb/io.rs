@@ -1,7 +1,8 @@
 use std::{fs, io};
 use std::io::{Seek, BufRead, BufReader};
 use std::convert::TryFrom;
-use super::reader::{DatabaseFile};
+use super::reader::{DatabaseFile, DatabaseBufReader, DatabaseReader, DatabaseLifetimeReader};
+use super::builder::{DatabaseBuilder};
 use super::core::*;
 use super::file::{
     FDBTableHeader,
@@ -103,38 +104,6 @@ where T: BufRead + Seek, C: LoaderConfig {
         Self{inner: db, config}
     }
 
-    /// Try to load a field
-    pub fn try_load_field<'b>(&'b mut self, data: FDBFieldData) -> LoadResult<Field> {
-        let bytes = data.value;
-        match ValueType::from(data.data_type) {
-            ValueType::Nothing => Ok(Field::Nothing),
-            ValueType::Integer => Ok(bytes)
-                .map(i32::from_le_bytes)
-                .map(Field::Integer),
-            ValueType::Float => Ok(bytes)
-                .map(u32::from_le_bytes)
-                .map(f32::from_bits)
-                .map(Field::Float),
-            ValueType::Text => Ok(bytes)
-                .map(u32::from_le_bytes)
-                .and_then(|addr| self.inner.get_string(addr).map_err(LoadError::File))
-                .map(Field::Text),
-            ValueType::Boolean => Ok(bytes)
-                .map(|v| v != [0; 4])
-                .map(Field::Boolean),
-            ValueType::BigInt => Ok(bytes)
-                .map(u32::from_le_bytes)
-                .and_then(|addr| self.inner.get_i64(addr).map_err(LoadError::File))
-                .map(Field::BigInt),
-            ValueType::VarChar => Ok(bytes)
-                .map(u32::from_le_bytes)
-                .and_then(|addr| self.inner.get_string(addr).map_err(LoadError::File))
-                .map(Field::VarChar),
-            ValueType::Unknown(k) =>
-                Err(LoadError::UnknownType(k))
-        }
-    }
-
     /// Try to load a row
     pub fn try_load_row<'b>(&'b mut self, header: FDBRowHeader) -> LoadResult<Row> {
         let a = &mut self.inner;
@@ -142,7 +111,7 @@ where T: BufRead + Seek, C: LoaderConfig {
         let field_data: Vec<FDBFieldData> = field_list.into();
         let mut fields: Vec<Field> = Vec::with_capacity(field_data.len());
         for field in field_data {
-            match self.try_load_field(field) {
+            match self.inner.try_load_field(&field) {
                 Ok(value) => fields.push(value),
                 Err(e) => println!("{:?}", e),
             }
@@ -176,7 +145,7 @@ where T: BufRead + Seek, C: LoaderConfig {
     pub fn try_load_table_def<'b>(&'b mut self, header: FDBTableDefHeader) -> LoadResult<TableDef> {
         let name = self.inner.get_string(header.table_name_addr).map_err(LoadError::File)?;
         let column_header_list: Vec<FDBColumnHeader> = self.inner
-            .get_column_header_list(header).map_err(LoadError::File)?.into();
+            .get_column_header_list(&header).map_err(LoadError::File)?.into();
 
         let columns: Vec<Column> = column_header_list.iter()
             .map(|column_header| self.try_load_column(*column_header))
@@ -188,7 +157,7 @@ where T: BufRead + Seek, C: LoaderConfig {
     /// Try to load table data
     pub fn try_load_table_data<'b>(&'b mut self, header: FDBTableDataHeader) -> LoadResult<TableData> {
         let bucket_header_list: Vec<FDBBucketHeader> = self.inner
-            .get_bucket_header_list(header).map_err(LoadError::File)?.into();
+            .get_bucket_header_list(&header).map_err(LoadError::File)?.into();
 
         let buckets: Vec<Bucket> = bucket_header_list.iter()
             .map(|bucket_header| self.try_load_bucket(*bucket_header))
