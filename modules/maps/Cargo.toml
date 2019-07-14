@@ -1,0 +1,14 @@
+[package]
+name = "assembly-maps"
+version = "0.1.0"
+authors = ["Xiphoseer"]
+edition = "2018"
+homepage = "https://xiphoseer.github.io"
+repository = "https://github.com/xiphoseer/assembly_rs"
+description = "Map content module for the assembly crate"
+license = "MIT"
+readme = "README.md"
+
+[dependencies]
+assembly-core = { path = "../core", version = "0.1" }
+num-traits = "0.2"

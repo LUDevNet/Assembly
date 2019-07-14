@@ -1,0 +1,23 @@
+[package]
+name = "assembly"
+version = "0.6.0"
+authors = ["Xiphoseer"]
+edition = "2018"
+homepage = "https://xiphoseer.github.io"
+repository = "https://github.com/xiphoseer/assembly_rs"
+description = "Library for files/resources for LU related software"
+license = "MIT"
+readme = "README.md"
+
+[features]
+default = ["core", "data", "maps", "pack"]
+core = ["assembly-core"]
+data = ["assembly-data"]
+maps = ["assembly-maps"]
+pack = ["assembly-pack"]
+
+[dependencies]
+assembly-core = { path = "../core", version = "0.1", optional = true }
+assembly-data = { path = "../data", version = "0.1", optional = true }
+assembly-maps = { path = "../maps", version = "0.1", optional = true }
+assembly-pack = { path = "../pack", version = "0.1", optional = true }

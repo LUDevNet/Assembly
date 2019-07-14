@@ -1,0 +1,16 @@
+[package]
+name = "assembly-core"
+version = "0.1.0"
+authors = ["Xiphoseer"]
+edition = "2018"
+homepage = "https://xiphoseer.github.io"
+repository = "https://github.com/xiphoseer/assembly_rs"
+description = "Core functionality of the assembly crate"
+license = "MIT"
+readme = "README.md"
+
+[dependencies]
+encoding = "0.2"
+nom = "5.0"
+num-traits = "0.2"
+num-derive = "0.2"

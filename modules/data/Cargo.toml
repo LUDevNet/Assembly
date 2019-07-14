@@ -1,0 +1,18 @@
+[package]
+name = "assembly-data"
+version = "0.1.0"
+authors = ["Xiphoseer"]
+edition = "2018"
+homepage = "https://xiphoseer.github.io"
+repository = "https://github.com/xiphoseer/assembly_rs"
+description = "Database module for the assembly crate"
+license = "MIT"
+readme = "README.md"
+
+[dependencies]
+assembly-core = { path = "../core", version = "0.1" }
+hsieh-hash = "0.1"
+
+[dev-dependencies]
+prettytable-rs = "0.8"
+getopts = "0.2"

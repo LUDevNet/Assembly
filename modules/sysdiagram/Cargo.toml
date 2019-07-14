@@ -1,0 +1,17 @@
+[package]
+name = "assembly-sysdiagram"
+version = "0.1.0"
+authors = ["Xiphoseer"]
+edition = "2018"
+homepage = "https://xiphoseer.github.io"
+repository = "https://github.com/xiphoseer/assembly_rs"
+description = "Library for files/resources for LU related software"
+license = "MIT"
+readme = "README.md"
+
+[dependencies]
+assembly-core = { path = "../core", version = "0.1" }
+ms-oforms = { path = "../../../rust-ms-oforms", version = "0.3.0-alpha1" }
+nom = "5.0"
+base64 = "0.10"
+cfb = "0.3.1"
