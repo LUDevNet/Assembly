@@ -8,7 +8,9 @@ extern crate nom;
 //#[macro_use]
 extern crate nom_methods;
 
-pub mod core;
+pub use assembly_core as core;
+
+//pub mod core;
 pub mod fdb;
 pub mod luz;
 pub mod lvl;

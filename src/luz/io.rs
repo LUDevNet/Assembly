@@ -3,7 +3,7 @@ use std::io::{Read};
 use std::convert::TryFrom;
 use super::core::ZoneFile;
 use super::parser;
-use nom::{Context,ErrorKind};
+use nom::error::ErrorKind;
 
 /// Error when loading a LUZ file
 #[derive(Debug)]
@@ -12,19 +12,19 @@ pub enum LoadError {
     Read(io::Error),
     Incomplete,
     ParseError(ErrorKind),
-    ParseFailure,
+    ParseFailure(ErrorKind),
 }
 
 type LoadResult<T> = Result<T, LoadError>;
 
 // Generates a LoadError from a nom error
-impl From<nom::Err<&[u8]>> for LoadError {
-    fn from(e: nom::Err<&[u8]>) -> LoadError {
+impl From<nom::Err<(&[u8], ErrorKind)>> for LoadError {
+    fn from(e: nom::Err<(&[u8], ErrorKind)>) -> LoadError {
         match e {
             // Need to translate the error here, as this lives longer than the input
             nom::Err::Incomplete(_) => LoadError::Incomplete,
-            nom::Err::Error(Context::Code(_,k)) => LoadError::ParseError(k),
-            nom::Err::Failure(_) => LoadError::ParseFailure,
+            nom::Err::Error((_,k)) => LoadError::ParseError(k),
+            nom::Err::Failure((_,k)) => LoadError::ParseFailure(k),
         }
     }
 }

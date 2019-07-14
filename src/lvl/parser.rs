@@ -1,6 +1,6 @@
 //! # Parsers for the data
 use super::file::*;
-use nom::{le_u16, le_u32};
+use nom::number::complete::{le_u16, le_u32};
 
 named!(pub parse_chunk_version<ChunkVersion>,
     do_parse!(

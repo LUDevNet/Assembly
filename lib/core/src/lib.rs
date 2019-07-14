@@ -6,3 +6,9 @@ pub mod types;
 pub mod parser;
 pub mod reader;
 pub mod borrow;
+pub mod nom_ext;
+
+#[macro_use]
+extern crate num_derive;
+#[macro_use]
+extern crate nom;

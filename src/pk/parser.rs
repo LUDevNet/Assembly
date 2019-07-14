@@ -1,7 +1,9 @@
 //! # Parsing functions
 
 use super::file::*;
-use nom::{le_u32, le_u8};
+use nom::number::complete::{le_u32};
+use nom::IResult;
+use std::convert::TryInto;
 
 named!(pub parse_pk_magic<&[u8]>,
     tag!("ndpk")
@@ -19,19 +21,34 @@ fn ascii_from_bytes(b: [u8; 32]) -> String {
     String::from_utf8_lossy(&b).to_string()
 }
 
+fn parse_hash(i: &[u8]) -> IResult<&[u8], String> {
+    let (i, byte_slice) = take!(i, 32)?;
+    // This cannot fail
+    let bytes: [u8; 32] = byte_slice.try_into().unwrap();
+    let hash = ascii_from_bytes(bytes);
+    Ok((i, hash))
+}
+
+fn parse_compressed(i: &[u8]) -> IResult<&[u8], [u8;4]> {
+    let (i, byte_slice) = take!(i, 4)?;
+    // This cannot fail
+    let bytes: [u8; 4] = byte_slice.try_into().unwrap();
+    Ok((i, bytes))
+}
+
 named!(pub parse_pk_entry<PKEntry>,
     do_parse!(
         crc: le_u32 >>
         left: le_u32 >>
         right: le_u32 >>
         orig_file_size: le_u32 >>
-        orig_file_hash: map!(count_fixed!(u8, le_u8, 32), ascii_from_bytes) >>
+        orig_file_hash: parse_hash >>
         take!(4) >>
         compr_file_size: le_u32 >>
-        compr_file_hash: map!(count_fixed!(u8, le_u8, 32), ascii_from_bytes) >>
+        compr_file_hash: parse_hash >>
         take!(4) >>
         file_data_addr: le_u32 >>
-        is_compressed: count_fixed!(u8, le_u8, 4) >>
+        is_compressed: parse_compressed >>
         (PKEntry{
             crc, left, right,
             orig_file_size, orig_file_hash,

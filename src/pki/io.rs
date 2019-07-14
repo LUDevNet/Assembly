@@ -3,7 +3,7 @@ use std::io::{Error as IoError, BufReader, Read};
 use std::convert::TryFrom;
 use super::core::PackIndexFile;
 use super::parser;
-use nom::{ErrorKind, Context};
+use nom::error::ErrorKind;
 
 #[derive(Debug)]
 pub enum LoadError {
@@ -11,19 +11,19 @@ pub enum LoadError {
     Read(IoError),
     Incomplete,
     ParseError(ErrorKind),
-    ParseFailure,
+    ParseFailure(ErrorKind),
 }
 
 type LoadResult<T> = Result<T, LoadError>;
 
 // Generates a LoadError from a nom error
-impl From<nom::Err<&[u8]>> for LoadError {
-    fn from(e: nom::Err<&[u8]>) -> LoadError {
+impl From<nom::Err<(&[u8], ErrorKind)>> for LoadError {
+    fn from(e: nom::Err<(&[u8], ErrorKind)>) -> LoadError {
         match e {
             // Need to translate the error here, as this lives longer than the input
             nom::Err::Incomplete(_) => LoadError::Incomplete,
-            nom::Err::Error(Context::Code(_,k)) => LoadError::ParseError(k),
-            nom::Err::Failure(_) => LoadError::ParseFailure,
+            nom::Err::Error((_,k)) => LoadError::ParseError(k),
+            nom::Err::Failure((_,k)) => LoadError::ParseFailure(k),
         }
     }
 }

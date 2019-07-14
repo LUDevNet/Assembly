@@ -3,11 +3,11 @@
 use ms_oforms::properties::types::parser::{parse_size, parse_position};
 //use crate::core::parser::{parse_u32_wstring};
 use encoding::{Encoding, DecoderTrap, all::UTF_16LE};
-use nom::{le_u32, le_u16, le_u8, IResult};
+use nom::number::complete::{le_u32, le_u16, le_u8};
+use nom::IResult;
 use super::core::*;
 use std::convert::TryFrom;
 use std::collections::HashMap;
-use nom::types::CompleteStr;
 
 named!(parse_wstring_nt<String>,
     map_res!(
@@ -60,7 +60,7 @@ named!(parse_entry<DSRefSchemaEntry>,
     )
 );
 
-named!(parse_setting<CompleteStr,(String, String)>,
+named!(parse_setting<&str,(String, String)>,
     map!(
         separated_pair!(
             is_not!("="),
@@ -82,15 +82,19 @@ named!(parse_setting<CompleteStr,(String, String)>,
 //pub type StringMap = Vec<(String, String)>;
 pub type StringMap = HashMap<String, String>;
 
-named!(parse_connection_string<CompleteStr, StringMap>,
+named!(parse_connection_setting<&str, (String, String)>,
+    do_parse!(
+        set: parse_setting >>
+        alt!(tag!(";") | eof!()) >>
+        (set)
+    )
+);
+
+named!(parse_connection_string<&str, StringMap>,
     fold_many0!(
-        do_parse!(
-            set: parse_setting >>
-            alt!(tag!(";") | eof!()) >>
-            (set)
-        ),
+        parse_connection_setting,
         HashMap::new(),
-        |mut acc: StringMap, (key, value)| {
+        |mut acc: StringMap, (key, value): (String, String)| {
             acc.insert(key, value);
             acc
         }
@@ -98,20 +102,20 @@ named!(parse_connection_string<CompleteStr, StringMap>,
 );
 
 pub fn get_settings<'a>(val: String) -> Result<StringMap, ()> {
-    parse_connection_string(CompleteStr::from(val.as_str())).map(|y| y.1).map_err(|_| ())
+    parse_connection_string(val.as_str()).map(|y| y.1).map_err(|_| ())
 }
 
 pub fn parse_dsref_schema_contents(input: &[u8]) -> IResult<&[u8], DSRefSchemaContents> {
     do_parse!(input,
-        _d1: count_fixed!(u8, le_u8, 25) >>
+        _d1: take!(25) >>
         len: map!(le_u8, usize::from) >>
-        _d2: count_fixed!(u8, le_u8, 26) >>
+        _d2: take!(26) >>
         connection: parse_u32_bytes_wstring_nt >>
-        settings: map_res!(value!(connection), get_settings) >>
+        settings: map_res!(value!(connection.clone()), get_settings) >>
         _d3: le_u32 >>
         name: parse_u32_bytes_wstring_nt >>
         tables: count!(parse_entry, len) >>
-        _d4: count_fixed!(u8, le_u8, 22) >>
+        _d4: take!(22) >>
         guid: parse_u32_bytes_wstring_nt >>
         ({
             //println!("{:?}", d1);
@@ -131,18 +135,18 @@ pub fn parse_control1(input: &[u8]) -> IResult<&[u8], Control1> {
         pos_count: le_u16 >>
         d1: le_u16 >>
         positions: count!(parse_position, usize::from(pos_count)) >>
-        d2: count_fixed!(u8, le_u8, 32) >>
+        _d2: take!(32) >>
         d3: le_u32 >>
         d4: le_u32 >>
         pos: parse_position >>
         d5: le_u32 >>
         d6: le_u32 >>
         d7: le_u32 >>
-        d8: count_fixed!(u8, le_u8, 6) >>
+        _d8: take!(6) >>
         d9: le_u32 >>
         (Control1{
             positions, pos,
-            d1, d2, d3, d4, d5, d6, d7, d8, d9,
+            d1, /*d2,*/ d3, d4, d5, d6, d7, /*d8,*/ d9,
         })
     )
 }
@@ -157,22 +161,22 @@ pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
         buf_len: map_res!(le_u32, usize::try_from) >>
         name: parse_wstring_nt >>
         take!(buf_len - name.len() * 2 - 2) >>
-        d5: count_fixed!(u32, le_u32, 6) >>
+        _d5: take!(6 * 4) >>
         d6: le_u32 >>
-        d7: count_fixed!(u32, le_u32, 16) >>
+        _d7: take!(16 * 4) >>
         size2: parse_size >>
-        d8: count_fixed!(u32, le_u32, 16) >>
+        _d8: take!(16 * 4) >>
         d9: le_u32 >>
-        d10: count_fixed!(u32, le_u32, 16) >>
-        d11: count_fixed!(u32, le_u32, 11) >>
+        _d10: take!(16 * 4) >>
+        _d11: take!(11 * 4) >>
         d12: le_u32 >>
-        d13: count_fixed!(u32, le_u32, 2) >>
+        _d13: take!(2 * 4) >>
         some_len: map_res!(le_u32, usize::try_from) >>
         d14: count!(le_u32, some_len) >>
         schema: parse_u32_wstring_nt >>
         table: parse_u32_wstring_nt >>
         (SchGrid{
-            d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13, d14,
+            d1, d2, d3, d4, /*d5,*/ d6, /*d7, d8,*/ d9, /*d10, d11,*/ d12, /*d13,*/ d14,
             size1, name, size2,
             schema, table,
         })

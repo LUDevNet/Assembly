@@ -1,4 +1,4 @@
-use nom::{le_u32};
+use nom::number::complete::{le_u32};
 use super::core::*;
 use crate::core::parser::{parse_u32_string};
 use std::collections::BTreeMap;

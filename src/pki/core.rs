@@ -6,6 +6,7 @@ pub struct PackFileRef {
     pub path: String,
 }
 
+#[derive(Debug, Copy, Clone)]
 pub struct FileRef {
     pub category: u32,
     pub pack_file: u32,

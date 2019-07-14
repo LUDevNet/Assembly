@@ -1,5 +1,5 @@
 //! # Parser methods for the general types
-use nom::{le_f32, le_u32, le_u8};
+use nom::number::complete::{le_f32, le_u32, le_u8};
 use num_traits::FromPrimitive;
 use encoding::{Encoding, DecoderTrap, all::UTF_16LE};
 use super::types::{Vector3f, Quaternion, WorldID, ObjectID, ObjectTemplate};
@@ -68,15 +68,15 @@ named!(pub parse_u32_wstring<String>,
 );
 
 named_args!(pub parse_string_u16(i: u16)<String>,
-    map_res!(map!(length_bytes!(value!(i)), Vec::from), String::from_utf8)
+    map_res!(map!(length_data!(value!(i)), Vec::from), String::from_utf8)
 );
 
 named!(pub parse_u8_string<String>,
-    map_res!(map!(length_bytes!(le_u8), Vec::from), String::from_utf8)
+    map_res!(map!(length_data!(le_u8), Vec::from), String::from_utf8)
 );
 
 named!(pub parse_u32_string<String>,
-    map_res!(map!(length_bytes!(le_u32), Vec::from), String::from_utf8)
+    map_res!(map!(length_data!(le_u32), Vec::from), String::from_utf8)
 );
 
 named!(pub parse_u32_bool<bool>,

@@ -8,7 +8,7 @@ use super::parser;
 use base64::decode as base64_decode;
 use base64::DecodeError as Base64DecodeError;
 use cfb::CompoundFile;
-use nom::{Context,ErrorKind};
+use nom::error::ErrorKind;
 use ms_oforms::controls::form::parser::parse_form_control;
 use ms_oforms::controls::form::Site;
 use ms_oforms::controls::ole_site_concrete::Clsid;
@@ -26,7 +26,7 @@ pub enum LoadError {
     MissingStream(String),
     Incomplete,
     ParseError(ErrorKind),
-    ParseFailure,
+    ParseFailure(ErrorKind),
     StringEncoding(String),
 }
 
@@ -55,24 +55,24 @@ trait TryFromCfb<T: Read + Seek> where Self: Sized {
     fn try_from_cfb(buf: T) -> Result<Self, Self::Error>;
 }
 
-impl From<nom::Err<&[u8]>> for LoadError {
-    fn from(e: nom::Err<&[u8]>) -> LoadError {
+impl From<nom::Err<(&[u8], ErrorKind)>> for LoadError {
+    fn from(e: nom::Err<(&[u8], ErrorKind)>) -> LoadError {
         match e {
             // Need to translate the error here, as this lives longer than the input
             nom::Err::Incomplete(_) => LoadError::Incomplete,
-            nom::Err::Error(Context::Code(_,k)) => LoadError::ParseError(k),
-            nom::Err::Failure(_) => LoadError::ParseFailure,
+            nom::Err::Error((_,k)) => LoadError::ParseError(k),
+            nom::Err::Failure((_,k)) => LoadError::ParseFailure(k),
         }
     }
 }
 
-impl From<nom::Err<&str>> for LoadError {
-    fn from(e: nom::Err<&str>) -> LoadError {
+impl From<nom::Err<(&str, ErrorKind)>> for LoadError {
+    fn from(e: nom::Err<(&str, ErrorKind)>) -> LoadError {
         match e {
             // Need to translate the error here, as this lives longer than the input
             nom::Err::Incomplete(_) => LoadError::Incomplete,
-            nom::Err::Error(Context::Code(_,k)) => LoadError::ParseError(k),
-            nom::Err::Failure(_) => LoadError::ParseFailure,
+            nom::Err::Error((_,k)) => LoadError::ParseError(k),
+            nom::Err::Failure((_,k)) => LoadError::ParseFailure(k),
         }
     }
 }

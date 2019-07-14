@@ -1,10 +1,14 @@
 use std::convert::TryFrom;
-use nom::{le_u8, le_u32, le_u64};
+use nom::number::complete::{le_u8, le_u32, le_u64};
+use nom::combinator::map;
+use nom::IResult;
+
 use crate::core::parser::{
     parse_world_id, parse_vec3f, parse_quat,
     parse_u8_string,
 };
 use crate::core::types::{Placement3D};
+use crate::core::nom_ext::{count_2, count_5};
 use super::core::{
     FileVersion, ZoneFile, SceneRef,
     SceneTransition, SceneTransitionInfo, SceneTransitionPoint
@@ -50,23 +54,26 @@ named!(parse_scene_transition_point<SceneTransitionPoint>,
     )
 );
 
-named_args!(parse_scene_transition_info(version: FileVersion)<SceneTransitionInfo>,
-    switch!(value!(version.id() <= 0x21 || version.id() >= 0x27),
-        true => map!(count_fixed!(SceneTransitionPoint, parse_scene_transition_point, 2), SceneTransitionInfo::from) |
-        false => map!(count_fixed!(SceneTransitionPoint, parse_scene_transition_point, 5), SceneTransitionInfo::from)
+fn parse_scene_transition_info<'a>(i: &'a [u8], version: FileVersion)
+-> IResult<&'a [u8], SceneTransitionInfo> {
+    if version.id() <= 0x21 || version.id() >= 0x27 {
+        map(count_2(parse_scene_transition_point), SceneTransitionInfo::from)(i)
+    } else {
+        map(count_5(parse_scene_transition_point), SceneTransitionInfo::from)(i)
+    }
+}
+
+named_args!(parse_scene_transition(version: FileVersion)<SceneTransition>,
+    do_parse!(
+        name: cond!(version.id() < 0x25, parse_u8_string) >>
+        points: call!(parse_scene_transition_info, version) >>
+        (SceneTransition{ name, points })
     )
 );
 
 named_args!(parse_scene_transitions(version: FileVersion)<Option<Vec<SceneTransition>>>,
     cond!(version.id() >= 0x20,
-        length_count!(le_u32, do_parse!(
-            a: cond!(version.id() < 0x25, parse_u8_string) >>
-            b: call!(parse_scene_transition_info, version) >>
-            (SceneTransition{
-                name: a,
-                points: b,
-            })
-        ))
+        length_count!(le_u32, call!(parse_scene_transition, version))
     )
 );
 
