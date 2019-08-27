@@ -18,4 +18,6 @@ pub extern crate nom;
 #[doc(hidden)]
 pub use encoding;
 #[doc(hidden)]
+pub use byteorder;
+#[doc(hidden)]
 pub use num_traits;

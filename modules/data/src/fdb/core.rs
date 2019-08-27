@@ -40,6 +40,21 @@ pub enum ValueType {
     Unknown(u32),
 }
 
+impl fmt::Display for ValueType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ValueType::Nothing => write!(f, "NULL"),
+            ValueType::Integer => write!(f, "INTEGER"),
+            ValueType::Float => write!(f, "FLOAT"),
+            ValueType::Text => write!(f, "TEXT"),
+            ValueType::Boolean => write!(f, "BOOLEAN"),
+            ValueType::BigInt => write!(f, "BIGINT"),
+            ValueType::VarChar => write!(f, "VARCHAR"),
+            ValueType::Unknown(i) => write!(f, "UNKNOWN({})", i),
+        }
+    }
+}
+
 impl From<ValueType> for u32 {
     fn from(value_type: ValueType) -> u32 {
         match value_type {

@@ -105,7 +105,7 @@ where T: Seek + BufRead {
     }
 
     /// Get some object with a read trait representing the data
-    pub fn get_file_data<'c, 'b: 'c>(&'b mut self, entry: PKEntry) -> Result<Box<Read + 'c>, StreamError> {
+    pub fn get_file_data<'c, 'b: 'c>(&'b mut self, entry: PKEntry) -> Result<Box<dyn Read + 'c>, StreamError> {
         let is_compr = entry.is_compressed[0] > 0;
         let file_stream = self.get_file_stream(entry);
         Ok(if is_compr {

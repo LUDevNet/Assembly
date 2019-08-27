@@ -1,7 +1,7 @@
 use std::{fs, io};
 use std::io::{Seek, BufRead, BufReader};
 use std::convert::TryFrom;
-use super::reader::{DatabaseFile, DatabaseBufReader, DatabaseReader, DatabaseLifetimeReader};
+use super::reader::{DatabaseBufReader, DatabaseReader};
 use super::builder::{DatabaseBuilder};
 use super::core::*;
 use super::file::{
@@ -69,7 +69,7 @@ where P: Fn(&TableDef) -> bool {
 
 /// Structure to load a schema from some encapsulated stream
 pub struct SchemaLoader<'a, T, C> {
-    inner: DatabaseFile<'a, T>,
+    inner: &'a mut T,
     config: C,
 }
 
@@ -100,8 +100,7 @@ where T: BufRead + Seek, C: LoaderConfig {
 
     /// Create a new loader from the given reader
     pub fn open(inner: &'a mut T, config: C) -> Self {
-        let db = DatabaseFile::open(inner);
-        Self{inner: db, config}
+        Self{inner: inner, config}
     }
 
     /// Try to load a row

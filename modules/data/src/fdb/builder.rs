@@ -13,14 +13,11 @@ pub enum BuildError {
 
 pub type BuildResult<T> = Result<T, BuildError>;
 
-impl<T,R> DatabaseBuilder<T> for R
-where
-    R: DatabaseBufReader<T> + DatabaseReader<T>,
-    T: Seek + BufRead {}
+impl<T> DatabaseBuilder for T where
+    T: DatabaseBufReader + DatabaseReader + Seek + BufRead {}
 
-pub trait DatabaseBuilder<T>
-where T: Seek + BufRead,
-Self: DatabaseBufReader<T> + DatabaseReader<T> {
+pub trait DatabaseBuilder
+where Self: Seek + BufRead + DatabaseBufReader + DatabaseReader {
     fn try_load_field(&mut self, data: &FDBFieldData) -> BuildResult<Field> {
         let bytes = data.value;
         match ValueType::from(data.data_type) {
