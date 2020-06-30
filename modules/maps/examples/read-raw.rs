@@ -1,12 +1,12 @@
 extern crate structopt;
 
+use assembly_core::byteorder::{ReadBytesExt, LE};
 use assembly_maps::raw::reader::*;
-use assembly_core::byteorder::{LE, ReadBytesExt};
 
-use std::path::PathBuf;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::Write;
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -23,7 +23,7 @@ pub enum Error {
     FileNotFound,
 }
 
-pub fn main() -> Result<(),Error> {
+pub fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
 
     if !opt.input.exists() || !opt.input.is_file() {

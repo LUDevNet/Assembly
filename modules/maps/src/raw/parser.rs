@@ -1,8 +1,8 @@
 //! ### Parsers for the data
 use super::file::*;
 use assembly_core::nom::{
-    number::complete::{le_u8, le_u32, le_f32},
-    named, do_parse
+    do_parse, named,
+    number::complete::{le_f32, le_u32, le_u8},
 };
 
 named!(pub parse_terrain_header<TerrainHeader>,

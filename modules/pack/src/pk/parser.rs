@@ -2,9 +2,7 @@
 
 use super::file::*;
 use assembly_core::nom::{
-    number::complete::le_u32,
-    named, do_parse, take, length_count, tag,
-    IResult,
+    do_parse, length_count, named, number::complete::le_u32, tag, take, IResult,
 };
 use std::convert::TryInto;
 
@@ -32,7 +30,7 @@ fn parse_hash(i: &[u8]) -> IResult<&[u8], String> {
     Ok((i, hash))
 }
 
-fn parse_compressed(i: &[u8]) -> IResult<&[u8], [u8;4]> {
+fn parse_compressed(i: &[u8]) -> IResult<&[u8], [u8; 4]> {
     let (i, byte_slice) = take!(i, 4)?;
     // This cannot fail
     let bytes: [u8; 4] = byte_slice.try_into().unwrap();

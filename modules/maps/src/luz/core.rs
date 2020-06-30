@@ -1,8 +1,4 @@
-use assembly_core::types::{
-    Placement3D,
-    WorldID,
-    Vector3f,
-};
+use assembly_core::types::{Placement3D, Vector3f, WorldID};
 
 /// Version of the zone file
 #[derive(Debug, Clone, Copy)]
@@ -96,7 +92,6 @@ pub struct ZoneFile {
     pub map_name: String,
     /// Internal description of the map
     pub map_description: String,
-
 
     /// List of transitions
     pub scene_transitions: Option<Vec<SceneTransition>>,

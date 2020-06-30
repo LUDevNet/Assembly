@@ -135,7 +135,7 @@ impl<'a> InventoryDataSink for InventoryStoreDataSink<'a> {
 
 pub type InventoryBagStoreDataSink<'a> = (&'a mut Object, Inventory, Bag);
 
-impl <'a> InventoryBagsDataSink for InventoryStoreDataSink<'a> {
+impl<'a> InventoryBagsDataSink for InventoryStoreDataSink<'a> {
     type E = InventoryStoreDataSink<'a>;
     type B = InventoryBagStoreDataSink<'a>;
 
@@ -148,7 +148,7 @@ impl <'a> InventoryBagsDataSink for InventoryStoreDataSink<'a> {
     }
 }
 
-impl <'a> InventoryBagDataSink for InventoryBagStoreDataSink<'a> {
+impl<'a> InventoryBagDataSink for InventoryBagStoreDataSink<'a> {
     type E = InventoryStoreDataSink<'a>;
 
     fn end_b(self) -> Self::E {
@@ -170,7 +170,7 @@ impl <'a> InventoryBagDataSink for InventoryBagStoreDataSink<'a> {
 
 pub type InventoryGroupStoreDataSink<'a> = (&'a mut Object, Inventory, Group);
 
-impl <'a> InventoryGroupsDataSink for InventoryStoreDataSink<'a> {
+impl<'a> InventoryGroupsDataSink for InventoryStoreDataSink<'a> {
     type E = InventoryStoreDataSink<'a>;
     type G = InventoryGroupStoreDataSink<'a>;
 
@@ -183,7 +183,7 @@ impl <'a> InventoryGroupsDataSink for InventoryStoreDataSink<'a> {
     }
 }
 
-impl <'a> InventoryGroupDataSink for InventoryGroupStoreDataSink<'a> {
+impl<'a> InventoryGroupDataSink for InventoryGroupStoreDataSink<'a> {
     type E = InventoryStoreDataSink<'a>;
 
     fn end_grp(self) -> Self::E {
@@ -260,7 +260,8 @@ impl<'a> InventoryItemBagDataSink for InventoryItemBagStoreDataSink<'a> {
     }
 }
 
-pub type InventoryItemExtraStoreDataSink<'a> = (&'a mut Object, Inventory, ItemBag, Item, ItemExtra);
+pub type InventoryItemExtraStoreDataSink<'a> =
+    (&'a mut Object, Inventory, ItemBag, Item, ItemExtra);
 
 impl<'a> InventoryItemDataSink for InventoryItemStoreDataSink<'a> {
     type E = InventoryItemBagStoreDataSink<'a>;
@@ -435,9 +436,7 @@ impl<'a> MinifigDataSink for MinifigStoreDataSink<'a> {
         self.1.attr_t = v;
         return self;
     }
-
 }
-
 
 #[cfg(test)]
 mod test {
@@ -445,25 +444,46 @@ mod test {
 
     #[test]
     fn test() {
-
-        let comp_obj = Object{
-            dest: Some(Destructible{
+        let comp_obj = Object {
+            dest: Some(Destructible {
                 attr_d: Some(true),
                 attr_im: Some(10),
                 ..Destructible::default()
             }),
-            inv: Some(Inventory{
-                bag: vec![Bag{attr_t: 2, attr_m: 3}, Bag{attr_t: 4, attr_m: 8}],
-                grps: vec![Group{attr_n: String::from("Name"), ..Group::default()}],
-                items: Items{children: vec![
-                    ItemBag{attr_t: 2, children: vec![
-                        Item{attr_l: 1234, ..Item::default()},
-                        Item{attr_l: 5678, ..Item::default()}
-                    ]}
-                ], ..Items::default()},
+            inv: Some(Inventory {
+                bag: vec![
+                    Bag {
+                        attr_t: 2,
+                        attr_m: 3,
+                    },
+                    Bag {
+                        attr_t: 4,
+                        attr_m: 8,
+                    },
+                ],
+                grps: vec![Group {
+                    attr_n: String::from("Name"),
+                    ..Group::default()
+                }],
+                items: Items {
+                    children: vec![ItemBag {
+                        attr_t: 2,
+                        children: vec![
+                            Item {
+                                attr_l: 1234,
+                                ..Item::default()
+                            },
+                            Item {
+                                attr_l: 5678,
+                                ..Item::default()
+                            },
+                        ],
+                    }],
+                    ..Items::default()
+                },
                 ..Inventory::default()
             }),
-            mf: Some(Minifig{
+            mf: Some(Minifig {
                 attr_hs: 4,
                 attr_cd: 10,
                 ..Minifig::default()
@@ -474,36 +494,40 @@ mod test {
         let mut test_obj = Object::default();
         let sink = &mut test_obj;
         sink.start_dest()
-                .push_attr_d(true)
-                .push_attr_im(10)
+            .push_attr_d(true)
+            .push_attr_im(10)
             .end_dest()
             .start_inv()
-                .start_bag()
-                    .start_b()
-                        .push_attr_t(2)
-                        .push_attr_m(3)
-                    .end_b()
-                    .start_b()
-                        .push_attr_t(4)
-                        .push_attr_m(8)
-                    .end_b()
-                .end_bag()
-                .start_grps()
-                    .start_grp()
-                        .push_attr_n(String::from("Name"))
-                    .end_grp()
-                .end_grps()
-                .start_items()
-                    .start_in()
-                        .push_attr_t(2)
-                        .start_i().push_attr_l(1234).end_i()
-                        .start_i().push_attr_l(5678).end_i()
-                    .end_in()
-                .end_items()
+            .start_bag()
+            .start_b()
+            .push_attr_t(2)
+            .push_attr_m(3)
+            .end_b()
+            .start_b()
+            .push_attr_t(4)
+            .push_attr_m(8)
+            .end_b()
+            .end_bag()
+            .start_grps()
+            .start_grp()
+            .push_attr_n(String::from("Name"))
+            .end_grp()
+            .end_grps()
+            .start_items()
+            .start_in()
+            .push_attr_t(2)
+            .start_i()
+            .push_attr_l(1234)
+            .end_i()
+            .start_i()
+            .push_attr_l(5678)
+            .end_i()
+            .end_in()
+            .end_items()
             .end_inv()
             .start_mf()
-                .push_attr_hs(4)
-                .push_attr_cd(10)
+            .push_attr_hs(4)
+            .push_attr_cd(10)
             .end_mf();
 
         assert_eq!(comp_obj, test_obj);

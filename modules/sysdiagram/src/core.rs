@@ -1,5 +1,5 @@
 //! # Data definitions for sysdiagrams
-use ms_oforms::properties::types::{Size, Position};
+use ms_oforms::properties::types::{Position, Size};
 use std::collections::HashMap;
 
 #[derive(Debug)]

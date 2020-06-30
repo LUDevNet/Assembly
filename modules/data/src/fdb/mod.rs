@@ -15,14 +15,16 @@
 //! }
 //! ```
 
+pub mod builder;
 pub mod core;
+pub mod de;
+pub mod file;
+pub mod io;
 #[doc(hidden)]
 pub mod iter;
-pub mod io;
-pub mod file;
 pub mod parser;
-pub mod reader;
 pub mod query;
-pub mod builder;
+pub mod reader;
+pub mod store;
 
 pub use self::core::Schema;

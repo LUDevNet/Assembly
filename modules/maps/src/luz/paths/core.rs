@@ -1,5 +1,5 @@
-use assembly_core::types::{WorldID, Vector3f, Quaternion, ObjectTemplate, ObjectID};
 use assembly_core::num_derive::{FromPrimitive, ToPrimitive};
+use assembly_core::types::{ObjectID, ObjectTemplate, Quaternion, Vector3f, WorldID};
 use std::collections::HashMap;
 
 /// Version / first field of path data
@@ -236,14 +236,14 @@ pub struct PathWaypointVariant<WaypointType> {
     pub data: WaypointType,
 }
 
-pub type PathWaypointVariantMovement        = PathWaypointVariant<PathWaypointDataMovement>;
-pub type PathWaypointVariantMovingPlatform  = PathWaypointVariant<PathWaypointDataMovingPlatform>;
-pub type PathWaypointVariantProperty        = PathWaypointVariant<PathWaypointDataProperty>;
-pub type PathWaypointVariantCamera          = PathWaypointVariant<PathWaypointDataCamera>;
-pub type PathWaypointVariantSpawner         = PathWaypointVariant<PathWaypointDataSpawner>;
-pub type PathWaypointVariantShowcase        = PathWaypointVariant<PathWaypointDataShowcase>;
-pub type PathWaypointVariantRace            = PathWaypointVariant<PathWaypointDataRace>;
-pub type PathWaypointVariantRail            = PathWaypointVariant<PathWaypointDataRail>;
+pub type PathWaypointVariantMovement = PathWaypointVariant<PathWaypointDataMovement>;
+pub type PathWaypointVariantMovingPlatform = PathWaypointVariant<PathWaypointDataMovingPlatform>;
+pub type PathWaypointVariantProperty = PathWaypointVariant<PathWaypointDataProperty>;
+pub type PathWaypointVariantCamera = PathWaypointVariant<PathWaypointDataCamera>;
+pub type PathWaypointVariantSpawner = PathWaypointVariant<PathWaypointDataSpawner>;
+pub type PathWaypointVariantShowcase = PathWaypointVariant<PathWaypointDataShowcase>;
+pub type PathWaypointVariantRace = PathWaypointVariant<PathWaypointDataRace>;
+pub type PathWaypointVariantRail = PathWaypointVariant<PathWaypointDataRail>;
 
 /// Common header for all paths
 #[derive(Debug)]
@@ -259,17 +259,18 @@ pub struct PathHeader {
 pub struct PathVariant<DataType, WaypointDataType> {
     pub header: PathHeader,
     pub path_data: DataType,
-    pub waypoints: Vec<PathWaypointVariant<WaypointDataType>>
+    pub waypoints: Vec<PathWaypointVariant<WaypointDataType>>,
 }
 
-pub type PathVariantMovement        = PathVariant<PathDataMovement,         PathWaypointDataMovement>;
-pub type PathVariantMovingPlatform  = PathVariant<PathDataMovingPlatform,   PathWaypointDataMovingPlatform>;
-pub type PathVariantProperty        = PathVariant<PathDataProperty,         PathWaypointDataProperty>;
-pub type PathVariantCamera          = PathVariant<PathDataCamera,           PathWaypointDataCamera>;
-pub type PathVariantSpawner         = PathVariant<PathDataSpawner,          PathWaypointDataSpawner>;
-pub type PathVariantShowcase        = PathVariant<PathDataShowcase,         PathWaypointDataShowcase>;
-pub type PathVariantRace            = PathVariant<PathDataRace,             PathWaypointDataRace>;
-pub type PathVariantRail            = PathVariant<PathDataRail,             PathWaypointDataRail>;
+pub type PathVariantMovement = PathVariant<PathDataMovement, PathWaypointDataMovement>;
+pub type PathVariantMovingPlatform =
+    PathVariant<PathDataMovingPlatform, PathWaypointDataMovingPlatform>;
+pub type PathVariantProperty = PathVariant<PathDataProperty, PathWaypointDataProperty>;
+pub type PathVariantCamera = PathVariant<PathDataCamera, PathWaypointDataCamera>;
+pub type PathVariantSpawner = PathVariant<PathDataSpawner, PathWaypointDataSpawner>;
+pub type PathVariantShowcase = PathVariant<PathDataShowcase, PathWaypointDataShowcase>;
+pub type PathVariantRace = PathVariant<PathDataRace, PathWaypointDataRace>;
+pub type PathVariantRail = PathVariant<PathDataRail, PathWaypointDataRail>;
 
 /// Enum of all path variants
 #[derive(Debug)]

@@ -4,14 +4,14 @@
 #[cfg(feature = "core")]
 pub use assembly_core as core;
 #[cfg(feature = "data")]
-pub use assembly_data::fdb as fdb;
+pub use assembly_data::fdb;
 #[cfg(feature = "maps")]
-pub use assembly_maps::luz as luz;
+pub use assembly_maps::luz;
 #[cfg(feature = "maps")]
-pub use assembly_maps::lvl as lvl;
+pub use assembly_maps::lvl;
 #[cfg(feature = "pack")]
-pub use assembly_pack::pk as pk;
+pub use assembly_pack::pk;
 #[cfg(feature = "pack")]
-pub use assembly_pack::pki as pki;
+pub use assembly_pack::pki;
 #[cfg(feature = "pack")]
-pub use assembly_pack::sd0 as sd0;
+pub use assembly_pack::sd0;

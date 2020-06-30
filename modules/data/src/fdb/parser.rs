@@ -1,9 +1,9 @@
-use assembly_core::nom::{
-    number::complete::{le_u32},
-    IResult,
-    named, named_args, do_parse, count, map, take,
-};
+//! The parsing of structures
+
 use super::file::*;
+use assembly_core::nom::{
+    count, do_parse, map, named, named_args, number::complete::le_u32, take, IResult,
+};
 use std::convert::TryInto;
 
 // Read a table definition header from a *.fdb file
@@ -32,11 +32,15 @@ named_args!(pub parse_bucket_header_list(i: usize)<FDBBucketHeaderList>,
     FDBBucketHeaderList::from)
 );
 
-named!(parse_column_header<FDBColumnHeader>,
+named!(
+    parse_column_header<FDBColumnHeader>,
     do_parse!(
-        column_data_type: le_u32 >>
-        column_name_addr: le_u32 >>
-        (FDBColumnHeader { column_data_type, column_name_addr })
+        column_data_type: le_u32
+            >> column_name_addr: le_u32
+            >> (FDBColumnHeader {
+                column_data_type,
+                column_name_addr
+            })
     )
 );
 
@@ -72,11 +76,15 @@ named_args!(pub parse_field_data_list(i: usize)<FDBFieldDataList>,
     map!(count!(parse_field_data, i), FDBFieldDataList::from)
 );
 
-named!(parse_table_header<FDBTableHeader>,
+named!(
+    parse_table_header<FDBTableHeader>,
     do_parse!(
-        table_def_header_addr: le_u32 >>
-        table_data_header_addr: le_u32 >>
-        (FDBTableHeader{ table_def_header_addr, table_data_header_addr })
+        table_def_header_addr: le_u32
+            >> table_data_header_addr: le_u32
+            >> (FDBTableHeader {
+                table_def_header_addr,
+                table_data_header_addr
+            })
     )
 );
 

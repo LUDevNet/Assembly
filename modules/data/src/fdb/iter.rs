@@ -1,6 +1,7 @@
-use super::core::{Field,Row,Bucket,Table};
+use super::core::{Bucket, Field, Row, Table};
+use std::{iter::FlatMap, slice::Iter as SliceIter, vec::IntoIter as VecIntoIter};
 
-pub type FieldVecIter = std::vec::IntoIter<Field>;
+pub type FieldVecIter = VecIntoIter<Field>;
 
 impl IntoIterator for Row {
     type Item = Field;
@@ -11,7 +12,7 @@ impl IntoIterator for Row {
     }
 }
 
-pub type FieldRefIter<'a> = std::slice::Iter<'a, Field>;
+pub type FieldRefIter<'a> = SliceIter<'a, Field>;
 
 impl<'a> IntoIterator for &'a Row {
     type Item = &'a Field;
@@ -22,8 +23,8 @@ impl<'a> IntoIterator for &'a Row {
     }
 }
 
-pub type RowVecIter = ::std::vec::IntoIter<Row>;
-pub type RowSliceIter<'a> = std::slice::Iter<'a, Row>;
+pub type RowVecIter = VecIntoIter<Row>;
+pub type RowSliceIter<'a> = SliceIter<'a, Row>;
 
 impl IntoIterator for Bucket {
     type Item = Row;
@@ -43,9 +44,9 @@ impl<'a> IntoIterator for &'a Bucket {
     }
 }
 
-pub type TableBucketIter = ::std::vec::IntoIter<Bucket>;
+pub type TableBucketIter = VecIntoIter<Bucket>;
 pub type BucketRowIterMapper = fn(Bucket) -> RowVecIter;
-pub type TableRowIter = ::std::iter::FlatMap<TableBucketIter,RowVecIter,BucketRowIterMapper>;
+pub type TableRowIter = FlatMap<TableBucketIter, RowVecIter, BucketRowIterMapper>;
 
 impl IntoIterator for Table {
     type Item = Row;
@@ -56,15 +57,18 @@ impl IntoIterator for Table {
     }
 }
 
-pub type TableBucketRefIter<'a> = std::slice::Iter<'a, Bucket>;
+pub type TableBucketRefIter<'a> = SliceIter<'a, Bucket>;
 pub type BucketRowRefIterMapper<'a> = fn(&'a Bucket) -> RowSliceIter<'a>;
-pub type TableRowRefIter<'a> = ::std::iter::FlatMap<TableBucketRefIter<'a>,RowSliceIter<'a>,BucketRowRefIterMapper<'a>>;
+pub type TableRowRefIter<'a> =
+    FlatMap<TableBucketRefIter<'a>, RowSliceIter<'a>, BucketRowRefIterMapper<'a>>;
 
 impl<'a> IntoIterator for &'a Table {
     type Item = &'a Row;
     type IntoIter = TableRowRefIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.buckets_ref().into_iter().flat_map(<(&Bucket)>::into_iter)
+        self.buckets_ref()
+            .into_iter()
+            .flat_map(<&Bucket>::into_iter)
     }
 }

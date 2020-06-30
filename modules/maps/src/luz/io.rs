@@ -1,11 +1,9 @@
-use std::{fs, io};
-use std::io::{Read};
-use std::convert::TryFrom;
 use super::core::ZoneFile;
 use super::parser;
-use assembly_core::nom::{
-    error::ErrorKind, Err as NomErr
-};
+use assembly_core::nom::{error::ErrorKind, Err as NomErr};
+use std::convert::TryFrom;
+use std::io::Read;
+use std::{fs, io};
 
 /// Error when loading a LUZ file
 #[derive(Debug)]
@@ -25,14 +23,17 @@ impl From<NomErr<(&[u8], ErrorKind)>> for LoadError {
         match e {
             // Need to translate the error here, as this lives longer than the input
             NomErr::Incomplete(_) => LoadError::Incomplete,
-            NomErr::Error((_,k)) => LoadError::ParseError(k),
-            NomErr::Failure((_,k)) => LoadError::ParseFailure(k),
+            NomErr::Error((_, k)) => LoadError::ParseError(k),
+            NomErr::Failure((_, k)) => LoadError::ParseFailure(k),
         }
     }
 }
 
 pub trait TryFromLUZ<T>
-where T: Read, Self: Sized {
+where
+    T: Read,
+    Self: Sized,
+{
     type Error;
 
     fn try_from_luz(buf: &mut T) -> Result<Self, Self::Error>;
@@ -57,14 +58,19 @@ impl TryFrom<fs::File> for ZoneFile {
 }
 
 impl<T> TryFromLUZ<T> for ZoneFile
-where T: Read {
+where
+    T: Read,
+{
     type Error = LoadError;
 
     fn try_from_luz(buf: &mut T) -> Result<Self, Self::Error> {
         let mut bytes: Vec<u8> = Vec::new();
         buf.read_to_end(&mut bytes)
             .map_err(LoadError::Read)
-            .and_then(|_| parser::parse_zone_file(&bytes)
-                .map_err(LoadError::from).map(|r| r.1))
+            .and_then(|_| {
+                parser::parse_zone_file(&bytes)
+                    .map_err(LoadError::from)
+                    .map(|r| r.1)
+            })
     }
 }

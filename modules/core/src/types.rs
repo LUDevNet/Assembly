@@ -8,14 +8,18 @@ pub struct Vector3f {
     pub z: f32,
 }
 
-impl From<[f32;3]> for Vector3f {
-    fn from(val: [f32;3]) -> Self {
-        Vector3f{x: val[0], y: val[1], z: val[2]}
+impl From<[f32; 3]> for Vector3f {
+    fn from(val: [f32; 3]) -> Self {
+        Vector3f {
+            x: val[0],
+            y: val[1],
+            z: val[2],
+        }
     }
 }
 
-impl Into<[f32;3]> for Vector3f {
-    fn into(self) -> [f32;3] {
+impl Into<[f32; 3]> for Vector3f {
+    fn into(self) -> [f32; 3] {
         [self.x, self.y, self.z]
     }
 }

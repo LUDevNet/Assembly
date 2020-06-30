@@ -1,22 +1,18 @@
-use std::convert::TryFrom;
 use assembly_core::nom::{
-    number::complete::{le_u8, le_u32, le_u64},
+    call,
     combinator::map,
-    IResult,
-    named, named_args, map, cond, call, do_parse,
-    length_count, count, take, switch, map_res, value,
+    cond, count, do_parse, length_count, map, map_res, named, named_args,
+    number::complete::{le_u32, le_u64, le_u8},
+    switch, take, value, IResult,
 };
+use std::convert::TryFrom;
 
-use assembly_core::parser::{
-    parse_world_id, parse_vec3f, parse_quat,
-    parse_u8_string,
-};
-use assembly_core::types::{Placement3D};
-use assembly_core::nom_ext::{count_2, count_5};
 use super::core::{
-    FileVersion, ZoneFile, SceneRef,
-    SceneTransition, SceneTransitionInfo, SceneTransitionPoint
+    FileVersion, SceneRef, SceneTransition, SceneTransitionInfo, SceneTransitionPoint, ZoneFile,
 };
+use assembly_core::nom_ext::{count_2, count_5};
+use assembly_core::parser::{parse_quat, parse_u8_string, parse_vec3f, parse_world_id};
+use assembly_core::types::Placement3D;
 
 named!(pub parse_file_version<FileVersion>,
     map!(le_u32, FileVersion::from)
@@ -39,31 +35,49 @@ named_args!(pub parse_scene_count(version: FileVersion)<usize>,
     )
 );
 
-named!(parse_scene_ref<SceneRef>,
+named!(
+    parse_scene_ref<SceneRef>,
     do_parse!(
-        file_name: parse_u8_string >>
-        id: le_u32 >>
-        layer: le_u32 >>
-        name: parse_u8_string >>
-        take!(3) >>
-        (SceneRef{ file_name, id, layer, name })
+        file_name: parse_u8_string
+            >> id: le_u32
+            >> layer: le_u32
+            >> name: parse_u8_string
+            >> take!(3)
+            >> (SceneRef {
+                file_name,
+                id,
+                layer,
+                name
+            })
     )
 );
 
-named!(parse_scene_transition_point<SceneTransitionPoint>,
+named!(
+    parse_scene_transition_point<SceneTransitionPoint>,
     do_parse!(
-        a: le_u64 >>
-        b: parse_vec3f >>
-        (SceneTransitionPoint{scene_id: a, point: b})
+        a: le_u64
+            >> b: parse_vec3f
+            >> (SceneTransitionPoint {
+                scene_id: a,
+                point: b
+            })
     )
 );
 
-fn parse_scene_transition_info<'a>(i: &'a [u8], version: FileVersion)
--> IResult<&'a [u8], SceneTransitionInfo> {
+fn parse_scene_transition_info<'a>(
+    i: &'a [u8],
+    version: FileVersion,
+) -> IResult<&'a [u8], SceneTransitionInfo> {
     if version.id() <= 0x21 || version.id() >= 0x27 {
-        map(count_2(parse_scene_transition_point), SceneTransitionInfo::from)(i)
+        map(
+            count_2(parse_scene_transition_point),
+            SceneTransitionInfo::from,
+        )(i)
     } else {
-        map(count_5(parse_scene_transition_point), SceneTransitionInfo::from)(i)
+        map(
+            count_5(parse_scene_transition_point),
+            SceneTransitionInfo::from,
+        )(i)
     }
 }
 
@@ -115,9 +129,24 @@ named!(pub parse_zone_file<ZoneFile>,
 
 #[test]
 fn test_parse() {
-    assert_eq!(parse_file_revision(&[20, 0, 0, 0], FileVersion::from(0x24)), Ok((&[][..], Some(20))));
-    assert_eq!(parse_file_revision(&[20, 0, 0, 0], FileVersion::from(0x23)), Ok((&[20,0,0,0][..], None)));
-    assert_eq!(parse_scene_count(&[20], FileVersion::from(0x24)), Ok((&[][..], 20)));
-    assert_eq!(parse_scene_count(&[20,0,0,0], FileVersion::from(0x25)), Ok((&[][..], 20)));
-    assert_eq!(parse_u8_string(&[2,65,66]), Ok((&[][..], String::from("AB"))));
+    assert_eq!(
+        parse_file_revision(&[20, 0, 0, 0], FileVersion::from(0x24)),
+        Ok((&[][..], Some(20)))
+    );
+    assert_eq!(
+        parse_file_revision(&[20, 0, 0, 0], FileVersion::from(0x23)),
+        Ok((&[20, 0, 0, 0][..], None))
+    );
+    assert_eq!(
+        parse_scene_count(&[20], FileVersion::from(0x24)),
+        Ok((&[][..], 20))
+    );
+    assert_eq!(
+        parse_scene_count(&[20, 0, 0, 0], FileVersion::from(0x25)),
+        Ok((&[][..], 20))
+    );
+    assert_eq!(
+        parse_u8_string(&[2, 65, 66]),
+        Ok((&[][..], String::from("AB")))
+    );
 }

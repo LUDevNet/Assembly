@@ -1,7 +1,7 @@
-use std::env;
-use assembly::pki::core::PackIndexFile;
-use assembly::pki::io::{LoadError};
+use assembly_pack::pki::core::PackIndexFile;
+use assembly_pack::pki::io::LoadError;
 use std::convert::TryFrom;
+use std::env;
 use std::num::TryFromIntError;
 
 #[derive(Debug)]
@@ -26,7 +26,7 @@ fn print_usage(program: &str) {
     println!("Usage: {} PATH CRC", program);
 }
 
-fn main() -> Result<(),MainError> {
+fn main() -> Result<(), MainError> {
     let args: Vec<String> = env::args().collect();
     let program = args[0].clone();
 
@@ -48,7 +48,7 @@ fn main() -> Result<(),MainError> {
                     }
                     None => println!("Pack ID {} out of bounds", pack_index),
                 }
-            },
+            }
             None => println!("File not found"),
         }
         Ok(())

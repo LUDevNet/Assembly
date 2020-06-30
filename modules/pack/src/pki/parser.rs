@@ -1,10 +1,9 @@
 use super::core::*;
 
-use assembly_core::parser::parse_u32_string;
 use assembly_core::nom::{
-    named, do_parse, tag, length_count, map_res, fold_many_m_n,
-    number::complete::le_u32,
+    do_parse, fold_many_m_n, length_count, map_res, named, number::complete::le_u32, tag,
 };
+use assembly_core::parser::parse_u32_string;
 
 use std::collections::BTreeMap;
 use std::convert::TryFrom;
@@ -20,26 +19,37 @@ struct FileRefData {
 }
 
 fn extend_map(mut map: BTreeMap<u32, FileRef>, data: FileRefData) -> BTreeMap<u32, FileRef> {
-    map.insert(data.filename_crc, FileRef{category: data.category, pack_file: data.pack_file});
+    map.insert(
+        data.filename_crc,
+        FileRef {
+            category: data.category,
+            pack_file: data.pack_file,
+        },
+    );
     map
 }
 
-named!(parse_file_ref<FileRefData>,
+named!(
+    parse_file_ref<FileRefData>,
     do_parse!(
-        filename_crc: le_u32 >>
-        left: le_u32 >>
-        right: le_u32 >>
-        pack_file: le_u32 >>
-        category: le_u32 >>
-        (FileRefData{filename_crc, left, right, pack_file, category})
+        filename_crc: le_u32
+            >> left: le_u32
+            >> right: le_u32
+            >> pack_file: le_u32
+            >> category: le_u32
+            >> (FileRefData {
+                filename_crc,
+                left,
+                right,
+                pack_file,
+                category
+            })
     )
 );
 
-named!(parse_pack_file_ref<PackFileRef>,
-    do_parse!(
-        path: parse_u32_string >>
-        (PackFileRef{path})
-    )
+named!(
+    parse_pack_file_ref<PackFileRef>,
+    do_parse!(path: parse_u32_string >> (PackFileRef { path }))
 );
 
 named!(pub parse_pki_file<PackIndexFile>,

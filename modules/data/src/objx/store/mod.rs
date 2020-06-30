@@ -17,9 +17,7 @@ pub struct Object {
 
 /// Buff Component
 #[derive(Default, Debug, PartialEq)]
-pub struct Buff {
-
-}
+pub struct Buff {}
 
 /// `dest`
 #[derive(Default, Debug, PartialEq)]

@@ -1,13 +1,16 @@
 //! # Parser methods for the general types
+use super::types::{ObjectID, ObjectTemplate, Quaternion, Vector3f, WorldID};
+//use encoding::{all::UTF_16LE, DecoderTrap, Encoding};
 use nom::number::complete::{le_f32, le_u32, le_u8};
 use num_traits::FromPrimitive;
-use encoding::{Encoding, DecoderTrap, all::UTF_16LE};
-use super::types::{Vector3f, Quaternion, WorldID, ObjectID, ObjectTemplate};
+use std::char::decode_utf16;
 
 // Helper method to dump some values
 #[allow(dead_code)]
 pub fn dump<T>(val: T) -> T
-where T: std::fmt::Debug {
+where
+    T: std::fmt::Debug,
+{
     println!("{:?}", val);
     val
 }
@@ -47,8 +50,15 @@ named!(pub parse_object_id<ObjectID>,
     )
 );
 
-fn map_wstring(val: &[u8]) -> Result<String,std::borrow::Cow<'static, str>> {
-    UTF_16LE.decode(val, DecoderTrap::Strict)
+fn map_wstring(val: &[u8]) -> Result<String, ()> {
+    //UTF_16LE.decode(val, DecoderTrap::Strict)
+    let iter = val.chunks_exact(2);
+    if let [] = iter.remainder() {
+        let iter = iter.map(|s| (s[0] as u16) + ((s[1] as u16) << 8));
+        decode_utf16(iter).map(|r| r.or(Err(()))).collect()
+    } else {
+        Err(())
+    }
 }
 
 named!(pub parse_u8_wstring<String>,
@@ -93,6 +103,9 @@ mod test {
 
     #[test]
     fn test_wstring() {
-        assert_eq!(parse_u8_wstring(&[2,65,0,66,0]), Ok((&[][..], String::from("AB"))));
+        assert_eq!(
+            parse_u8_wstring(&[2, 65, 0, 66, 0]),
+            Ok((&[][..], String::from("AB")))
+        );
     }
 }

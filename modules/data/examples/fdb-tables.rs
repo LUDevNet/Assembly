@@ -1,40 +1,11 @@
 extern crate getopts;
-use std::io::{BufReader, Error as IoError};
-use std::fs::File;
-use assembly_data::fdb::reader::{DatabaseReader, DatabaseBufReader};
-use assembly_data::fdb::builder::{BuildError};
-use assembly_core::reader::FileError;
-use prettytable::{Table as PTable, Row as PRow, Cell as PCell};
+use assembly_core::anyhow;
+use assembly_data::fdb::reader::{DatabaseBufReader, DatabaseReader};
 use getopts::Options;
-use std::env;
+use prettytable::{Cell as PCell, Row as PRow, Table as PTable};
+use std::{env, fs::File, io::BufReader};
 
-#[derive(Debug)]
-pub enum MainError {
-    Io(IoError),
-    Build(BuildError),
-    LowLevel(FileError),
-    TableNotFound,
-}
-
-impl From<IoError> for MainError {
-    fn from(e: IoError) -> Self {
-        MainError::Io(e)
-    }
-}
-
-impl From<BuildError> for MainError {
-    fn from(e: BuildError) -> Self {
-        MainError::Build(e)
-    }
-}
-
-impl From<FileError> for MainError {
-    fn from(e: FileError) -> Self {
-        MainError::LowLevel(e)
-    }
-}
-
-fn run(filename: &str) -> Result<(), MainError> {
+fn run(filename: &str) -> Result<(), anyhow::Error> {
     //println!("Loading tables... (this may take a while)");
     let file = File::open(filename)?;
     let mut loader = BufReader::new(file);
@@ -61,7 +32,7 @@ fn run(filename: &str) -> Result<(), MainError> {
                 output.add_row(PRow::new(fv));
 
                 count += 1;
-            },
+            }
             None => break,
         }
     }
@@ -77,15 +48,15 @@ fn print_usage(program: &str, opts: Options) {
     print!("{}", opts.usage(&brief));
 }
 
-pub fn main() -> Result<(), MainError> {
+pub fn main() -> Result<(), anyhow::Error> {
     let args: Vec<String> = env::args().collect();
     let program = args[0].clone();
 
     let mut opts = Options::new();
     opts.optflag("h", "help", "print this help menu");
     let matches = match opts.parse(&args[1..]) {
-        Ok(m) => { m }
-        Err(f) => { panic!(f.to_string()) }
+        Ok(m) => m,
+        Err(f) => panic!(f.to_string()),
     };
     if matches.opt_present("h") {
         print_usage(&program, opts);

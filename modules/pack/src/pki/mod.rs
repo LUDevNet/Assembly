@@ -5,5 +5,5 @@
 //! a specific file resides in.
 
 pub mod core;
-pub mod parser;
 pub mod io;
+pub mod parser;

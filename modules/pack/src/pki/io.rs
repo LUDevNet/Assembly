@@ -1,11 +1,11 @@
-use std::fs::File;
-use std::io::{Error as IoError, BufReader, Read};
 use std::convert::TryFrom;
+use std::fs::File;
+use std::io::{BufReader, Error as IoError, Read};
 
 use super::core::PackIndexFile;
 use super::parser;
 
-use assembly_core::nom::{Err as NomErr, error::ErrorKind};
+use assembly_core::nom::{error::ErrorKind, Err as NomErr};
 
 #[derive(Debug)]
 pub enum LoadError {
@@ -24,8 +24,8 @@ impl From<NomErr<(&[u8], ErrorKind)>> for LoadError {
         match e {
             // Need to translate the error here, as this lives longer than the input
             NomErr::Incomplete(_) => LoadError::Incomplete,
-            NomErr::Error((_,k)) => LoadError::ParseError(k),
-            NomErr::Failure((_,k)) => LoadError::ParseFailure(k),
+            NomErr::Error((_, k)) => LoadError::ParseError(k),
+            NomErr::Failure((_, k)) => LoadError::ParseFailure(k),
         }
     }
 }

@@ -1,19 +1,16 @@
-use std::collections::HashMap;
-use std::convert::TryFrom;
+use super::core::*;
 use assembly_core::nom::{
+    call, cond, do_parse, fold_many_m_n, length_count, map_opt, map_res, named, named_args,
     number::complete::{le_f32, le_u32, le_u8},
-    IResult,
-    named, named_args, map_opt, do_parse, value,
-    length_count, call, cond, map_res, pair, fold_many_m_n,
+    pair, value, IResult,
+};
+use assembly_core::parser::{
+    parse_object_id, parse_object_template, parse_quat, parse_u32_wstring, parse_u8_bool,
+    parse_u8_wstring, parse_vec3f, parse_world_id,
 };
 use num_traits::FromPrimitive;
-use assembly_core::parser::{
-    parse_u8_wstring, parse_u32_wstring,
-    parse_u8_bool,
-    parse_world_id, parse_object_id, parse_object_template,
-    parse_vec3f, parse_quat,
-};
-use super::core::*;
+use std::collections::HashMap;
+use std::convert::TryFrom;
 
 named!(pub parse_zone_paths_version<ZonePathsVersion>,
     map_opt!(le_u32, ZonePathsVersion::from_u32)
@@ -209,11 +206,12 @@ named!(pub parse_path_waypoint_data_rail<PathWaypointDataRail>,
     )
 );
 
-named!(parse_path_waypoint_variant_movement<PathWaypointVariantMovement>,
+named!(
+    parse_path_waypoint_variant_movement<PathWaypointVariantMovement>,
     do_parse!(
-        position: parse_vec3f >>
-        data: parse_path_waypoint_data_movement >>
-        (PathWaypointVariantMovement{position, data})
+        position: parse_vec3f
+            >> data: parse_path_waypoint_data_movement
+            >> (PathWaypointVariantMovement { position, data })
     )
 );
 
@@ -245,11 +243,12 @@ named_args!(parse_path_variant_moving_platform(header: PathHeader)<PathVariantMo
     )
 );
 
-named!(parse_path_waypoint_variant_property<PathWaypointVariantProperty>,
+named!(
+    parse_path_waypoint_variant_property<PathWaypointVariantProperty>,
     do_parse!(
-        position: parse_vec3f >>
-        data: parse_path_waypoint_data_property >>
-        (PathWaypointVariantProperty{position, data})
+        position: parse_vec3f
+            >> data: parse_path_waypoint_data_property
+            >> (PathWaypointVariantProperty { position, data })
     )
 );
 
@@ -263,11 +262,12 @@ named_args!(parse_path_variant_property(header: PathHeader)<PathVariantProperty>
     )
 );
 
-named!(parse_path_waypoint_variant_camera<PathWaypointVariantCamera>,
+named!(
+    parse_path_waypoint_variant_camera<PathWaypointVariantCamera>,
     do_parse!(
-        position: parse_vec3f >>
-        data: parse_path_waypoint_data_camera >>
-        (PathWaypointVariantCamera{position, data})
+        position: parse_vec3f
+            >> data: parse_path_waypoint_data_camera
+            >> (PathWaypointVariantCamera { position, data })
     )
 );
 
@@ -281,11 +281,12 @@ named_args!(parse_path_variant_camera(header: PathHeader)<PathVariantCamera>,
     )
 );
 
-named!(parse_path_waypoint_variant_spawner<PathWaypointVariantSpawner>,
+named!(
+    parse_path_waypoint_variant_spawner<PathWaypointVariantSpawner>,
     do_parse!(
-        position: parse_vec3f >>
-        data: parse_path_waypoint_data_spawner >>
-        (PathWaypointVariantSpawner{position, data})
+        position: parse_vec3f
+            >> data: parse_path_waypoint_data_spawner
+            >> (PathWaypointVariantSpawner { position, data })
     )
 );
 
@@ -299,11 +300,12 @@ named_args!(parse_path_variant_spawner(header: PathHeader)<PathVariantSpawner>,
     )
 );
 
-named!(parse_path_waypoint_variant_showcase<PathWaypointVariantShowcase>,
+named!(
+    parse_path_waypoint_variant_showcase<PathWaypointVariantShowcase>,
     do_parse!(
-        position: parse_vec3f >>
-        data: parse_path_waypoint_data_showcase >>
-        (PathWaypointVariantShowcase{position, data})
+        position: parse_vec3f
+            >> data: parse_path_waypoint_data_showcase
+            >> (PathWaypointVariantShowcase { position, data })
     )
 );
 
@@ -317,11 +319,12 @@ named_args!(parse_path_variant_showcase(header: PathHeader)<PathVariantShowcase>
     )
 );
 
-named!(parse_path_waypoint_variant_race<PathWaypointVariantRace>,
+named!(
+    parse_path_waypoint_variant_race<PathWaypointVariantRace>,
     do_parse!(
-        position: parse_vec3f >>
-        data: parse_path_waypoint_data_race >>
-        (PathWaypointVariantRace{position, data})
+        position: parse_vec3f
+            >> data: parse_path_waypoint_data_race
+            >> (PathWaypointVariantRace { position, data })
     )
 );
 
@@ -335,11 +338,12 @@ named_args!(parse_path_variant_race(header: PathHeader)<PathVariantRace>,
     )
 );
 
-named!(parse_path_waypoint_variant_rail<PathWaypointVariantRail>,
+named!(
+    parse_path_waypoint_variant_rail<PathWaypointVariantRail>,
     do_parse!(
-        position: parse_vec3f >>
-        data: parse_path_waypoint_data_rail >>
-        (PathWaypointVariantRail{position, data})
+        position: parse_vec3f
+            >> data: parse_path_waypoint_data_rail
+            >> (PathWaypointVariantRail { position, data })
     )
 );
 
@@ -358,35 +362,35 @@ fn parse_path_data(inp: &[u8], path_type: PathType, header: PathHeader) -> IResu
         PathType::Movement => {
             let (inp, var) = parse_path_variant_movement(inp, header)?;
             Ok((inp, Path::Movement(var)))
-        },
+        }
         PathType::MovingPlatform => {
             let (inp, var) = parse_path_variant_moving_platform(inp, header)?;
             Ok((inp, Path::MovingPlatform(var)))
-        },
+        }
         PathType::Property => {
             let (inp, var) = parse_path_variant_property(inp, header)?;
             Ok((inp, Path::Property(var)))
-        },
+        }
         PathType::Camera => {
             let (inp, var) = parse_path_variant_camera(inp, header)?;
             Ok((inp, Path::Camera(var)))
-        },
+        }
         PathType::Spawner => {
             let (inp, var) = parse_path_variant_spawner(inp, header)?;
             Ok((inp, Path::Spawner(var)))
-        },
+        }
         PathType::Showcase => {
             let (inp, var) = parse_path_variant_showcase(inp, header)?;
             Ok((inp, Path::Showcase(var)))
-        },
+        }
         PathType::Race => {
             let (inp, var) = parse_path_variant_race(inp, header)?;
             Ok((inp, Path::Race(var)))
-        },
+        }
         PathType::Rail => {
             let (inp, var) = parse_path_variant_rail(inp, header)?;
             Ok((inp, Path::Rail(var)))
-        },
+        }
     }
 }
 
@@ -407,7 +411,10 @@ named!(pub parse_waypoint_config_entry<(String, String)>,
     pair!(parse_u8_wstring, parse_u8_wstring)
 );
 
-fn extend_config_map(mut map: HashMap<String,String>, entry: (String,String)) -> HashMap<String,String> {
+fn extend_config_map(
+    mut map: HashMap<String, String>,
+    entry: (String, String),
+) -> HashMap<String, String> {
     map.insert(entry.0, entry.1);
     map
 }

@@ -1,6 +1,7 @@
+use assembly_pack::pki::{core::PackIndexFile, io::LoadError};
 use getopts::Options;
-use assembly::pki::{io::LoadError, core::PackIndexFile};
 use std::convert::TryFrom;
+use std::env;
 
 #[derive(Debug)]
 pub enum MainError {
@@ -26,8 +27,8 @@ fn main() -> Result<(), MainError> {
     opts.optflag("h", "help", "print this help menu");
     opts.optflag("p", "pack-files", "print all pack files");
     let matches = match opts.parse(&args[1..]) {
-        Ok(m) => { m }
-        Err(f) => { panic!(f.to_string()) }
+        Ok(m) => m,
+        Err(f) => panic!(f.to_string()),
     };
     if matches.opt_present("h") {
         print_usage(&program, opts);

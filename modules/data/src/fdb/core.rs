@@ -20,7 +20,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 /// Value datatypes used in the database
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ValueType {
     /// The NULL value
     Nothing,
@@ -184,7 +184,10 @@ pub struct Column {
 
 impl From<(&str, ValueType)> for Column {
     fn from(data: (&str, ValueType)) -> Self {
-        Column { name: String::from(data.0), field_type: data.1 }
+        Column {
+            name: String::from(data.0),
+            field_type: data.1,
+        }
     }
 }
 
@@ -201,7 +204,9 @@ pub struct TableData {
 
 impl TableData {
     pub fn new() -> Self {
-        TableData{buckets: Vec::new()}
+        TableData {
+            buckets: Vec::new(),
+        }
     }
 }
 

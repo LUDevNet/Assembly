@@ -1,42 +1,15 @@
-extern crate getopts;
-use std::io::{BufReader, Error as IoError};
-use std::fs::File;
-use assembly::fdb::core::{Field};
-use assembly::fdb::io::{SchemaLoader, LoaderConfigImpl, LoadError};
-use assembly::fdb::sysdiagram::core::SysDiagram;
-use assembly::fdb::sysdiagram::io::LoadError as SysDiagramError;
-use std::convert::TryFrom;
+//extern crate getopts;
+use assembly_core::anyhow::{self, anyhow, Context};
+use assembly_data::fdb::core::Field;
+use assembly_data::fdb::io::{LoaderConfigImpl, SchemaLoader};
+use assembly_sysdiagram::core::SysDiagram;
 use getopts::Options;
+use std::convert::TryFrom;
 use std::env;
+use std::fs::File;
+use std::io::BufReader;
 
-
-#[derive(Debug)]
-pub enum MainError {
-    Io(IoError),
-    Load(LoadError),
-    SysDiagram(SysDiagramError),
-    TableNotFound,
-}
-
-impl From<IoError> for MainError {
-    fn from(e: IoError) -> Self {
-        MainError::Io(e)
-    }
-}
-
-impl From<LoadError> for MainError {
-    fn from(e: LoadError) -> Self {
-        MainError::Load(e)
-    }
-}
-
-impl From<SysDiagramError> for MainError {
-    fn from(e: SysDiagramError) -> Self {
-        MainError::SysDiagram(e)
-    }
-}
-
-fn load_database(filename: &str) -> Result<(), MainError> {
+fn load_database(filename: &str) -> Result<(), anyhow::Error> {
     println!("Loading tables... (this may take a while)");
     let file = File::open(filename)?;
     let mut reader = BufReader::new(file);
@@ -61,13 +34,13 @@ fn load_database(filename: &str) -> Result<(), MainError> {
                         for (key, value) in sysdiagram.dsref_schema_contents.settings.iter() {
                             println!("{:25}: {}", key, value);
                         }
-                    },
+                    }
                     data => println!("Wrong data: {:?}", data),
                 }
             }
             Ok(())
-        },
-        None => Err(MainError::TableNotFound),
+        }
+        None => Err(anyhow!("Table not found!")),
     }
 }
 
@@ -76,15 +49,15 @@ fn print_usage(program: &str, opts: Options) {
     print!("{}", opts.usage(&brief));
 }
 
-pub fn main() -> Result<(), MainError> {
+pub fn main() -> Result<(), anyhow::Error> {
     let args: Vec<String> = env::args().collect();
     let program = args[0].clone();
 
     let mut opts = Options::new();
     opts.optflag("h", "help", "print this help menu");
     let matches = match opts.parse(&args[1..]) {
-        Ok(m) => { m }
-        Err(f) => { panic!(f.to_string()) }
+        Ok(m) => m,
+        Err(f) => panic!(f.to_string()),
     };
     if matches.opt_present("h") {
         print_usage(&program, opts);
@@ -96,5 +69,5 @@ pub fn main() -> Result<(), MainError> {
         print_usage(&program, opts);
         return Ok(());
     };
-    load_database(&input)
+    load_database(&input).with_context(|| "Loading database failed!")
 }

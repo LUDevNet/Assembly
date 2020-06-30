@@ -50,6 +50,4 @@ pub struct FileMetaChunkData {
 pub type FileMetaChunk = Chunk<FileMetaChunkData>;
 
 #[derive(Debug)]
-pub struct Chunk2000Data {
-
-}
+pub struct Chunk2000Data {}

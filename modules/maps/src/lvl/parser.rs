@@ -1,8 +1,9 @@
 //! # Parsers for the data
 use super::file::*;
 use assembly_core::nom::{
+    do_parse, named,
     number::complete::{le_u16, le_u32},
-    named, do_parse, tag
+    tag,
 };
 
 named!(pub parse_chunk_version<ChunkVersion>,

@@ -1,7 +1,7 @@
 //! ## Query the database
+use super::core::{Field, ValueType};
 use hsieh_hash::digest;
-use super::core::{ValueType, Field};
-
+use thiserror::Error;
 
 pub struct PrimaryKeyFilter {
     hash_value: u32,
@@ -18,25 +18,33 @@ impl PrimaryKeyFilter {
     }
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum PKFilterError {
+    #[error("Unsupported Type {0:?}")]
     UnsupportedType(ValueType),
+    #[error("Key Error")]
     KeyError(std::num::ParseIntError),
 }
 
 pub fn text_pk_filter(key: String) -> Result<PrimaryKeyFilter, PKFilterError> {
     let hash_value = digest(key.as_bytes());
     let value = Field::Text(key);
-    Ok(PrimaryKeyFilter{hash_value, value})
+    Ok(PrimaryKeyFilter { hash_value, value })
 }
 
 pub fn integer_pk_filter(key: String) -> Result<PrimaryKeyFilter, PKFilterError> {
     let value: i32 = key.parse().map_err(PKFilterError::KeyError)?;
     let hash_value = u32::from_ne_bytes(value.to_ne_bytes());
-    Ok(PrimaryKeyFilter{hash_value, value: Field::Integer(value)})
+    Ok(PrimaryKeyFilter {
+        hash_value,
+        value: Field::Integer(value),
+    })
 }
 
-pub fn pk_filter<T: Into<String>>(key: T, field_type: ValueType) -> Result<PrimaryKeyFilter, PKFilterError> {
+pub fn pk_filter<T: Into<String>>(
+    key: T,
+    field_type: ValueType,
+) -> Result<PrimaryKeyFilter, PKFilterError> {
     match field_type {
         ValueType::Text => text_pk_filter(key.into()),
         ValueType::Integer => integer_pk_filter(key.into()),
