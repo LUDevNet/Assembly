@@ -216,3 +216,14 @@ impl IntoIterator for FDBFieldDataList {
         self.0.into_iter()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::mem;
+
+    #[test]
+    fn test_align() {
+        assert_eq!(mem::align_of::<FDBHeader>(), 4);
+    }
+}

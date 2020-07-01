@@ -4,7 +4,9 @@ use std::borrow::{Borrow, BorrowMut};
 /// An enum that provides a mutable reference by either owning or
 /// borrowing a struct (Own or Mutable)
 pub enum Oom<'a, T> {
+    /// An owned reference to T
     Own(T),
+    /// A mutable reference to T
     Mut(&'a mut T),
 }
 

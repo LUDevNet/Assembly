@@ -129,6 +129,8 @@ named!(pub parse_zone_file<ZoneFile>,
 
 #[test]
 fn test_parse() {
+    use assembly_core::nom::error::ErrorKind;
+
     assert_eq!(
         parse_file_revision(&[20, 0, 0, 0], FileVersion::from(0x24)),
         Ok((&[][..], Some(20)))
@@ -146,7 +148,7 @@ fn test_parse() {
         Ok((&[][..], 20))
     );
     assert_eq!(
-        parse_u8_string(&[2, 65, 66]),
+        parse_u8_string::<(&[u8], ErrorKind)>(&[2, 65, 66]),
         Ok((&[][..], String::from("AB")))
     );
 }

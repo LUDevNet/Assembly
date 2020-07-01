@@ -1,10 +1,14 @@
 //! # The general types used all over the place
+use derive_new::new;
 
 /// Position in three dimensional space
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, new)]
 pub struct Vector3f {
+    /// The X coordinate
     pub x: f32,
+    /// The Y coordinate
     pub y: f32,
+    /// The Z coordinate
     pub z: f32,
 }
 
@@ -25,18 +29,24 @@ impl Into<[f32; 3]> for Vector3f {
 }
 
 /// Rotation in three dimensional space
-#[derive(Debug)]
+#[derive(Debug, new)]
 pub struct Quaternion {
+    /// The X component
     pub x: f32,
+    /// The Y component
     pub y: f32,
+    /// The Z component
     pub z: f32,
+    /// The W component
     pub w: f32,
 }
 
 /// Position and rotation in three dimensional space
 #[derive(Debug)]
 pub struct Placement3D {
+    /// The position
     pub pos: Vector3f,
+    /// The rotation
     pub rot: Quaternion,
 }
 
@@ -49,9 +59,11 @@ pub struct WorldID(u32);
 pub struct ObjectTemplate(u32);
 
 /// Object ID
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, new)]
 pub struct ObjectID {
+    /// The bitmask for the scope of this object
     pub scope: u32,
+    /// The serial ID of this object
     pub id: u32,
 }
 

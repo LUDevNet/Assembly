@@ -11,8 +11,6 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum BufferError {
-    //#[error("index out of bounds {0}")]
-    //OutOfBounds(#[from] io::Error),
     #[error("index out of bounds {}..{}", .0.start, .0.end)]
     OutOfBounds(Range<usize>),
 }

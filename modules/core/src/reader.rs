@@ -4,6 +4,7 @@ use nom::{error::ErrorKind, Err as NomError};
 use std::{error::Error, io::Error as IoError, num::TryFromIntError};
 use thiserror::Error;
 
+/// Error when parsing a file
 #[derive(Debug, Display)]
 pub enum FileError {
     /// Read Error {0:?}
@@ -39,12 +40,16 @@ impl From<NomError<(&[u8], ErrorKind)>> for FileError {
     }
 }
 
+/// Nom error
 #[derive(Debug, Error)]
 pub enum ParseError {
+    /// Parsing was not successful
     #[error("Error at -{0}, {1:?}")]
     Error(usize, ErrorKind),
+    /// A parse was recognized but invalid
     #[error("Failure at -{0}, {1:?}")]
     Failure(usize, ErrorKind),
+    /// Needs more data
     #[error("Incomplete")]
     Incomplete,
 }
@@ -60,10 +65,5 @@ impl From<NomError<(&[u8], ErrorKind)>> for ParseError {
     }
 }
 
-/*impl From<Cow<'_, str>> for FileError {
-    fn from(e: Cow<'_, str>) -> Self {
-        FileError::StringEncoding(String::from(e))
-    }
-}*/
-
+/// Result when parsing a file
 pub type FileResult<T> = Result<T, anyhow::Error>;

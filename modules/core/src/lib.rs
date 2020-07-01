@@ -1,8 +1,10 @@
 //! # Common datastructures and methods
 //!
 //! This module implements core traits for this library
+#![warn(missing_docs)]
 
 pub mod borrow;
+pub mod buffer;
 #[doc(hidden)]
 pub mod nom_ext;
 pub mod parser;
@@ -13,7 +15,6 @@ pub mod types;
 #[doc(hidden)]
 pub extern crate num_derive;
 #[doc(hidden)]
-#[macro_use]
 pub extern crate nom;
 #[doc(hidden)]
 pub use anyhow;
