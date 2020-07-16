@@ -1,6 +1,5 @@
 use anyhow::Error;
-use assembly_core::buffer::Unaligned;
-use assembly_data::fdb::de::align::FDBHeaderC;
+use assembly_data::fdb::align::{Database, Tables};
 use memmap::Mmap;
 use std::{fs::File, path::PathBuf, time::Instant};
 use structopt::StructOpt;
@@ -18,8 +17,14 @@ fn main() -> Result<(), Error> {
     let mmap = unsafe { Mmap::map(&file)? };
     let buffer: &[u8] = &mmap;
 
-    let header = FDBHeaderC::cast(buffer, 0);
-    println!("#Tables: {}", header.table_count());
+    let db = Database::new(buffer);
+    let tables: Tables<'_> = db.tables();
+    println!("#Tables: {}", tables.len());
+
+    for table in tables.iter() {
+        let name = table.name();
+        println!("{}", name);
+    }
 
     let duration = start.elapsed();
     println!(

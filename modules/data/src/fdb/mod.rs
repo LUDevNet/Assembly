@@ -15,6 +15,7 @@
 //! }
 //! ```
 
+pub mod align;
 pub mod builder;
 pub mod core;
 pub mod de;
