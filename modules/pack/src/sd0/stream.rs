@@ -165,7 +165,7 @@ where
                 Ok(Some(mut decoder)) => {
                     let next_read_len = decoder.read(buf)?;
                     // Store the new decoder
-                    std::mem::replace(&mut self.decoder, Some(decoder));
+                    self.decoder = Some(decoder);
                     // Returned `next_read_len` bytes from the next chunk
                     Ok(next_read_len)
                 }
