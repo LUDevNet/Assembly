@@ -3,6 +3,9 @@
 //! This module implements core traits for this library
 #![warn(missing_docs)]
 
+use anyhow::Result;
+use std::time::Instant;
+
 pub mod borrow;
 pub mod buffer;
 #[doc(hidden)]
@@ -26,3 +29,22 @@ pub use displaydoc;
 //pub use encoding;
 #[doc(hidden)]
 pub use num_traits;
+
+/// Run the function `run` and print the how much time the execution took.
+pub fn time<F>(run: F) -> Result<()>
+where
+    F: FnOnce() -> Result<()>,
+{
+    let start = Instant::now();
+    let res = run();
+    let duration = start.elapsed();
+
+    println!(
+        "{} in {}.{}s",
+        if res.is_ok() { "Finished" } else { "Failed" },
+        duration.as_secs(),
+        duration.subsec_millis(),
+    );
+
+    return res;
+}

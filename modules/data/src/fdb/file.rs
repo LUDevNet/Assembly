@@ -110,6 +110,18 @@ impl FDBFieldData {
     pub const BYTE_COUNT: usize = 8;
 }
 
+/// A database field value repr
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum FDBFieldValue {
+    Nothing,
+    Integer(i32),
+    Float(f32),
+    Text { addr: u32 },
+    Boolean(bool),
+    BigInt { addr: u32 },
+    VarChar { addr: u32 },
+}
+
 #[derive(Debug)]
 pub struct FDBTableHeaderList(pub Vec<FDBTableHeader>);
 

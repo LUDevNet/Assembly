@@ -11,39 +11,7 @@ use std::convert::TryFrom;
 use std::fs;
 use std::io::{BufRead, BufReader, Seek};
 
-/*#[derive(Debug)]
-pub enum LoadError {
-    Io(io::Error),
-    Seek(io::Error),
-    Read(io::Error),
-    StringEncoding(String),
-    Count(std::num::TryFromIntError),
-    File(FileError),
-    UnknownType(u32),
-    Incomplete,
-    ParseError,
-    ParseFailure,
-    NotImplemented,
-}*/
-
 type LoadResult<A> = Result<A, Error>;
-
-/*impl From<NomErr<&[u8]>> for LoadError {
-    fn from(e: NomErr<&[u8]>) -> LoadError {
-        match e {
-            // Need to translate the error here, as this lives longer than the input
-            NomErr::Incomplete(_) => LoadError::Incomplete,
-            NomErr::Error(_) => LoadError::ParseError,
-            NomErr::Failure(_) => LoadError::ParseFailure,
-        }
-    }
-}*/
-
-/*impl From<FileError> for LoadError {
-    fn from(e: FileError) -> LoadError {
-        LoadError::File(e)
-    }
-}*/
 
 pub trait LoaderConfig {
     fn load_table_data(&self, def: &TableDef) -> bool;
@@ -101,10 +69,7 @@ where
 {
     /// Create a new loader from the given reader
     pub fn open(inner: &'a mut T, config: C) -> Self {
-        Self {
-            inner: inner,
-            config,
-        }
+        Self { inner, config }
     }
 
     /// Try to load a row

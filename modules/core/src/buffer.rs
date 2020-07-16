@@ -50,6 +50,10 @@ pub struct LEU16([u8; 2]);
 #[repr(C, align(1))]
 pub struct LEU32([u8; 4]);
 
+/// little-endian u64
+#[repr(C, align(1))]
+pub struct LEI64([u8; 8]);
+
 unsafe impl Unaligned for LEU16 {
     type Value = u16;
     fn extract(&self) -> Self::Value {
@@ -61,6 +65,13 @@ unsafe impl Unaligned for LEU32 {
     type Value = u32;
     fn extract(&self) -> Self::Value {
         u32::from_le_bytes(self.0)
+    }
+}
+
+unsafe impl Unaligned for LEI64 {
+    type Value = i64;
+    fn extract(&self) -> Self::Value {
+        i64::from_le_bytes(self.0)
     }
 }
 

@@ -1,6 +1,7 @@
+use crate::fdb::core::ValueType;
 use crate::fdb::file::{
-    FDBBucketHeader, FDBColumnHeader, FDBHeader, FDBTableDataHeader, FDBTableDefHeader,
-    FDBTableHeader,
+    FDBBucketHeader, FDBColumnHeader, FDBFieldValue, FDBHeader, FDBRowHeader,
+    FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
 };
 use assembly_core::buffer::{Unaligned, LEU32};
 
@@ -71,16 +72,6 @@ pub struct FDBFieldDataC {
     pub(super) value: FDBFieldValueC,
 }
 
-impl FDBHeaderC {
-    pub fn table_count(&self) -> u32 {
-        self.table_count.extract()
-    }
-
-    pub fn table_header_list_addr(&self) -> u32 {
-        self.table_header_list_addr.extract()
-    }
-}
-
 unsafe impl Unaligned for FDBHeaderC {
     type Value = FDBHeader;
     fn extract(&self) -> Self::Value {
@@ -137,6 +128,49 @@ unsafe impl Unaligned for FDBBucketHeaderC {
     fn extract(&self) -> Self::Value {
         FDBBucketHeader {
             row_header_list_head_addr: self.row_header_list_head_addr.extract(),
+        }
+    }
+}
+
+unsafe impl Unaligned for FDBRowHeaderListEntryC {
+    type Value = FDBRowHeaderListEntry;
+    fn extract(&self) -> Self::Value {
+        FDBRowHeaderListEntry {
+            row_header_addr: self.row_header_addr.extract(),
+            row_header_list_next_addr: self.row_header_list_next_addr.extract(),
+        }
+    }
+}
+
+unsafe impl Unaligned for FDBRowHeaderC {
+    type Value = FDBRowHeader;
+    fn extract(&self) -> Self::Value {
+        FDBRowHeader {
+            field_count: self.field_count.extract(),
+            field_data_list_addr: self.field_data_list_addr.extract(),
+        }
+    }
+}
+
+unsafe impl Unaligned for FDBFieldDataC {
+    type Value = FDBFieldValue;
+    fn extract(&self) -> Self::Value {
+        let data_type = ValueType::from(self.data_type.extract());
+        match data_type {
+            ValueType::Nothing => FDBFieldValue::Nothing,
+            ValueType::Integer => FDBFieldValue::Integer(i32::from_le_bytes(self.value.0)),
+            ValueType::Float => FDBFieldValue::Float(f32::from_le_bytes(self.value.0)),
+            ValueType::Text => FDBFieldValue::Text {
+                addr: u32::from_le_bytes(self.value.0),
+            },
+            ValueType::Boolean => FDBFieldValue::Boolean(self.value.0 != [0, 0, 0, 0]),
+            ValueType::BigInt => FDBFieldValue::BigInt {
+                addr: u32::from_le_bytes(self.value.0),
+            },
+            ValueType::VarChar => FDBFieldValue::VarChar {
+                addr: u32::from_le_bytes(self.value.0),
+            },
+            ValueType::Unknown(i) => unimplemented!("Cannot read unknown value type {}", i),
         }
     }
 }

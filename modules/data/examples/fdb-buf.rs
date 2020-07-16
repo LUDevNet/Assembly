@@ -22,8 +22,22 @@ fn main() -> Result<(), Error> {
     println!("#Tables: {}", tables.len());
 
     for table in tables.iter() {
-        let name = table.name();
-        println!("{}", name);
+        let table_name = table.name();
+        println!("{}", table_name);
+
+        for column in table.column_iter() {
+            let name = column.name();
+            println!("- {}: {:?}", name, column.value_type());
+        }
+
+        for bucket in table.bucket_iter() {
+            print!("|");
+            for row in bucket.row_iter() {
+                print!(".");
+            }
+        }
+
+        println!("# {}", table.bucket_count());
     }
 
     let duration = start.elapsed();
