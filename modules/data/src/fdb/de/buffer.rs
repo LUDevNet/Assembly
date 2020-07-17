@@ -1,6 +1,7 @@
 use super::slice::Latin1Str;
 use crate::fdb::file::{
     FDBHeader, FDBRowHeader, FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader,
+    FDBTableHeader,
 };
 use std::{
     convert::TryInto,
@@ -13,6 +14,8 @@ use thiserror::Error;
 pub enum BufferError {
     #[error("index out of bounds {}..{}", .0.start, .0.end)]
     OutOfBounds(Range<usize>),
+    #[error("index not aligned {}", .0)]
+    Unaligned(usize),
 }
 
 #[derive(Copy, Clone)]
@@ -31,6 +34,73 @@ impl<'a> Deref for Buffer<'a> {
 impl<'a> Buffer<'a> {
     pub fn new(buf: &'a [u8]) -> Self {
         Self(buf)
+    }
+
+    /// Get a reference to a type at the given address of this buffer
+    ///
+    /// This functions checks whether the offset and alignment is valid
+    pub fn get_at<T>(self, addr: usize) -> Res<&'a T> {
+        let base = self.0.as_ptr();
+        let len = self.0.len();
+        let size = std::mem::size_of::<T>();
+        let align = std::mem::align_of::<T>();
+
+        if let Some(needed) = addr.checked_add(size) {
+            if needed <= len {
+                let start = unsafe { base.add(addr) };
+                if 0 == start.align_offset(align) {
+                    Ok(unsafe { &*(start as *const T) })
+                } else {
+                    Err(BufferError::Unaligned(addr))
+                }
+            } else {
+                Err(BufferError::OutOfBounds(addr..needed))
+            }
+        } else {
+            Err(BufferError::OutOfBounds(addr..len))
+        }
+    }
+
+    /// Get a reference to a slice at the given address of this buffer
+    ///
+    /// This functions checks whether the offset and alignment is valid
+    pub fn get_slice_at<T>(self, addr: usize, count: usize) -> Res<&'a [T]> {
+        let base = self.0.as_ptr();
+        let len = self.0.len();
+        let size = std::mem::size_of::<T>();
+        let align = std::mem::align_of::<T>();
+
+        if let Some(slice_bytes) = size.checked_mul(count) {
+            if let Some(needed) = addr.checked_add(slice_bytes) {
+                if needed <= len {
+                    let start = unsafe { base.add(addr) };
+                    if 0 == start.align_offset(align) {
+                        Ok(unsafe { &*(std::ptr::slice_from_raw_parts(start as *const T, count)) })
+                    } else {
+                        Err(BufferError::Unaligned(addr))
+                    }
+                } else {
+                    Err(BufferError::OutOfBounds(addr..needed))
+                }
+            } else {
+                Err(BufferError::OutOfBounds(addr..len))
+            }
+        } else {
+            Err(BufferError::OutOfBounds(addr..len))
+        }
+    }
+
+    /// Get the database header
+    pub fn header_ref(self) -> Res<&'a FDBHeader> {
+        self.get_at(0)
+    }
+
+    /// Get the table slice
+    pub fn table_headers(self, header: &'a FDBHeader) -> Res<&'a [FDBTableHeader]> {
+        self.get_slice_at(
+            header.table_header_list_addr as usize,
+            header.table_count as usize,
+        )
     }
 
     pub fn get_len_at(self, start: usize, len: usize) -> Res<&'a [u8]> {

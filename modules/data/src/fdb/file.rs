@@ -1,6 +1,7 @@
 //! The structures, as they are serialized
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct FDBHeader {
     pub table_count: u32,
     pub table_header_list_addr: u32,
@@ -16,6 +17,7 @@ impl FDBHeader {
 }
 
 #[derive(Debug, Copy, Clone)]
+#[repr(C)]
 pub struct FDBTableHeader {
     pub table_def_header_addr: u32,
     pub table_data_header_addr: u32,
@@ -26,6 +28,7 @@ impl FDBTableHeader {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct FDBTableDefHeader {
     pub column_count: u32,
     pub table_name_addr: u32,
@@ -42,6 +45,7 @@ impl FDBTableDefHeader {
 }
 
 #[derive(Debug, Copy, Clone)]
+#[repr(C)]
 pub struct FDBColumnHeader {
     pub column_data_type: u32,
     pub column_name_addr: u32,
@@ -52,6 +56,7 @@ impl FDBColumnHeader {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct FDBTableDataHeader {
     pub bucket_count: u32,
     pub bucket_header_list_addr: u32,
@@ -67,6 +72,7 @@ impl FDBTableDataHeader {
 }
 
 #[derive(Debug, Copy, Clone)]
+#[repr(C)]
 pub struct FDBBucketHeader {
     pub row_header_list_head_addr: u32,
 }
@@ -76,6 +82,7 @@ impl FDBBucketHeader {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct FDBRowHeaderListEntry {
     pub row_header_addr: u32,
     pub row_header_list_next_addr: u32,
@@ -86,6 +93,7 @@ impl FDBRowHeaderListEntry {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct FDBRowHeader {
     pub field_count: u32,
     pub field_data_list_addr: u32,
@@ -101,6 +109,7 @@ impl FDBRowHeader {
 }
 
 #[derive(Debug)]
+#[repr(C)]
 pub struct FDBFieldData {
     pub data_type: u32,
     pub value: [u8; 4],
