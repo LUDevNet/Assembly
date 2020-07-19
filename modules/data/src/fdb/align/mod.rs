@@ -174,6 +174,11 @@ impl<'a> Table<'a> {
     pub fn bucket_count(&self) -> usize {
         self.buckets.len()
     }
+
+    /// Get an iterator over all rows
+    pub fn row_iter(&self) -> impl Iterator<Item = Row<'a>> {
+        self.bucket_iter().map(|b| b.row_iter()).flatten()
+    }
 }
 
 pub struct Column<'a> {
@@ -182,7 +187,7 @@ pub struct Column<'a> {
 }
 
 impl<'a> Column<'a> {
-    pub fn name(&self) -> Cow<str> {
+    pub fn name(&self) -> Cow<'a, str> {
         self.name.decode()
     }
 
@@ -235,6 +240,7 @@ impl<'a> Iterator for RowHeaderIter<'a> {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct Row<'a> {
     buf: &'a [u8],
     fields: &'a [FDBFieldDataC],
@@ -286,6 +292,7 @@ impl<'a> Row<'a> {
     }
 }
 
+#[derive(Debug)]
 pub enum Field<'a> {
     Nothing,
     Integer(i32),

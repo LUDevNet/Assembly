@@ -12,7 +12,7 @@ pub struct PathVersion(u32);
 
 impl PathVersion {
     pub fn min(self, val: u32) -> bool {
-        return self.0 >= val;
+        self.0 >= val
     }
 }
 

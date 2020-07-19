@@ -4,6 +4,7 @@ use memchr::memchr;
 use std::{
     borrow::{Borrow, Cow},
     convert::TryInto,
+    fmt::Debug,
 };
 
 #[repr(transparent)]
@@ -21,6 +22,12 @@ impl Borrow<Latin1Str> for Latin1String {
 pub struct Latin1Str {
     #[allow(dead_code)]
     inner: [u8],
+}
+
+impl Debug for &'_ Latin1Str {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.decode().fmt(f)
+    }
 }
 
 impl ToOwned for Latin1Str {

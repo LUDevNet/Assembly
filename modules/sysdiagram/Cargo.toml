@@ -11,7 +11,7 @@ readme = "README.md"
 
 [dependencies]
 assembly-core = { path = "../core", version = "0.1" }
-ms-oforms = { path = "../../../rust-ms-oforms", version = "0.3.0-alpha1" }
+ms-oforms = { path = "../../../ms-oforms", version = "0.3.0-alpha1" }
 nom = "5.0"
 base64 = "0.10"
 cfb = "0.3.1"

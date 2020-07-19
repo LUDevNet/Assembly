@@ -12,6 +12,8 @@ readme = "README.md"
 [dependencies]
 assembly-core = { path = "../core", version = "0.1" }
 num-traits = "0.2"
+thiserror = "1"
+displaydoc = "0.1"
 
 [dev-dependencies]
 structopt = "0.2"

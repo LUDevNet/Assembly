@@ -1,17 +1,24 @@
 use super::core::ZoneFile;
 use super::parser;
 use assembly_core::nom::{error::ErrorKind, Err as NomErr};
+use displaydoc::Display;
 use std::convert::TryFrom;
 use std::io::Read;
 use std::{fs, io};
+use thiserror::Error;
 
 /// Error when loading a LUZ file
-#[derive(Debug)]
+#[derive(Debug, Error, Display)]
 pub enum LoadError {
+    /// Failed to open the file
     FileOpen(io::Error),
+    /// Failed to read from the file
     Read(io::Error),
+    /// Missing bytes
     Incomplete,
+    /// Failed to parse (recoverable)
     ParseError(ErrorKind),
+    /// Failed to parse (fatal)
     ParseFailure(ErrorKind),
 }
 

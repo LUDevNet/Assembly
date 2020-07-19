@@ -40,18 +40,18 @@ pub fn main() -> Result<(), Error> {
     let lm_data = buf.read_embedded_file().unwrap();
     let _cm2_data = buf.read_color_map_data().unwrap();
 
-    let _1 = buf.read_u8().unwrap();
+    let _padding1 = buf.read_u8().unwrap();
     let lm2_data = buf.read_embedded_file().unwrap();
-    let _2 = buf.read_i32::<LE>().unwrap();
+    let _padding2 = buf.read_i32::<LE>().unwrap();
 
     println!("{:?}", header);
     println!("{:?}", chunk1);
-    dbg!(_1);
-    dbg!(_2);
+    dbg!(_padding1);
+    dbg!(_padding2);
 
     let mut out = File::create("out.dds").unwrap();
-    out.write(lm_data.as_slice()).unwrap();
+    out.write_all(lm_data.as_slice()).unwrap();
     let mut out = File::create("out2.dds").unwrap();
-    out.write(lm2_data.as_slice()).unwrap();
+    out.write_all(lm2_data.as_slice()).unwrap();
     Ok(())
 }

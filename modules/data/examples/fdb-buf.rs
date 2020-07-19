@@ -32,7 +32,7 @@ fn main() -> Result<(), Error> {
 
         for bucket in table.bucket_iter() {
             print!("|");
-            for row in bucket.row_iter() {
+            for _row in bucket.row_iter() {
                 print!(".");
             }
         }

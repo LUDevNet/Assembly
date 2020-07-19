@@ -27,7 +27,7 @@ where
         let mut header_bytes = [0 as u8; 20];
         self.inner.read_exact(&mut header_bytes)?;
         let (_rest, header) =
-            parser::parse_chunk_header(&mut header_bytes).map_err(ParseError::from)?;
+            parser::parse_chunk_header(&header_bytes).map_err(ParseError::from)?;
         Ok(header)
     }
 
@@ -36,8 +36,7 @@ where
         let mut meta_chunk_data_bytes = [0 as u8; 20];
         self.inner.read_exact(&mut meta_chunk_data_bytes)?;
         let (_rest, meta_chunk_data) =
-            parser::parse_file_meta_chunk_data(&mut meta_chunk_data_bytes)
-                .map_err(ParseError::from)?;
+            parser::parse_file_meta_chunk_data(&meta_chunk_data_bytes).map_err(ParseError::from)?;
         Ok(meta_chunk_data)
     }
 

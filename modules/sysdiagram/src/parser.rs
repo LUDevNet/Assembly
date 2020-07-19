@@ -101,7 +101,7 @@ named!(parse_connection_string<&str, StringMap>,
     )
 );
 
-pub fn get_settings<'a>(val: String) -> Result<StringMap, ()> {
+pub fn get_settings(val: String) -> Result<StringMap, ()> {
     parse_connection_string(val.as_str())
         .map(|y| y.1)
         .map_err(|_| ())
