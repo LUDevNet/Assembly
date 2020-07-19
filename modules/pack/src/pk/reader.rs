@@ -170,7 +170,7 @@ where
     }
 }
 
-fn other_io_err<'a, E>(e: E) -> IoError
+fn other_io_err<E>(e: E) -> IoError
 where
     E: Into<Box<dyn Error + Send + Sync>>,
 {

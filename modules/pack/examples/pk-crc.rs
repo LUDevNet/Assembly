@@ -24,11 +24,11 @@ fn calculate_crc(path: &[u8]) -> u32 {
     for bp in path {
         let mut b = *bp;
         /* Perform some cleanup on the input */
-        if b == '/' as u8 {
-            b = '\\' as u8;
+        if b == b'/' {
+            b = b'\\';
         }
-        if 'A' as u8 <= b && b <= 'Z' as u8 {
-            b += 'a' as u8 - 'A' as u8;
+        if b'A' <= b && b <= b'Z' {
+            b += b'a' - b'A';
         }
 
         update_crc(&mut crc, b);
@@ -38,7 +38,7 @@ fn calculate_crc(path: &[u8]) -> u32 {
         update_crc(&mut crc, 0);
     }
     crc ^= CRC_FXOR;
-    return crc;
+    crc
 }
 
 fn print_usage(program: &str) {

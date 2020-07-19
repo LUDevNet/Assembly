@@ -48,6 +48,6 @@ pub fn pk_filter<T: Into<String>>(
     match field_type {
         ValueType::Text => text_pk_filter(key.into()),
         ValueType::Integer => integer_pk_filter(key.into()),
-        _ => Err(PKFilterError::UnsupportedType(field_type.clone())),
+        _ => Err(PKFilterError::UnsupportedType(field_type)),
     }
 }

@@ -45,9 +45,9 @@ fn main() -> Result<(), MainError> {
         for pack in file.archives {
             println!("{}", pack.path);
         }
-        return Ok(());
+        Ok(())
     } else {
         print_usage(&program, opts);
-        return Ok(());
+        Ok(())
     }
 }

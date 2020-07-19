@@ -78,8 +78,12 @@ fn map_table_header<'a>(buf: &'a [u8]) -> impl Fn(&'a FDBTableHeaderC) -> Table<
 }
 
 impl<'a> Tables<'a> {
-    pub fn len(&self) -> usize {
+    pub fn len(self) -> usize {
         self.slice.len()
+    }
+
+    pub fn is_empty(self) -> bool {
+        self.slice.len() == 0
     }
 
     pub fn get(self, index: usize) -> Option<Table<'a>> {
@@ -99,6 +103,7 @@ pub struct Table<'a> {
     buckets: &'a [FDBBucketHeaderC],
 }
 
+#[allow(clippy::needless_lifetimes)] // <- clippy gets this wrong, presumably because of impl trait?
 fn map_column_header<'a>(buf: &'a [u8]) -> impl Fn(&'a FDBColumnHeaderC) -> Column<'a> {
     move |header: &FDBColumnHeaderC| {
         let column_header = header.extract();
@@ -109,7 +114,7 @@ fn map_column_header<'a>(buf: &'a [u8]) -> impl Fn(&'a FDBColumnHeaderC) -> Colu
     }
 }
 
-fn get_row_header_list_entry<'a>(buf: &'a [u8], addr: u32) -> Option<&'a FDBRowHeaderListEntryC> {
+fn get_row_header_list_entry(buf: &[u8], addr: u32) -> Option<&FDBRowHeaderListEntryC> {
     if addr == u32::MAX {
         None
     } else {
@@ -117,6 +122,7 @@ fn get_row_header_list_entry<'a>(buf: &'a [u8], addr: u32) -> Option<&'a FDBRowH
     }
 }
 
+#[allow(clippy::needless_lifetimes)] // <- clippy gets this wrong
 fn map_bucket_header<'a>(buf: &'a [u8]) -> impl Fn(&'a FDBBucketHeaderC) -> Bucket<'a> {
     move |header: &FDBBucketHeaderC| {
         let bucket_header = header.extract();
@@ -246,6 +252,7 @@ pub struct Row<'a> {
     fields: &'a [FDBFieldDataC],
 }
 
+#[allow(clippy::needless_lifetimes)] // <- clippy gets this wrong
 fn map_field<'a>(buf: &'a [u8]) -> impl Fn(&'a FDBFieldDataC) -> Field<'a> {
     move |data: &FDBFieldDataC| {
         let data_type = ValueType::from(data.data_type.extract());

@@ -99,8 +99,7 @@ where
         let off: u64 = header.column_header_list_addr.into();
         let byte_count = header.column_header_list_byte_count();
 
-        let mut column_header_list_bytes: Vec<u8> = Vec::with_capacity(byte_count);
-        column_header_list_bytes.resize(byte_count, 0);
+        let mut column_header_list_bytes: Vec<u8> = vec![0; byte_count];
         let count = header.column_count as usize;
 
         self.seek(SeekFrom::Start(off)).map_err(FileError::Seek)?;
@@ -108,7 +107,7 @@ where
             .map_err(FileError::Read)?;
 
         let (_rest, column_header_list) =
-            parser::parse_column_header_list(&mut column_header_list_bytes, count)
+            parser::parse_column_header_list(&column_header_list_bytes, count)
                 .map_err(FileError::from)?;
 
         Ok(column_header_list)
@@ -138,8 +137,7 @@ where
         let count = header.bucket_count as usize;
         let byte_count = header.bucket_header_list_byte_count();
 
-        let mut bucket_header_list_bytes: Vec<u8> = Vec::with_capacity(byte_count);
-        bucket_header_list_bytes.resize(byte_count, 0);
+        let mut bucket_header_list_bytes: Vec<u8> = vec![0; byte_count];
 
         self.seek(SeekFrom::Start(off)).map_err(FileError::Seek)?;
         self.read_exact(bucket_header_list_bytes.as_mut_slice())
@@ -185,8 +183,7 @@ where
         let byte_count = header.field_data_list_byte_count();
         let count = header.field_count as usize;
 
-        let mut field_data_list_bytes: Vec<u8> = Vec::with_capacity(byte_count);
-        field_data_list_bytes.resize(byte_count, 0);
+        let mut field_data_list_bytes: Vec<u8> = vec![0; byte_count];
 
         self.seek(SeekFrom::Start(off)).map_err(FileError::Seek)?;
         self.read_exact(field_data_list_bytes.as_mut_slice())

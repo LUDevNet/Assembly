@@ -51,6 +51,11 @@ impl Latin1Str {
         unsafe { Self::from_bytes_unchecked(text) }
     }
 
+    /// Turns some bytes into a Latin1Str slice
+    ///
+    /// ## Safety
+    ///
+    /// The byte slice may not contain any null bytes
     pub unsafe fn from_bytes_unchecked(text: &[u8]) -> &Self {
         &*(text as *const [u8] as *const Latin1Str)
     }

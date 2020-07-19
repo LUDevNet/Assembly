@@ -126,7 +126,7 @@ impl From<&Field> for ValueType {
 }
 
 /// A sequence of fields
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Row(Vec<Field>);
 
 impl From<Vec<Field>> for Row {
@@ -136,7 +136,6 @@ impl From<Vec<Field>> for Row {
 }
 
 impl Row {
-    #[allow(dead_code)]
     pub fn new() -> Row {
         Row(Vec::new())
     }
@@ -151,6 +150,7 @@ impl Row {
 }
 
 /// A container of rows with the same hash value
+#[derive(Debug, Default)]
 pub struct Bucket(pub Vec<Row>);
 
 impl Bucket {
@@ -192,12 +192,14 @@ impl From<(&str, ValueType)> for Column {
 }
 
 /// A list of columns with types and a name
+#[derive(Debug)]
 pub struct TableDef {
     pub columns: Vec<Column>,
     pub name: String,
 }
 
 /// An array of buckets, and a collection of rows
+#[derive(Debug, Default)]
 pub struct TableData {
     pub buckets: Vec<Bucket>,
 }
@@ -211,7 +213,7 @@ impl TableData {
 }
 
 /// A list of buckets and thus collection of rows with a name
-#[allow(dead_code)]
+#[derive(Debug)]
 pub struct Table {
     definition: TableDef,
     data: TableData,
@@ -252,6 +254,7 @@ impl Table {
 ///
 /// A schema is an ordered map of tables. It represents a full
 /// relational database and is the root struct type in this module.
+#[derive(Debug, Default)]
 pub struct Schema {
     /// The tables in this schema
     pub tables: BTreeMap<String, Table>,

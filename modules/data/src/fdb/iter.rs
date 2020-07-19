@@ -19,7 +19,7 @@ impl<'a> IntoIterator for &'a Row {
     type IntoIter = FieldRefIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.fields_ref().into_iter()
+        self.fields_ref().iter()
     }
 }
 
@@ -40,7 +40,7 @@ impl<'a> IntoIterator for &'a Bucket {
     type IntoIter = RowSliceIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.rows_ref().into_iter()
+        self.rows_ref().iter()
     }
 }
 
@@ -67,8 +67,6 @@ impl<'a> IntoIterator for &'a Table {
     type IntoIter = TableRowRefIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.buckets_ref()
-            .into_iter()
-            .flat_map(<&Bucket>::into_iter)
+        self.buckets_ref().iter().flat_map(<&Bucket>::into_iter)
     }
 }

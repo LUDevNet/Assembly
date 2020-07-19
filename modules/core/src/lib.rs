@@ -46,5 +46,5 @@ where
         duration.subsec_millis(),
     );
 
-    return res;
+    res
 }

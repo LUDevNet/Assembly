@@ -15,23 +15,23 @@ impl<'a> ObjectDataSink for ObjectStoreDataSink<'a> {
 
     fn push_attr_v(self, v: u32) -> Self::V {
         self.attr_v = v;
-        return self;
+        self
     }
 
     fn start_buff(self) -> Self::B {
-        return self;
+        self
     }
 
     fn start_dest(self) -> Self::D {
-        return (self, Destructible::default());
+        (self, Destructible::default())
     }
 
     fn start_inv(self) -> Self::I {
-        return (self, Inventory::default());
+        (self, Inventory::default())
     }
 
     fn start_mf(self) -> Self::M {
-        return (self, Minifig::default());
+        (self, Minifig::default())
     }
 }
 
@@ -39,7 +39,7 @@ impl<'a> BuffDataSink for ObjectStoreDataSink<'a> {
     type E = ObjectStoreDataSink<'a>;
 
     fn end_buff(self) -> Self::E {
-        return self;
+        self
     }
 }
 
@@ -49,57 +49,57 @@ impl<'a> DestructibleDataSink for DestructibleStoreDataSink<'a> {
     fn end_dest(self) -> Self::E {
         let obj = self.0;
         obj.dest = Some(self.1);
-        return obj;
+        obj
     }
 
     fn push_attr_ac(mut self, ac: u32) -> Self {
         self.1.attr_ac = Some(ac);
-        return self;
+        self
     }
 
     fn push_attr_am(mut self, am: u32) -> Self {
         self.1.attr_am = Some(am);
-        return self;
+        self
     }
 
     fn push_attr_d(mut self, d: bool) -> Self {
         self.1.attr_d = Some(d);
-        return self;
+        self
     }
 
     fn push_attr_hc(mut self, hc: u32) -> Self {
         self.1.attr_hc = Some(hc);
-        return self;
+        self
     }
 
     fn push_attr_hm(mut self, hm: u32) -> Self {
         self.1.attr_hm = Some(hm);
-        return self;
+        self
     }
 
     fn push_attr_ic(mut self, ic: u32) -> Self {
         self.1.attr_ic = Some(ic);
-        return self;
+        self
     }
 
     fn push_attr_im(mut self, im: u32) -> Self {
         self.1.attr_im = Some(im);
-        return self;
+        self
     }
 
     fn push_attr_imm(mut self, imm: u32) -> Self {
         self.1.attr_imm = Some(imm);
-        return self;
+        self
     }
 
     fn push_attr_rsh(mut self, rsh: u32) -> Self {
         self.1.attr_rsh = Some(rsh);
-        return self;
+        self
     }
 
     fn push_attr_rsi(mut self, rsi: u32) -> Self {
         self.1.attr_rsi = Some(rsi);
-        return self;
+        self
     }
 }
 
@@ -112,24 +112,24 @@ impl<'a> InventoryDataSink for InventoryStoreDataSink<'a> {
     fn end_inv(self) -> Self::E {
         let obj = self.0;
         obj.inv = Some(self.1);
-        return obj;
+        obj
     }
 
     fn push_attr_csl(mut self, csl: u32) -> Self {
         self.1.attr_csl = Some(csl);
-        return self;
+        self
     }
 
     fn start_bag(self) -> Self::IB {
-        return self;
+        self
     }
 
     fn start_grps(self) -> Self::IG {
-        return self;
+        self
     }
 
     fn start_items(self) -> Self::II {
-        return self;
+        self
     }
 }
 
@@ -140,11 +140,11 @@ impl<'a> InventoryBagsDataSink for InventoryStoreDataSink<'a> {
     type B = InventoryBagStoreDataSink<'a>;
 
     fn end_bag(self) -> Self::E {
-        return self;
+        self
     }
 
     fn start_b(self) -> Self::B {
-        return (self.0, self.1, Bag::default());
+        (self.0, self.1, Bag::default())
     }
 }
 
@@ -154,17 +154,17 @@ impl<'a> InventoryBagDataSink for InventoryBagStoreDataSink<'a> {
     fn end_b(self) -> Self::E {
         let mut inv = self.1;
         inv.bag.push(self.2);
-        return (self.0, inv);
+        (self.0, inv)
     }
 
     fn push_attr_t(mut self, v: u32) -> Self {
         self.2.attr_t = v;
-        return self;
+        self
     }
 
     fn push_attr_m(mut self, v: u32) -> Self {
         self.2.attr_m = v;
-        return self;
+        self
     }
 }
 
@@ -175,11 +175,11 @@ impl<'a> InventoryGroupsDataSink for InventoryStoreDataSink<'a> {
     type G = InventoryGroupStoreDataSink<'a>;
 
     fn end_grps(self) -> Self::E {
-        return self;
+        self
     }
 
     fn start_grp(self) -> Self::G {
-        return (self.0, self.1, Group::default());
+        (self.0, self.1, Group::default())
     }
 }
 
@@ -189,32 +189,32 @@ impl<'a> InventoryGroupDataSink for InventoryGroupStoreDataSink<'a> {
     fn end_grp(self) -> Self::E {
         let mut inv = self.1;
         inv.grps.push(self.2);
-        return (self.0, inv);
+        (self.0, inv)
     }
 
     fn push_attr_id(mut self, v: String) -> Self {
         self.2.attr_id = v;
-        return self;
+        self
     }
 
     fn push_attr_l(mut self, v: String) -> Self {
         self.2.attr_l = v;
-        return self;
+        self
     }
 
     fn push_attr_n(mut self, v: String) -> Self {
         self.2.attr_n = v;
-        return self;
+        self
     }
 
     fn push_attr_t(mut self, v: u32) -> Self {
         self.2.attr_t = v;
-        return self;
+        self
     }
 
     fn push_attr_u(mut self, v: String) -> Self {
         self.2.attr_u = v;
-        return self;
+        self
     }
 }
 
@@ -226,15 +226,15 @@ impl<'a> InventoryItemsDataSink for InventoryStoreDataSink<'a> {
 
     fn push_attr_nn(mut self, v: String) -> Self {
         self.1.items.attr_nn = v;
-        return self;
+        self
     }
 
     fn start_in(self) -> Self::I {
-        return (self.0, self.1, ItemBag::default());
+        (self.0, self.1, ItemBag::default())
     }
 
     fn end_items(self) -> Self::E {
-        return self;
+        self
     }
 }
 
@@ -246,17 +246,17 @@ impl<'a> InventoryItemBagDataSink for InventoryItemBagStoreDataSink<'a> {
 
     fn push_attr_t(mut self, v: u32) -> Self {
         self.2.attr_t = v;
-        return self;
+        self
     }
 
     fn end_in(self) -> Self::E {
         let mut inv = self.1;
         inv.items.children.push(self.2);
-        return (self.0, inv);
+        (self.0, inv)
     }
 
     fn start_i(self) -> Self::I {
-        return (self.0, self.1, self.2, Item::default());
+        (self.0, self.1, self.2, Item::default())
     }
 }
 
@@ -270,46 +270,46 @@ impl<'a> InventoryItemDataSink for InventoryItemStoreDataSink<'a> {
     fn end_i(self) -> Self::E {
         let mut bag = self.2;
         bag.children.push(self.3);
-        return (self.0, self.1, bag);
+        (self.0, self.1, bag)
     }
 
     fn push_attr_b(mut self, v: bool) -> Self {
         self.3.attr_b = v;
-        return self;
+        self
     }
 
     fn push_attr_c(mut self, v: u32) -> Self {
         self.3.attr_c = v;
-        return self;
+        self
     }
 
     fn push_attr_eq(mut self, v: bool) -> Self {
         self.3.attr_eq = v;
-        return self;
+        self
     }
 
     fn push_attr_id(mut self, v: u64) -> Self {
         self.3.attr_id = v;
-        return self;
+        self
     }
 
     fn push_attr_l(mut self, v: u32) -> Self {
         self.3.attr_l = v;
-        return self;
+        self
     }
 
     fn push_attr_s(mut self, v: u32) -> Self {
         self.3.attr_s = v;
-        return self;
+        self
     }
 
     fn push_attr_sk(mut self, v: u32) -> Self {
         self.3.attr_sk = v;
-        return self;
+        self
     }
 
     fn start_x(self) -> Self::X {
-        return (self.0, self.1, self.2, self.3, ItemExtra::default());
+        (self.0, self.1, self.2, self.3, ItemExtra::default())
     }
 }
 
@@ -319,52 +319,52 @@ impl<'a> InventoryItemExtraDataSink for InventoryItemExtraStoreDataSink<'a> {
     fn end_x(self) -> Self::E {
         let mut item = self.3;
         item.x = Some(self.4);
-        return (self.0, self.1, self.2, item);
+        (self.0, self.1, self.2, item)
     }
 
     fn push_attr_b(mut self, v: String) -> Self {
         self.4.attr_b = v;
-        return self;
+        self
     }
 
     fn push_attr_ma(mut self, v: String) -> Self {
         self.4.attr_ma = v;
-        return self;
+        self
     }
 
     fn push_attr_ub(mut self, v: String) -> Self {
         self.4.attr_ub = v;
-        return self;
+        self
     }
 
     fn push_attr_ud(mut self, v: String) -> Self {
         self.4.attr_ud = v;
-        return self;
+        self
     }
 
     fn push_attr_ui(mut self, v: String) -> Self {
         self.4.attr_ui = v;
-        return self;
+        self
     }
 
     fn push_attr_um(mut self, v: String) -> Self {
         self.4.attr_um = v;
-        return self;
+        self
     }
 
     fn push_attr_un(mut self, v: String) -> Self {
         self.4.attr_ub = v;
-        return self;
+        self
     }
 
     fn push_attr_uo(mut self, v: String) -> Self {
         self.4.attr_uo = v;
-        return self;
+        self
     }
 
     fn push_attr_up(mut self, v: String) -> Self {
         self.4.attr_up = v;
-        return self;
+        self
     }
 }
 
@@ -374,67 +374,67 @@ impl<'a> MinifigDataSink for MinifigStoreDataSink<'a> {
     fn end_mf(self) -> Self::E {
         let obj = self.0;
         obj.mf = Some(self.1);
-        return obj;
+        obj
     }
 
     fn push_attr_cd(mut self, v: u32) -> Self {
         self.1.attr_cd = v;
-        return self;
+        self
     }
 
     fn push_attr_es(mut self, v: u32) -> Self {
         self.1.attr_es = v;
-        return self;
+        self
     }
 
     fn push_attr_ess(mut self, v: u32) -> Self {
         self.1.attr_ess = v;
-        return self;
+        self
     }
 
     fn push_attr_hc(mut self, v: u32) -> Self {
         self.1.attr_hc = v;
-        return self;
+        self
     }
 
     fn push_attr_hd(mut self, v: u32) -> Self {
         self.1.attr_hd = v;
-        return self;
+        self
     }
 
     fn push_attr_hdc(mut self, v: u32) -> Self {
         self.1.attr_hdc = v;
-        return self;
+        self
     }
 
     fn push_attr_hs(mut self, v: u32) -> Self {
         self.1.attr_hs = v;
-        return self;
+        self
     }
 
     fn push_attr_l(mut self, v: u32) -> Self {
         self.1.attr_l = v;
-        return self;
+        self
     }
 
     fn push_attr_lh(mut self, v: u32) -> Self {
         self.1.attr_lh = v;
-        return self;
+        self
     }
 
     fn push_attr_ms(mut self, v: u32) -> Self {
         self.1.attr_ms = v;
-        return self;
+        self
     }
 
     fn push_attr_rh(mut self, v: u32) -> Self {
         self.1.attr_rh = v;
-        return self;
+        self
     }
 
     fn push_attr_t(mut self, v: u32) -> Self {
         self.1.attr_t = v;
-        return self;
+        self
     }
 }
 

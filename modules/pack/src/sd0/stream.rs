@@ -134,10 +134,10 @@ impl<'a, T> SegmentedStream<'a, T>
 where
     T: Read,
 {
-    fn check_magic<'b>(inner: &'b mut T) -> SegmentedResult<()> {
+    fn check_magic(inner: &mut T) -> SegmentedResult<()> {
         let mut magic: [u8; 5] = [0; 5];
         inner.read_exact(&mut magic).map_err(SegmentedError::Read)?;
-        if magic == ['s' as u8, 'd' as u8, '0' as u8, 0x01, 0xff] {
+        if magic == [b's', b'd', b'0', 0x01, 0xff] {
             Ok(())
         } else {
             Err(SegmentedError::MagicMismatch(magic))
