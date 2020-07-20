@@ -21,7 +21,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: check
-          args: --manifest-path Workspace.toml
+          args: --manifest-path modules/full/Cargo.toml
 
   test:
     name: Test Suite
@@ -41,7 +41,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --manifest-path Workspace.toml
+          args: --manifest-path modules/full/Cargo.toml
 
   lints:
     name: Lints
@@ -62,10 +62,10 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: fmt
-          args: --manifest-path Workspace.toml --all -- --check
+          args: --manifest-path modules/full/Cargo.toml --all -- --check
 
       - name: Run cargo clippy
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --manifest-path Workspace.toml -- -D warnings
+          args: --manifest-path modules/full/Cargo.toml -- -D warnings
