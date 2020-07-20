@@ -1,0 +1,11 @@
+# This is the Cargo.toml file used in CI
+
+[workspace]
+members = [
+  "modules/full",
+  "modules/core",
+  "modules/data",
+  "modules/maps",
+  "modules/pack",
+  "modules/sysdiagram",
+]
