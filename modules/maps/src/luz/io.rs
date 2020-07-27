@@ -46,25 +46,25 @@ where
     fn try_from_luz(buf: &mut T) -> Result<Self, Self::Error>;
 }
 
-impl TryFrom<&str> for ZoneFile {
+impl TryFrom<&str> for ZoneFile<Vec<u8>> {
     type Error = LoadError;
 
-    fn try_from(filename: &str) -> LoadResult<ZoneFile> {
+    fn try_from(filename: &str) -> LoadResult<Self> {
         fs::File::open(filename)
             .map_err(LoadError::FileOpen)
             .and_then(ZoneFile::try_from)
     }
 }
 
-impl TryFrom<fs::File> for ZoneFile {
+impl TryFrom<fs::File> for ZoneFile<Vec<u8>> {
     type Error = LoadError;
 
-    fn try_from(file: fs::File) -> LoadResult<ZoneFile> {
+    fn try_from(file: fs::File) -> LoadResult<Self> {
         ZoneFile::try_from_luz(&mut io::BufReader::new(file))
     }
 }
 
-impl<T> TryFromLUZ<T> for ZoneFile
+impl<T> TryFromLUZ<T> for ZoneFile<Vec<u8>>
 where
     T: Read,
 {

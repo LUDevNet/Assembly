@@ -95,7 +95,7 @@ named_args!(parse_scene_transitions(version: FileVersion)<Option<Vec<SceneTransi
     )
 );
 
-named!(pub parse_zone_file<ZoneFile>,
+named!(pub parse_zone_file<ZoneFile<Vec<u8>>>,
     do_parse!(
         file_version: parse_file_version >>
         b: call!(parse_file_revision, file_version) >>

@@ -153,20 +153,15 @@ named!(pub parse_path_waypoint_data_property<PathWaypointDataProperty>,
 
 named!(pub parse_path_waypoint_data_camera<PathWaypointDataCamera>,
     do_parse!(
-        a: le_f32 >>
-        b: le_f32 >>
-        c: le_f32 >>
-        d: le_f32 >>
-        e: le_f32 >>
-        f: le_f32 >>
-        g: le_f32 >>
-        h: le_f32 >>
-        i: le_f32 >>
-        (PathWaypointDataCamera{
-            value_1: a, value_2: b, value_3: c, value_4: d,
-            time: e,
-            value_5: f,
-            tension: g, continuity: h, bias: i,
+        rotation: parse_quat >>
+        time: le_f32 >>
+        value_5: le_f32 >>
+        tension: le_f32 >>
+        continuity: le_f32 >>
+        bias: le_f32 >>
+        (PathWaypointDataCamera {
+            rotation, time, value_5,
+            tension, continuity, bias,
         })
     )
 );

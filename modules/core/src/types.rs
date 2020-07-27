@@ -1,8 +1,12 @@
 //! # The general types used all over the place
 use derive_new::new;
 
+#[cfg(feature = "serde-derives")]
+use serde::Serialize;
+
 /// Position in three dimensional space
 #[derive(Copy, Clone, Debug, new)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct Vector3f {
     /// The X coordinate
     pub x: f32,
@@ -30,6 +34,7 @@ impl Into<[f32; 3]> for Vector3f {
 
 /// Rotation in three dimensional space
 #[derive(Debug, new)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct Quaternion {
     /// The X component
     pub x: f32,
@@ -43,6 +48,7 @@ pub struct Quaternion {
 
 /// Position and rotation in three dimensional space
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct Placement3D {
     /// The position
     pub pos: Vector3f,
@@ -52,14 +58,17 @@ pub struct Placement3D {
 
 /// Alias for u32 that represents a world map from the resources
 #[derive(Debug, Clone, FromPrimitive, ToPrimitive, PartialEq)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct WorldID(u32);
 
 /// Alias for u32 for an object template id
 #[derive(Debug, Clone, FromPrimitive, ToPrimitive, PartialEq)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct ObjectTemplate(u32);
 
 /// Object ID
 #[derive(Debug, Clone, new)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct ObjectID {
     /// The bitmask for the scope of this object
     pub scope: u32,

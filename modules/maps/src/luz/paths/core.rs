@@ -2,11 +2,16 @@ use assembly_core::num_derive::{FromPrimitive, ToPrimitive};
 use assembly_core::types::{ObjectID, ObjectTemplate, Quaternion, Vector3f, WorldID};
 use std::collections::HashMap;
 
+#[cfg(feature = "serde-derives")]
+use serde::Serialize;
+
 /// Version / first field of path data
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 #[derive(Clone, Debug, FromPrimitive, ToPrimitive)]
 pub struct ZonePathsVersion(u32);
 
 /// Version of this path data
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 #[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive)]
 pub struct PathVersion(u32);
 
@@ -17,6 +22,7 @@ impl PathVersion {
 }
 
 /// Type of this path
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 #[derive(Debug, FromPrimitive, ToPrimitive)]
 pub enum PathType {
     Movement,
@@ -30,6 +36,7 @@ pub enum PathType {
 }
 
 /// Interpretation of this path
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 #[derive(Debug, FromPrimitive, ToPrimitive)]
 pub enum PathComposition {
     /// A closed polygon
@@ -42,10 +49,12 @@ pub enum PathComposition {
 
 /// General data for a movement path
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathDataMovement {}
 
 /// General data for a moving platform path
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathDataMovingPlatform {
     /// Unknown field
     pub something: Option<u8>,
@@ -55,6 +64,7 @@ pub struct PathDataMovingPlatform {
 
 /// Time units for rental time
 #[derive(Debug, FromPrimitive, ToPrimitive)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub enum PropertyRentalTimeUnit {
     Forever,
     Seconds,
@@ -68,6 +78,7 @@ pub enum PropertyRentalTimeUnit {
 
 /// Achievement required to rent a property
 #[derive(Debug, FromPrimitive, ToPrimitive)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub enum PropertyAchievementRequired {
     None,
     Builder,
@@ -84,6 +95,7 @@ pub enum PropertyAchievementRequired {
 
 /// General data for a property (border) path
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathDataProperty {
     /// Unknown value
     pub value_1: u32,
@@ -117,6 +129,7 @@ pub struct PathDataProperty {
 
 /// General data for camera path
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathDataCamera {
     /// Following path
     pub next_path: String,
@@ -126,6 +139,7 @@ pub struct PathDataCamera {
 
 /// General data for a spawner path
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathDataSpawner {
     /// The object to be spawned
     pub spawned_lot: ObjectTemplate,
@@ -143,24 +157,29 @@ pub struct PathDataSpawner {
 
 /// General data for a showcase path
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathDataShowcase {}
 
 /// General data for a race path
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathDataRace {}
 
 /// General data for a rail path
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathDataRail {}
 
 /// Data for a movement path waypoint
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathWaypointDataMovement {
     pub config: WaypointConfig,
 }
 
 /// Sounds for a moving platform
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathWaypointDataMovingPlatformSounds {
     pub arrive_sound: String,
     pub depart_sound: String,
@@ -168,6 +187,7 @@ pub struct PathWaypointDataMovingPlatformSounds {
 
 /// Data for a moving platform path waypoint
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathWaypointDataMovingPlatform {
     pub rotation: Quaternion,
     pub lock_player: bool,
@@ -178,15 +198,14 @@ pub struct PathWaypointDataMovingPlatform {
 
 /// Data for a property (border) path waypoint
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathWaypointDataProperty {}
 
 /// Data for a camera path waypoint
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathWaypointDataCamera {
-    pub value_1: f32,
-    pub value_2: f32,
-    pub value_3: f32,
-    pub value_4: f32,
+    pub rotation: Quaternion,
     pub time: f32,
     pub value_5: f32,
     pub tension: f32,
@@ -196,6 +215,7 @@ pub struct PathWaypointDataCamera {
 
 /// Data for a spawner network waypoint
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathWaypointDataSpawner {
     pub rotation: Quaternion,
     pub config: WaypointConfig,
@@ -203,10 +223,12 @@ pub struct PathWaypointDataSpawner {
 
 /// Data for a showcase path waypoint
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathWaypointDataShowcase {}
 
 /// Data for a race path waypoint
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathWaypointDataRace {
     pub rotation: Quaternion,
     pub value_1: u8,
@@ -218,6 +240,7 @@ pub struct PathWaypointDataRace {
 
 /// Data for a rail path waypoint
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathWaypointDataRail {
     pub value_1: f32,
     pub value_2: f32,
@@ -231,8 +254,10 @@ pub type WaypointConfig = HashMap<String, String>;
 
 /// Path Waypoint
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathWaypointVariant<WaypointType> {
     pub position: Vector3f,
+    #[cfg_attr(feature = "serde-derives", serde(flatten))]
     pub data: WaypointType,
 }
 
@@ -247,6 +272,7 @@ pub type PathWaypointVariantRail = PathWaypointVariant<PathWaypointDataRail>;
 
 /// Common header for all paths
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathHeader {
     pub version: PathVersion,
     pub path_name: String,
@@ -256,6 +282,7 @@ pub struct PathHeader {
 
 /// Wrapper for all general path data
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathVariant<DataType, WaypointDataType> {
     pub header: PathHeader,
     pub path_data: DataType,
@@ -274,6 +301,8 @@ pub type PathVariantRail = PathVariant<PathDataRail, PathWaypointDataRail>;
 
 /// Enum of all path variants
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
+#[cfg_attr(feature = "serde-derives", serde(tag = "type"))]
 pub enum Path {
     Movement(PathVariantMovement),
     MovingPlatform(PathVariantMovingPlatform),
@@ -287,6 +316,7 @@ pub enum Path {
 
 /// All paths in a zone
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct ZonePaths {
     pub version: ZonePathsVersion,
     pub paths: Vec<Path>,

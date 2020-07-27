@@ -17,3 +17,11 @@ displaydoc = "0.1"
 
 [dev-dependencies]
 structopt = "0.2"
+
+[dependencies.serde]
+version = "1"
+optional = true
+features = ["derive"]
+
+[features]
+serde-derives = ["serde", "assembly-core/serde-derives"]

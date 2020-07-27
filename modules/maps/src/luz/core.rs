@@ -1,7 +1,16 @@
-use assembly_core::types::{Placement3D, Vector3f, WorldID};
+use super::paths::core::ZonePaths;
+use crate::luz::paths::parser::parse_zone_paths;
+use assembly_core::{
+    nom::{error::ErrorKind, Err, Offset},
+    types::{Placement3D, Vector3f, WorldID},
+};
+
+#[cfg(feature = "serde-derives")]
+use serde::Serialize;
 
 /// Version of the zone file
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct FileVersion(u32);
 
 impl FileVersion {
@@ -22,6 +31,7 @@ impl From<u32> for FileVersion {
 
 /// Reference to a scene file
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct SceneRef {
     /// Name of the scene file
     pub file_name: String,
@@ -35,6 +45,7 @@ pub struct SceneRef {
 
 /// Scene Transition at a single point
 #[derive(Copy, Clone, Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct SceneTransitionPoint {
     /// ID of the scene
     pub scene_id: u64,
@@ -44,6 +55,7 @@ pub struct SceneTransitionPoint {
 
 /// Transition Points
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub enum SceneTransitionInfo {
     Point2([SceneTransitionPoint; 2]),
     Point5([SceneTransitionPoint; 5]),
@@ -63,6 +75,7 @@ impl From<[SceneTransitionPoint; 5]> for SceneTransitionInfo {
 
 /// Transitions between scenes
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct SceneTransition {
     /// Name of the transition
     pub name: Option<String>,
@@ -70,9 +83,16 @@ pub struct SceneTransition {
     pub points: SceneTransitionInfo,
 }
 
+/// A type that can represent path data
+pub trait PathData {}
+
+impl PathData for Vec<u8> {}
+impl PathData for ZonePaths {}
+
 /// The data in a luz file
 #[derive(Debug)]
-pub struct ZoneFile {
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
+pub struct ZoneFile<P: PathData> {
     /// Version of this file
     pub file_version: FileVersion,
     /// Revision of this file
@@ -96,5 +116,41 @@ pub struct ZoneFile {
     /// List of transitions
     pub scene_transitions: Option<Vec<SceneTransition>>,
     /// Path data
-    pub path_data: Option<Vec<u8>>,
+    pub path_data: Option<P>,
+}
+
+impl<P: PathData> ZoneFile<P> {
+    fn set_path_data<N: PathData>(self, new: Option<N>) -> ZoneFile<N> {
+        ZoneFile {
+            file_version: self.file_version,
+            file_revision: self.file_revision,
+            world_id: self.world_id,
+            spawn_point: self.spawn_point,
+            scene_refs: self.scene_refs,
+            something: self.something,
+            map_filename: self.map_filename,
+            map_name: self.map_name,
+            map_description: self.map_description,
+            scene_transitions: self.scene_transitions,
+            path_data: new,
+        }
+    }
+}
+
+pub type ParsePathErr = (ZoneFile<Vec<u8>>, Err<(usize, ErrorKind)>);
+
+impl ZoneFile<Vec<u8>> {
+    pub fn parse_paths(self) -> Result<ZoneFile<ZonePaths>, ParsePathErr> {
+        if let Some(path_data) = &self.path_data {
+            match parse_zone_paths(&path_data) {
+                Ok((_rest, path_data)) => Ok(self.set_path_data(Some(path_data))),
+                Err(e) => {
+                    let err = e.map(|(slice, error_kind)| (path_data.offset(slice), error_kind));
+                    Err((self, err))
+                }
+            }
+        } else {
+            Ok(self.set_path_data(None))
+        }
+    }
 }
