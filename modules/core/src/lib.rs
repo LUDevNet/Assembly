@@ -8,12 +8,12 @@ use std::time::Instant;
 
 pub mod borrow;
 pub mod buffer;
+pub mod ldf;
 #[doc(hidden)]
 pub mod nom_ext;
 pub mod parser;
 pub mod reader;
 pub mod types;
-pub mod ldf;
 
 #[macro_use]
 #[doc(hidden)]

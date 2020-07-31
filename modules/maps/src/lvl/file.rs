@@ -1,9 +1,25 @@
 //! # General structs and data
-
 use assembly_core::{
     ldf::{LDFError, LDF},
     types::{ObjectID, ObjectTemplate, Quaternion, Vector3f},
 };
+
+#[cfg(feature = "serde-derives")]
+use serde::Serialize;
+
+#[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
+pub struct Level {
+    pub env: Option<Environment>,
+    pub objects: Vec<Object<LDF>>,
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
+pub struct Environment {
+    pub sec1: Section1,
+    pub sky: SkySection,
+}
 
 /// The version of a chunk
 #[derive(Debug, Copy, Clone)]
@@ -58,6 +74,7 @@ pub type FileMetaChunk = Chunk<FileMetaChunkData>;
 pub struct Chunk2000Data {}
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct ObjectExtra {
     pub field_1a: [u8; 32],
     pub field_1b: [u8; 32],
@@ -68,6 +85,7 @@ pub struct ObjectExtra {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct Object<S> {
     pub obj_id: ObjectID,
     pub lot: ObjectTemplate,
@@ -111,4 +129,74 @@ impl ObjectsChunkData<String> {
             .collect::<Result<Vec<_>, _>>()?;
         Ok(ObjectsChunkData { objects })
     }
+}
+
+#[derive(Debug)]
+pub struct EnvironmentChunkData {
+    pub section1_address: u32,
+    pub sky_address: u32,
+    pub section3_address: u32,
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
+pub struct Color {
+    pub red: f32,
+    pub green: f32,
+    pub blue: f32,
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
+pub struct Section1 {
+    pub value1: Option<f32>,
+    pub value2: Color,
+    pub value3: Color,
+    pub value4: Color,
+    pub value5: Vector3f,
+    pub value6: Option<Section1_31>,
+    pub value7: Option<Color>,
+    pub value8: Option<Section1_43>,
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
+pub struct Section1_31 {
+    pub value1: Section1_39,
+    pub value2: Color,
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
+pub enum Section1_39 {
+    Before {
+        value1: f32,
+        value2: f32,
+    },
+    After {
+        values: Box<[f32; 12]>,
+        array: Vec<Section1_40>,
+    },
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
+pub struct Section1_40 {
+    pub id: u32,
+    pub float1: f32,
+    pub float2: f32,
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
+pub struct Section1_43 {
+    pub pos: Vector3f,
+    pub rot: Option<Quaternion>,
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "serde-derives", derive(Serialize))]
+#[cfg_attr(feature = "serde-derives", serde(transparent))]
+pub struct SkySection {
+    pub files: [String; 6],
 }
