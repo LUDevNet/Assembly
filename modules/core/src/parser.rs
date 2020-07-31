@@ -47,6 +47,16 @@ where
     })(input)
 }
 
+/// Parse a Quaternion
+pub fn parse_quat_wxyz<'a, E>(input: &'a [u8]) -> Res<'a, Quaternion, E>
+where
+    E: ParseError<&'a [u8]>,
+{
+    map(tuple((le_f32, le_f32, le_f32, le_f32)), |(w, x, y, z)| {
+        Quaternion::new(x, y, z, w)
+    })(input)
+}
+
 /// Parse a WorldID
 pub fn parse_world_id<'a, E>(input: &'a [u8]) -> Res<'a, WorldID, E>
 where
@@ -68,7 +78,7 @@ pub fn parse_object_id<'a, E>(input: &'a [u8]) -> Res<'a, ObjectID, E>
 where
     E: ParseError<&'a [u8]>,
 {
-    map(tuple((le_u32, le_u32)), |(a, b)| ObjectID::new(a, b))(input)
+    map(tuple((le_u32, le_u32)), |(a, b)| ObjectID::new(b, a))(input)
 }
 
 fn map_wstring(val: &[u8]) -> Result<String, ()> {

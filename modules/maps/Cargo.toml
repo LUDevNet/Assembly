@@ -17,6 +17,7 @@ displaydoc = "0.1"
 
 [dev-dependencies]
 structopt = "0.2"
+anyhow = "1"
 
 [dependencies.serde]
 version = "1"
