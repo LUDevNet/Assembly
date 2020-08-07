@@ -242,10 +242,8 @@ pub struct PathWaypointDataRace {
 #[derive(Debug)]
 #[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct PathWaypointDataRail {
-    pub value_1: f32,
-    pub value_2: f32,
-    pub value_3: f32,
-    pub value_4: f32,
+    pub rotation: Quaternion,
+    pub speed: Option<f32>,
     pub config: WaypointConfig,
 }
 

@@ -1,12 +1,13 @@
 use super::core::*;
 use assembly_core::nom::{
     call, cond, do_parse, fold_many_m_n, length_count, map_opt, map_res, named, named_args,
+    switch,
     number::complete::{le_f32, le_u32, le_u8},
     pair, value, IResult,
 };
 use assembly_core::parser::{
     parse_object_id, parse_object_template, parse_quat, parse_u32_wstring, parse_u8_bool,
-    parse_u8_wstring, parse_vec3f, parse_world_id,
+    parse_u8_wstring, parse_vec3f, parse_world_id, parse_quat_wxyz,
 };
 use num_traits::FromPrimitive;
 use std::collections::HashMap;
@@ -190,17 +191,6 @@ named!(pub parse_path_waypoint_data_race<PathWaypointDataRace>,
     )
 );
 
-named!(pub parse_path_waypoint_data_rail<PathWaypointDataRail>,
-    do_parse!(
-        value_1: le_f32 >>
-        value_2: le_f32 >>
-        value_3: le_f32 >>
-        value_4: le_f32 >>
-        config: parse_waypoint_config >>
-        (PathWaypointDataRail{ value_1, value_2, value_3, value_4, config })
-    )
-);
-
 named!(
     parse_path_waypoint_variant_movement<PathWaypointVariantMovement>,
     do_parse!(
@@ -336,21 +326,43 @@ named_args!(parse_path_variant_race(header: PathHeader)<PathVariantRace>,
 named!(
     parse_path_waypoint_variant_rail<PathWaypointVariantRail>,
     do_parse!(
-        position: parse_vec3f
-            >> data: parse_path_waypoint_data_rail
-            >> (PathWaypointVariantRail { position, data })
+        position: parse_vec3f >>
+        rotation: parse_quat_wxyz >>
+        config: parse_waypoint_config >>
+        (PathWaypointVariantRail {
+            position,
+            data: PathWaypointDataRail{ rotation, speed: None, config }
+        })
     )
 );
 
-named_args!(parse_path_variant_rail(header: PathHeader)<PathVariantRail>,
+named!(
+    parse_path_waypoint_variant_rail_17<PathWaypointVariantRail>,
     do_parse!(
+        position: parse_vec3f >>
+        rotation: parse_quat_wxyz >>
+        speed: le_f32 >>
+        config: parse_waypoint_config >>
+        (PathWaypointVariantRail {
+            position,
+            data: PathWaypointDataRail{ rotation, speed: Some(speed), config }
+        })
+    )
+);
+
+fn parse_path_variant_rail(i: &[u8], header: PathHeader) -> IResult<&[u8], PathVariantRail> {
+    let version = header.version;
+    do_parse!(i,
         path_data: parse_path_data_rail >>
-        waypoints: length_count!(le_u32, parse_path_waypoint_variant_rail) >>
+        waypoints: switch!(value!(version.min(17)),
+            true => length_count!(le_u32, parse_path_waypoint_variant_rail_17) |
+            false => length_count!(le_u32, parse_path_waypoint_variant_rail)
+        ) >>
         (PathVariantRail {
             header, path_data, waypoints,
         })
     )
-);
+}
 
 fn parse_path_data(inp: &[u8], path_type: PathType, header: PathHeader) -> IResult<&[u8], Path> {
     match path_type {
