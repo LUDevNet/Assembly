@@ -8,7 +8,7 @@ use c::{
     FDBBucketHeaderC, FDBColumnHeaderC, FDBFieldDataC, FDBHeaderC, FDBRowHeaderC,
     FDBRowHeaderListEntryC, FDBTableDataHeaderC, FDBTableDefHeaderC, FDBTableHeaderC,
 };
-use std::borrow::Cow;
+use std::{borrow::Cow, cmp::Ordering};
 
 fn get_latin1_str(buf: &[u8], offset: u32) -> &Latin1Str {
     let (_, haystack) = buf.split_at(offset as usize);
@@ -92,6 +92,38 @@ impl<'a> Tables<'a> {
 
     pub fn iter(&self) -> impl Iterator<Item = Table<'a>> {
         self.slice.iter().map(map_table_header(self.buf))
+    }
+
+    pub fn by_name(&self, name: &str) -> Option<Table<'a>> {
+        let bytes = name.as_bytes();
+        self.slice
+            .binary_search_by(|table_header| {
+                let def_header_addr = table_header.table_def_header_addr.extract();
+                let def_header = FDBTableDefHeaderC::cast(self.buf, def_header_addr);
+
+                let name_addr = def_header.table_name_addr.extract() as usize;
+                let name_bytes = &self.buf[name_addr..];
+
+                for i in 0..bytes.len() {
+                    match name_bytes[i].cmp(&bytes[i]) {
+                        Ordering::Equal => {}
+                        Ordering::Less => {
+                            // the null terminator is a special case of this one
+                            return Ordering::Less;
+                        }
+                        Ordering::Greater => {
+                            return Ordering::Greater;
+                        }
+                    }
+                }
+                if name_bytes[bytes.len()] == 0 {
+                    Ordering::Equal
+                } else {
+                    Ordering::Greater
+                }
+            })
+            .ok()
+            .and_then(|index| self.get(index))
     }
 }
 
