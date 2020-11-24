@@ -1,4 +1,3 @@
-extern crate getopts;
 use assembly_core::anyhow;
 use assembly_data::fdb::align::Database;
 use memmap::Mmap;
@@ -17,7 +16,7 @@ pub fn main() -> Result<(), anyhow::Error> {
     // Load the options
     let opt = Options::from_args();
     assembly_core::time(|| {
-        // load the filed
+        // load the file
         let file = File::open(&opt.file)?;
         let mmap = unsafe { Mmap::map(&file)? };
         let buffer: &[u8] = &mmap;

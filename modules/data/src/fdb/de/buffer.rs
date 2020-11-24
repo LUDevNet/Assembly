@@ -107,7 +107,7 @@ impl<'a> Buffer<'a> {
         let end = start + len;
         self.0
             .get(Range { start, end })
-            .ok_or_else(|| BufferError::OutOfBounds(Range { start, end }))
+            .ok_or(BufferError::OutOfBounds(Range { start, end }))
     }
 
     pub fn string(self, addr: u32) -> Res<&'a Latin1Str> {

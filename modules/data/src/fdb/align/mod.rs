@@ -175,6 +175,15 @@ impl<'a> Table<'a> {
         self.name.decode()
     }
 
+    /// Get a list of rows by index
+    pub fn index_iter(&self, id: u32) -> impl Iterator<Item = Row<'a>> {
+        let bucket: usize = id as usize % self.bucket_count();
+        self.bucket_at(bucket).into_iter().flat_map(move |b| {
+            b.row_iter()
+                .filter(move |r| r.field_at(0) == Some(Field::Integer(id as i32)))
+        })
+    }
+
     /// Get the column at the index
     ///
     /// **Note**: This does some computation, call only once per colum if possible
@@ -331,7 +340,7 @@ impl<'a> Row<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Field<'a> {
     Nothing,
     Integer(i32),
@@ -340,4 +349,54 @@ pub enum Field<'a> {
     Boolean(bool),
     BigInt(i64),
     VarChar(&'a Latin1Str),
+}
+
+impl<'a> Field<'a> {
+    pub fn into_opt_integer(self) -> Option<i32> {
+        if let Self::Integer(value) = self {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    pub fn into_opt_float(self) -> Option<f32> {
+        if let Self::Float(value) = self {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    pub fn into_opt_text(self) -> Option<&'a Latin1Str> {
+        if let Self::Text(value) = self {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    pub fn into_opt_boolean(self) -> Option<bool> {
+        if let Self::Boolean(value) = self {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    pub fn into_opt_big_int(self) -> Option<i64> {
+        if let Self::BigInt(value) = self {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    pub fn into_opt_varchar(self) -> Option<&'a Latin1Str> {
+        if let Self::VarChar(value) = self {
+            Some(value)
+        } else {
+            None
+        }
+    }
 }

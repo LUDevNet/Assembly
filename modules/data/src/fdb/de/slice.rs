@@ -19,6 +19,7 @@ impl Borrow<Latin1Str> for Latin1String {
 }
 
 #[repr(transparent)]
+#[derive(PartialEq, PartialOrd, Eq, Ord)]
 pub struct Latin1Str {
     #[allow(dead_code)]
     inner: [u8],
