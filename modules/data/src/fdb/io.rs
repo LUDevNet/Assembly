@@ -5,13 +5,10 @@ use super::file::{
     FDBTableDefHeader, FDBTableHeader,
 };
 use super::reader::{DatabaseBufReader, DatabaseReader};
-//use assembly_core::nom::Err as NomErr;
-use assembly_core::anyhow::Error;
+use assembly_core::reader::{FileError, FileResult};
 use std::convert::TryFrom;
 use std::fs;
 use std::io::{BufRead, BufReader, Seek};
-
-type LoadResult<A> = Result<A, Error>;
 
 pub trait LoaderConfig {
     fn load_table_data(&self, def: &TableDef) -> bool;
@@ -41,18 +38,18 @@ pub struct SchemaLoader<'a, T, C> {
 }
 
 impl TryFrom<&str> for Schema {
-    type Error = Error;
+    type Error = FileError;
 
-    fn try_from(filename: &str) -> LoadResult<Schema> {
+    fn try_from(filename: &str) -> FileResult<Schema> {
         let file = fs::File::open(filename)?;
         Schema::try_from(file)
     }
 }
 
 impl TryFrom<fs::File> for Schema {
-    type Error = Error;
+    type Error = FileError;
 
-    fn try_from(file: fs::File) -> LoadResult<Schema> {
+    fn try_from(file: fs::File) -> FileResult<Schema> {
         let mut reader = BufReader::new(file);
         let config = LoaderConfigImpl {
             table_data_policy: |_| true,
@@ -73,7 +70,7 @@ where
     }
 
     /// Try to load a row
-    pub fn try_load_row(&mut self, header: FDBRowHeader) -> LoadResult<Row> {
+    pub fn try_load_row(&mut self, header: FDBRowHeader) -> FileResult<Row> {
         let a = &mut self.inner;
         let field_list = a.get_field_data_list(header)?;
         let field_data: Vec<FDBFieldData> = field_list.into();
@@ -88,7 +85,7 @@ where
     }
 
     /// Try to load a bucket
-    pub fn try_load_bucket(&mut self, header: FDBBucketHeader) -> LoadResult<Bucket> {
+    pub fn try_load_bucket(&mut self, header: FDBBucketHeader) -> FileResult<Bucket> {
         let row_header_addr_it = self
             .inner
             .get_row_header_addr_iterator(header.row_header_list_head_addr);
@@ -103,14 +100,14 @@ where
     }
 
     /// Try to load a column
-    pub fn try_load_column(&mut self, header: FDBColumnHeader) -> LoadResult<Column> {
+    pub fn try_load_column(&mut self, header: FDBColumnHeader) -> FileResult<Column> {
         let col_type = ValueType::from(header.column_data_type);
         let col_name = self.inner.get_string(header.column_name_addr)?;
         Ok(Column::from((col_name.as_ref(), col_type)))
     }
 
     /// Try to load a table definition
-    pub fn try_load_table_def(&mut self, header: FDBTableDefHeader) -> LoadResult<TableDef> {
+    pub fn try_load_table_def(&mut self, header: FDBTableDefHeader) -> FileResult<TableDef> {
         let name = self.inner.get_string(header.table_name_addr)?;
         let column_header_list: Vec<FDBColumnHeader> =
             self.inner.get_column_header_list(&header)?.into();
@@ -124,7 +121,7 @@ where
     }
 
     /// Try to load table data
-    pub fn try_load_table_data(&mut self, header: FDBTableDataHeader) -> LoadResult<TableData> {
+    pub fn try_load_table_data(&mut self, header: FDBTableDataHeader) -> FileResult<TableData> {
         let bucket_header_list: Vec<FDBBucketHeader> =
             self.inner.get_bucket_header_list(&header)?.into();
 
@@ -137,7 +134,7 @@ where
     }
 
     /// Try to load a table
-    pub fn try_load_table(&mut self, header: FDBTableHeader) -> LoadResult<Table> {
+    pub fn try_load_table(&mut self, header: FDBTableHeader) -> FileResult<Table> {
         let def_header = self
             .inner
             .get_table_def_header(header.table_def_header_addr)?;
@@ -154,7 +151,7 @@ where
     }
 
     /// Try to load a schema
-    pub fn try_load_schema(&mut self) -> LoadResult<Schema> {
+    pub fn try_load_schema(&mut self) -> FileResult<Schema> {
         let header = self.inner.get_header()?;
         let table_header_list: Vec<FDBTableHeader> =
             self.inner.get_table_header_list(header)?.into();

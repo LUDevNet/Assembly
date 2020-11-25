@@ -1,5 +1,4 @@
-//extern crate getopts;
-use assembly_core::anyhow::{self, anyhow, Context};
+use anyhow::{anyhow, Context};
 use assembly_data::fdb::core::Field;
 use assembly_data::fdb::io::{LoaderConfigImpl, SchemaLoader};
 use assembly_sysdiagram::core::SysDiagram;

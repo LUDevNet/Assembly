@@ -1,6 +1,6 @@
 [package]
 name = "assembly-core"
-version = "0.1.0"
+version = "0.2.0-beta.0"
 authors = ["Xiphoseer"]
 edition = "2018"
 homepage = "https://xiphoseer.github.io"
@@ -15,7 +15,6 @@ num-traits = "0.2"
 num-derive = "0.2"
 byteorder = "1"
 displaydoc = "0.1.5"
-anyhow = "1.0"
 thiserror = "1.0"
 derive-new = "0.5"
 

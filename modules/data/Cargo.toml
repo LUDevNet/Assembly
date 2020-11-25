@@ -1,6 +1,6 @@
 [package]
 name = "assembly-data"
-version = "0.1.2"
+version = "0.2.0-beta.0"
 authors = ["Xiphoseer"]
 edition = "2018"
 homepage = "https://xiphoseer.github.io"
@@ -10,7 +10,7 @@ license = "MIT"
 readme = "README.md"
 
 [dependencies]
-assembly-core = { path = "../core", version = "0.1" }
+assembly-core = { path = "../core", version = "0.2.0-beta" }
 hsieh-hash = "0.1"
 thiserror = "1.0"
 memchr = "2.3"

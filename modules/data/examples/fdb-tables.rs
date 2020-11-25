@@ -1,4 +1,3 @@
-use assembly_core::anyhow;
 use assembly_data::fdb::align::Database;
 use memmap::Mmap;
 use prettytable::{Cell as PCell, Row as PRow, Table as PTable};

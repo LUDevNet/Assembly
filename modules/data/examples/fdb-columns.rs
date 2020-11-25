@@ -1,5 +1,5 @@
 extern crate getopts;
-use assembly_core::anyhow::{self, anyhow};
+use anyhow::anyhow;
 use assembly_data::fdb::{
     core::ValueType,
     reader::{DatabaseBufReader, DatabaseReader},
