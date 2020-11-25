@@ -2,8 +2,7 @@
 
 use super::file::*;
 use assembly_core::nom::{
-    combinator::map, number::complete::le_u32,
-    sequence::tuple, take, IResult,
+    combinator::map, number::complete::le_u32, sequence::tuple, take, IResult,
 };
 use std::convert::TryInto;
 

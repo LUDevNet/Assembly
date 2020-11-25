@@ -85,7 +85,9 @@ impl FDBBucketHeader {
     pub const BYTE_COUNT: usize = 8;
 
     pub fn new(row_header_list_head_addr: u32) -> Self {
-        Self { row_header_list_head_addr }
+        Self {
+            row_header_list_head_addr,
+        }
     }
 }
 

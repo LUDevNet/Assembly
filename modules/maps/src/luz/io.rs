@@ -1,6 +1,6 @@
 use super::core::ZoneFile;
 use super::parser;
-use assembly_core::nom::{error::ErrorKind, Err as NomErr, error::Error as NomError};
+use assembly_core::nom::{error::Error as NomError, error::ErrorKind, Err as NomErr};
 use displaydoc::Display;
 use std::convert::TryFrom;
 use std::io::Read;

@@ -108,7 +108,8 @@ where
                 let buf = self.load_buf(meta.chunk_2000_offset, &header_2000)?;
                 let env = parser::parse_env_chunk_data(&buf)
                     .finish()
-                    .at(meta.chunk_2000_offset.into(), &buf)?.1;
+                    .at(meta.chunk_2000_offset.into(), &buf)?
+                    .1;
 
                 // first section
                 let sec1_base = (env.section1_address - header_2000.offset) as usize;
@@ -140,7 +141,7 @@ where
 
                 let buf = self.load_buf(meta.chunk_2001_offset, &header_2001)?;
                 let obj = parser::parse_objects_chunk_data(meta.version, &buf)
-                    .finish()    
+                    .finish()
                     .at(meta.chunk_2001_offset.into(), &buf)?
                     .1;
 

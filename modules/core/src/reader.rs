@@ -40,10 +40,10 @@ pub trait ParseAt<T>: Sized {
 
 impl<T> ParseAt<T> for Result<T, nom::error::Error<&[u8]>> {
     fn at(self, addr: u64, slice: &[u8]) -> Result<T, FileError> {
-        self.map_err(|e| {
-            FileError::Parse {
-                addr, code: e.code, offset: slice.offset(e.input)
-            }
+        self.map_err(|e| FileError::Parse {
+            addr,
+            code: e.code,
+            offset: slice.offset(e.input),
         })
     }
 }

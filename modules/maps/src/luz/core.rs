@@ -1,7 +1,7 @@
 use super::paths::core::ZonePaths;
 use crate::luz::paths::parser::parse_zone_paths;
 use assembly_core::{
-    nom::{error::ErrorKind, Offset, Finish},
+    nom::{error::ErrorKind, Finish, Offset},
     types::{Placement3D, Vector3f, WorldID},
 };
 

@@ -1,14 +1,20 @@
 //! # Parser methods for the general types
 use super::types::{ObjectID, ObjectTemplate, Quaternion, Vector3f, WorldID};
 //use encoding::{all::UTF_16LE, DecoderTrap, Encoding};
-use nom::{error::FromExternalError, bytes::complete::take, combinator::{map, map_opt, map_res}, multi::length_data, sequence::tuple};
+use nom::{
+    bytes::complete::take,
+    combinator::{map, map_opt, map_res},
+    error::FromExternalError,
+    multi::length_data,
+    sequence::tuple,
+};
 use nom::{
     error::ParseError,
     number::complete::{le_f32, le_u32, le_u8},
     IResult,
 };
 use num_traits::FromPrimitive;
-use std::{string::FromUtf8Error, char::decode_utf16};
+use std::{char::decode_utf16, string::FromUtf8Error};
 
 /// Helper method to dump some values
 #[allow(dead_code)]
