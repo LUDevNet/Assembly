@@ -1,6 +1,6 @@
 use super::core::ZoneFile;
 use super::parser;
-use assembly_core::nom::{error::ErrorKind, Err as NomErr};
+use assembly_core::nom::{error::ErrorKind, Err as NomErr, error::Error as NomError};
 use displaydoc::Display;
 use std::convert::TryFrom;
 use std::io::Read;
@@ -25,13 +25,13 @@ pub enum LoadError {
 type LoadResult<T> = Result<T, LoadError>;
 
 // Generates a LoadError from a nom error
-impl From<NomErr<(&[u8], ErrorKind)>> for LoadError {
-    fn from(e: NomErr<(&[u8], ErrorKind)>) -> LoadError {
+impl From<NomErr<NomError<&[u8]>>> for LoadError {
+    fn from(e: NomErr<NomError<&[u8]>>) -> LoadError {
         match e {
             // Need to translate the error here, as this lives longer than the input
             NomErr::Incomplete(_) => LoadError::Incomplete,
-            NomErr::Error((_, k)) => LoadError::ParseError(k),
-            NomErr::Failure((_, k)) => LoadError::ParseFailure(k),
+            NomErr::Error(e) => LoadError::ParseError(e.code),
+            NomErr::Failure(e) => LoadError::ParseFailure(e.code),
         }
     }
 }

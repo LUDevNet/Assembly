@@ -1,7 +1,7 @@
 use super::paths::core::ZonePaths;
 use crate::luz::paths::parser::parse_zone_paths;
 use assembly_core::{
-    nom::{error::ErrorKind, Err, Offset},
+    nom::{error::ErrorKind, Offset, Finish},
     types::{Placement3D, Vector3f, WorldID},
 };
 
@@ -137,16 +137,17 @@ impl<P: PathData> ZoneFile<P> {
     }
 }
 
-pub type ParsePathErr = (ZoneFile<Vec<u8>>, Err<(usize, ErrorKind)>);
+pub type ParsePathErr = (ZoneFile<Vec<u8>>, (usize, ErrorKind));
 
 impl ZoneFile<Vec<u8>> {
     pub fn parse_paths(self) -> Result<ZoneFile<ZonePaths>, ParsePathErr> {
         if let Some(path_data) = &self.path_data {
-            match parse_zone_paths(&path_data) {
+            match parse_zone_paths(&path_data).finish() {
                 Ok((_rest, path_data)) => Ok(self.set_path_data(Some(path_data))),
                 Err(e) => {
-                    let err = e.map(|(slice, error_kind)| (path_data.offset(slice), error_kind));
-                    Err((self, err))
+                    let len = path_data.offset(e.input);
+                    let code = e.code;
+                    Err((self, (len, code)))
                 }
             }
         } else {

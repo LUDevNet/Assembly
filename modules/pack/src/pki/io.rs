@@ -5,7 +5,7 @@ use std::io::{BufReader, Error as IoError, Read};
 use super::core::PackIndexFile;
 use super::parser;
 
-use assembly_core::nom::{error::ErrorKind, Err as NomErr};
+use assembly_core::nom::{self, error::ErrorKind, Err as NomErr};
 
 #[derive(Debug)]
 pub enum LoadError {
@@ -19,13 +19,13 @@ pub enum LoadError {
 type LoadResult<T> = Result<T, LoadError>;
 
 // Generates a LoadError from a nom error
-impl From<NomErr<(&[u8], ErrorKind)>> for LoadError {
-    fn from(e: NomErr<(&[u8], ErrorKind)>) -> LoadError {
+impl From<NomErr<nom::error::Error<&[u8]>>> for LoadError {
+    fn from(e: NomErr<nom::error::Error<&[u8]>>) -> LoadError {
         match e {
             // Need to translate the error here, as this lives longer than the input
             NomErr::Incomplete(_) => LoadError::Incomplete,
-            NomErr::Error((_, k)) => LoadError::ParseError(k),
-            NomErr::Failure((_, k)) => LoadError::ParseFailure(k),
+            NomErr::Error(e) => LoadError::ParseError(e.code),
+            NomErr::Failure(e) => LoadError::ParseFailure(e.code),
         }
     }
 }

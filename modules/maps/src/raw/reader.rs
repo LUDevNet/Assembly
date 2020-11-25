@@ -1,7 +1,11 @@
 use super::file::*;
 use super::parser;
-use assembly_core::byteorder::{ReadBytesExt, LE};
-use assembly_core::reader::{FileResult, ParseError};
+use assembly_core::reader::FileResult;
+use assembly_core::{
+    byteorder::{ReadBytesExt, LE},
+    nom::Finish,
+    reader::ParseAt,
+};
 
 use std::io::prelude::*;
 
@@ -9,7 +13,9 @@ pub trait TerrainReader: Read {
     fn read_terrain_header(&mut self) -> FileResult<TerrainHeader> {
         let mut header_bytes = [0 as u8; 15];
         self.read_exact(&mut header_bytes)?;
-        let (_, header) = parser::parse_terrain_header(&header_bytes).map_err(ParseError::from)?;
+        let (_, header) = parser::parse_terrain_header(&header_bytes)
+            .finish()
+            .at(0xbeef, &header_bytes)?;
         Ok(header)
     }
 
@@ -21,8 +27,9 @@ pub trait TerrainReader: Read {
     fn read_height_map_header(&mut self) -> FileResult<HeightMapHeader> {
         let mut header_bytes = [0 as u8; 36];
         self.read_exact(&mut header_bytes)?;
-        let (_, header) =
-            parser::parse_height_map_header(&header_bytes).map_err(ParseError::from)?;
+        let (_, header) = parser::parse_height_map_header(&header_bytes)
+            .finish()
+            .at(0xbeef, &header_bytes)?;
         Ok(header)
     }
 

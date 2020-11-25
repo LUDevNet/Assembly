@@ -1,18 +1,20 @@
 use super::core::{Field, ValueType};
 use super::file::FDBFieldData;
 use super::reader::{DatabaseBufReader, DatabaseReader};
-use assembly_core::anyhow;
+use assembly_core::displaydoc::Display;
 use thiserror::Error;
 
-use std::io::{BufRead, Seek};
+use std::io::{self, BufRead, Seek};
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Display)]
 pub enum BuildError {
-    #[error("Unknown Type ID {0}")]
+    /// Unknown Type ID {0}
     UnknownType(u32),
+    /// IO Error
+    IO(#[from] io::Error),
 }
 
-pub type BuildResult<T> = Result<T, anyhow::Error>;
+pub type BuildResult<T> = Result<T, BuildError>;
 
 impl<T: ?Sized> DatabaseBuilder for T where T: DatabaseBufReader + DatabaseReader + Seek + BufRead {}
 
@@ -32,17 +34,20 @@ where
             ValueType::Text => Ok(bytes)
                 .map(u32::from_le_bytes)
                 .and_then(|addr| self.get_string(addr))
-                .map(Field::Text),
+                .map(Field::Text)
+                .map_err(Into::into),
             ValueType::Boolean => Ok(bytes).map(|v| v != [0; 4]).map(Field::Boolean),
             ValueType::BigInt => Ok(bytes)
                 .map(u32::from_le_bytes)
                 .and_then(|addr| self.get_i64(addr))
-                .map(Field::BigInt),
+                .map(Field::BigInt)
+                .map_err(Into::into),
             ValueType::VarChar => Ok(bytes)
                 .map(u32::from_le_bytes)
                 .and_then(|addr| self.get_string(addr))
-                .map(Field::VarChar),
-            ValueType::Unknown(k) => Err(BuildError::UnknownType(k).into()),
+                .map(Field::VarChar)
+                .map_err(Into::into),
+            ValueType::Unknown(k) => Err(BuildError::UnknownType(k)),
         }
     }
 }

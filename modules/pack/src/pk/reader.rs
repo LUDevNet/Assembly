@@ -4,7 +4,10 @@ use super::file::{PKEntry, PKHeader};
 use super::parser;
 
 use crate::sd0::stream::{SegmentedError, SegmentedStream};
-use assembly_core::reader::{FileError, FileResult, ParseError};
+use assembly_core::{
+    nom::Finish,
+    reader::{FileResult, ParseAt},
+};
 
 use std::convert::TryFrom;
 use std::error::Error;
@@ -50,39 +53,33 @@ where
     /// Check for the magic bytes at the beginning of the file
     pub fn check_magic(&mut self) -> FileResult<()> {
         let mut magic_bytes: [u8; 4] = [0; 4];
-        self.inner
-            .seek(SeekFrom::Start(0))
-            .map_err(FileError::Seek)?;
-        self.inner
-            .read_exact(&mut magic_bytes)
-            .map_err(FileError::Read)?;
-        let (_rest, _magic) = parser::parse_pk_magic(&magic_bytes).map_err(ParseError::from)?;
+        self.inner.seek(SeekFrom::Start(0))?;
+        self.inner.read_exact(&mut magic_bytes)?;
+        let (_rest, _magic) = parser::parse_pk_magic(&magic_bytes)
+            .finish()
+            .at(0, &magic_bytes)?;
         Ok(())
     }
 
     /// Load the header from the end of the file
     pub fn get_header(&mut self) -> FileResult<PKHeader> {
         let mut header_bytes: [u8; 8] = [0; 8];
-        self.inner
-            .seek(SeekFrom::End(-8))
-            .map_err(FileError::Seek)?;
-        self.inner
-            .read_exact(&mut header_bytes)
-            .map_err(FileError::Read)?;
-        let (_rest, header) = parser::parse_pk_header(&header_bytes).map_err(ParseError::from)?;
+        let addr = self.inner.seek(SeekFrom::End(-8))?;
+        self.inner.read_exact(&mut header_bytes)?;
+        let (_rest, header) = parser::parse_pk_header(&header_bytes)
+            .finish()
+            .at(addr, &header_bytes)?;
         Ok(header)
     }
 
     /// Load the header from the end of the file
     pub fn get_entry(&mut self, addr: u32) -> FileResult<PKEntry> {
         let mut entry_bytes: [u8; 100] = [0; 100];
-        self.inner
-            .seek(SeekFrom::Start(u64::from(addr)))
-            .map_err(FileError::Seek)?;
-        self.inner
-            .read_exact(&mut entry_bytes)
-            .map_err(FileError::Read)?;
-        let (_rest, entry) = parser::parse_pk_entry(&entry_bytes).map_err(ParseError::from)?;
+        let addr = self.inner.seek(SeekFrom::Start(u64::from(addr)))?;
+        self.inner.read_exact(&mut entry_bytes)?;
+        let (_rest, entry) = parser::parse_pk_entry(&entry_bytes)
+            .finish()
+            .at(addr, &entry_bytes)?;
         Ok(entry)
     }
 
@@ -105,9 +102,11 @@ where
     /// Get a list of all entries
     pub fn get_entry_list(&mut self, addr: u32) -> FileResult<Vec<PKEntry>> {
         let mut bytes: Vec<u8> = Vec::new();
-        self.inner.seek(SeekFrom::Start(u64::from(addr)))?;
+        let addr = self.inner.seek(SeekFrom::Start(u64::from(addr)))?;
         self.inner.read_to_end(&mut bytes)?;
-        let (_rest, entry_list) = parser::parse_pk_entry_list(&bytes).map_err(ParseError::from)?;
+        let (_rest, entry_list) = parser::parse_pk_entry_list(&bytes)
+            .finish()
+            .at(addr, &bytes)?;
         Ok(entry_list)
     }
 

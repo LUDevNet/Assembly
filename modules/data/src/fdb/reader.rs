@@ -3,12 +3,18 @@
 //! This module provides a struct which can be used to access
 //! a FDB file in any order the user desires.
 
-use std::io::{BufRead, Read, Seek, SeekFrom};
+use std::io::{self, BufRead, Read, Seek, SeekFrom};
 
-use super::file::*;
 use super::parser;
+use super::{
+    file::*,
+    parser::{ParseFDB, ParseLE},
+};
 
-use assembly_core::reader::{FileError, FileResult, ParseError};
+use assembly_core::{
+    nom::{Finish, IResult},
+    reader::{FileError, FileResult},
+};
 use encoding_rs::WINDOWS_1252;
 
 pub struct FDBRowHeaderAddrIterator<'a, T: ?Sized> {
@@ -21,14 +27,14 @@ where
     Self: Seek + BufRead,
 {
     /// Read a string from the file
-    fn get_string(&mut self, addr: u32) -> FileResult<String>;
+    fn get_string(&mut self, addr: u32) -> io::Result<String>;
 }
 
 impl<T> DatabaseBufReader for T
 where
     T: Seek + BufRead,
 {
-    fn get_string(&mut self, addr: u32) -> FileResult<String> {
+    fn get_string(&mut self, addr: u32) -> io::Result<String> {
         let mut string: Vec<u8> = Vec::new();
         self.seek(SeekFrom::Start(addr.into()))?;
         self.read_until(0x00, &mut string)?;
@@ -41,53 +47,82 @@ where
 }
 impl<T> DatabaseReader for T where T: Seek + Read + ?Sized {}
 
+/// Parse a struct at the give offset into the buffer
+fn parse_at<R: Seek + Read + ?Sized, T>(
+    reader: &mut R,
+    addr: impl Into<u64>,
+    buf: &mut [u8],
+    parser: impl Fn(&[u8]) -> IResult<&[u8], T>,
+) -> FileResult<T> {
+    let addr = addr.into();
+    reader.seek(SeekFrom::Start(addr))?;
+    reader.read_exact(buf)?;
+    let (_rest, header) = parser(buf).finish().map_err(|e| FileError::Parse {
+        addr,
+        offset: buf.len() - e.input.len(),
+        code: e.code,
+    })?;
+    Ok(header)
+}
+
+fn bytes<IO: ParseLE>() -> IO::Buf {
+    IO::Buf::default()
+}
+
+fn parse_list_at<R: Seek + Read + ?Sized, T: ParseFDB>(
+    reader: &mut R,
+    addr: impl Into<u64>,
+    count: u32,
+) -> FileResult<Vec<T>> {
+    let addr = addr.into();
+    reader.seek(SeekFrom::Start(addr))?;
+    let buf_len = <T::IO as ParseLE>::BYTE_COUNT;
+    let mut buf = bytes::<T::IO>();
+    let mut offset = 0;
+    let mut list = Vec::with_capacity(count as usize);
+    for _ in 0..count {
+        reader.read_exact(buf.as_mut())?;
+        let (_rest, t) =
+            parser::parse::<T>(buf.as_mut())
+                .finish()
+                .map_err(|e| FileError::Parse {
+                    addr,
+                    offset: offset + buf_len - e.input.len(),
+                    code: e.code,
+                })?;
+        list.push(t);
+        offset += buf_len;
+    }
+    Ok(list)
+}
 pub trait DatabaseReader
 where
     Self: Seek + Read,
 {
     /// Read the schema header
     fn get_header(&mut self) -> FileResult<FDBHeader> {
-        let mut bytes = [0; FDBHeader::BYTE_COUNT];
-        self.seek(SeekFrom::Start(0))?;
-        self.read_exact(&mut bytes)?;
-        let (_rest, header) = parser::parse_header(&bytes[..]).map_err(ParseError::from)?;
-        Ok(header)
+        let mut bytes = [0; 8];
+        parse_at(self, 0u64, &mut bytes, parser::parse::<FDBHeader>)
     }
 
     /// Read the table header
     fn get_table_header_list(&mut self, header: FDBHeader) -> FileResult<FDBTableHeaderList> {
-        let mut table_headers_bytes: Vec<u8> = Vec::new();
-        let byte_count: u64 = header.table_headers_byte_count() as u64;
-        let list_addr: u64 = header.table_header_list_addr.into();
-        let count = header.table_count as usize;
-        self.seek(SeekFrom::Start(list_addr))
-            .map_err(FileError::Seek)?;
-        self.take(byte_count)
-            .read_to_end(&mut table_headers_bytes)
-            .map_err(FileError::Read)?;
-        let (_rest, table_header_list) =
-            parser::parse_table_headers(&table_headers_bytes, count).map_err(FileError::from)?;
-        Ok(table_header_list)
+        let addr = header.table_header_list_addr;
+        let count = header.table_count;
+        parse_list_at(self, addr, count).map(FDBTableHeaderList::from)
     }
 
     /// Read the table def header
     fn get_table_def_header(&mut self, addr: u32) -> FileResult<FDBTableDefHeader> {
-        let mut table_def_header_bytes = [0; FDBTableDefHeader::BYTE_COUNT];
-        self.seek(SeekFrom::Start(addr.into()))
-            .map_err(FileError::Seek)?;
-        self.read_exact(&mut table_def_header_bytes)
-            .map_err(FileError::Read)?;
-        let (_rest, def_header) =
-            parser::parse_table_def_header(&table_def_header_bytes).map_err(FileError::from)?;
-        Ok(def_header)
+        let mut bytes = [0; FDBTableDefHeader::BYTE_COUNT];
+        parse_at(self, addr, &mut bytes, parser::parse::<FDBTableDefHeader>)
     }
 
     /// Get a 64bit integer
-    fn get_i64(&mut self, addr: u32) -> FileResult<i64> {
+    fn get_i64(&mut self, addr: u32) -> io::Result<i64> {
         let mut bytes: [u8; 8] = [0; 8];
-        self.seek(SeekFrom::Start(addr.into()))
-            .map_err(FileError::Seek)?;
-        self.read_exact(&mut bytes).map_err(FileError::Read)?;
+        self.seek(SeekFrom::Start(addr.into()))?;
+        self.read_exact(&mut bytes)?;
         Ok(i64::from_le_bytes(bytes))
     }
 
@@ -96,36 +131,14 @@ where
         &'b mut self,
         header: &FDBTableDefHeader,
     ) -> FileResult<FDBColumnHeaderList> {
-        let off: u64 = header.column_header_list_addr.into();
-        let byte_count = header.column_header_list_byte_count();
-
-        let mut column_header_list_bytes: Vec<u8> = vec![0; byte_count];
-        let count = header.column_count as usize;
-
-        self.seek(SeekFrom::Start(off)).map_err(FileError::Seek)?;
-        self.read_exact(column_header_list_bytes.as_mut_slice())
-            .map_err(FileError::Read)?;
-
-        let (_rest, column_header_list) =
-            parser::parse_column_header_list(&column_header_list_bytes, count)
-                .map_err(FileError::from)?;
-
-        Ok(column_header_list)
+        parse_list_at(self, header.column_header_list_addr, header.column_count)
+            .map(FDBColumnHeaderList::from)
     }
 
     /// Get the table data header
     fn get_table_data_header(&mut self, addr: u32) -> FileResult<FDBTableDataHeader> {
-        let off: u64 = addr.into();
-        let mut table_data_header_bytes = [0; FDBTableDataHeader::BYTE_COUNT];
-
-        self.seek(SeekFrom::Start(off)).map_err(FileError::Seek)?;
-        self.read_exact(&mut table_data_header_bytes)
-            .map_err(FileError::Read)?;
-
-        let (_rest, table_data_header) =
-            parser::parse_table_data_header(&table_data_header_bytes).map_err(FileError::from)?;
-
-        Ok(table_data_header)
+        let mut bytes = bytes::<<FDBTableDataHeader as ParseFDB>::IO>();
+        parse_at(self, addr, &mut bytes, parser::parse::<FDBTableDataHeader>)
     }
 
     /// Get the table bucket header list
@@ -133,65 +146,31 @@ where
         &mut self,
         header: &FDBTableDataHeader,
     ) -> FileResult<FDBBucketHeaderList> {
-        let off: u64 = header.bucket_header_list_addr.into();
-        let count = header.bucket_count as usize;
-        let byte_count = header.bucket_header_list_byte_count();
-
-        let mut bucket_header_list_bytes: Vec<u8> = vec![0; byte_count];
-
-        self.seek(SeekFrom::Start(off)).map_err(FileError::Seek)?;
-        self.read_exact(bucket_header_list_bytes.as_mut_slice())
-            .map_err(FileError::Read)?;
-
-        let (_rest, bucket_header_list) =
-            parser::parse_bucket_header_list(&bucket_header_list_bytes, count)
-                .map_err(FileError::from)?;
-        Ok(bucket_header_list)
+        let addr = header.bucket_header_list_addr;
+        let count = header.bucket_count;
+        parse_list_at(self, addr, count).map(FDBBucketHeaderList::from)
     }
 
     /// Get a row header list entry
     fn get_row_header_list_entry(&mut self, addr: u32) -> FileResult<FDBRowHeaderListEntry> {
-        let off = u64::from(addr);
-        let mut row_header_list_entry_bytes = [0; FDBRowHeaderListEntry::BYTE_COUNT];
-
-        self.seek(SeekFrom::Start(off)).map_err(FileError::Seek)?;
-        self.read_exact(&mut row_header_list_entry_bytes)
-            .map_err(FileError::Read)?;
-
-        let (_rest, row_header_list_entry) =
-            parser::parse_row_header_list_entry(&row_header_list_entry_bytes)
-                .map_err(FileError::from)?;
-        Ok(row_header_list_entry)
+        let mut bytes = [0; FDBRowHeaderListEntry::BYTE_COUNT];
+        parse_at(
+            self,
+            addr,
+            &mut bytes,
+            parser::parse::<FDBRowHeaderListEntry>,
+        )
     }
 
     /// Get a row header
     fn get_row_header(&mut self, addr: u32) -> FileResult<FDBRowHeader> {
-        let off = u64::from(addr);
-        let mut row_header_bytes: [u8; 8] = [0; FDBRowHeader::BYTE_COUNT];
-
-        self.seek(SeekFrom::Start(off)).map_err(FileError::Seek)?;
-        self.read_exact(&mut row_header_bytes)
-            .map_err(FileError::Read)?;
-
-        let (_rest, row_header) =
-            parser::parse_row_header(&row_header_bytes).map_err(FileError::from)?;
-        Ok(row_header)
+        let mut bytes: [u8; 8] = [0; FDBRowHeader::BYTE_COUNT];
+        parse_at(self, addr, &mut bytes, parser::parse::<FDBRowHeader>)
     }
 
     fn get_field_data_list(&mut self, header: FDBRowHeader) -> FileResult<FDBFieldDataList> {
-        let off: u64 = header.field_data_list_addr.into();
-        let byte_count = header.field_data_list_byte_count();
-        let count = header.field_count as usize;
-
-        let mut field_data_list_bytes: Vec<u8> = vec![0; byte_count];
-
-        self.seek(SeekFrom::Start(off)).map_err(FileError::Seek)?;
-        self.read_exact(field_data_list_bytes.as_mut_slice())
-            .map_err(FileError::Read)?;
-
-        let (_rest, field_data_list) = parser::parse_field_data_list(&field_data_list_bytes, count)
-            .map_err(FileError::from)?;
-        Ok(field_data_list)
+        parse_list_at(self, header.field_data_list_addr, header.field_count)
+            .map(FDBFieldDataList::from)
     }
 
     fn get_row_header_addr_iterator<'a>(

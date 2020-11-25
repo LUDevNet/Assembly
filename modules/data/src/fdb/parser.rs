@@ -2,100 +2,155 @@
 
 use super::file::*;
 use assembly_core::nom::{
-    count, do_parse, map, named, named_args, number::complete::le_u32, take, IResult,
+    combinator::map, number::complete::le_u32,
+    sequence::tuple, take, IResult,
 };
 use std::convert::TryInto;
 
-// Read a table definition header from a *.fdb file
-named!(pub parse_table_def_header<FDBTableDefHeader>,
-    do_parse!(
-        a: le_u32 >>
-        b: le_u32 >>
-        c: le_u32 >>
-        (FDBTableDefHeader{ column_count: a, table_name_addr: b, column_header_list_addr: c })
-    )
-);
-
-named!(pub parse_table_data_header<FDBTableDataHeader>,
-    do_parse!(
-        a: le_u32 >>
-        b: le_u32 >>
-        (FDBTableDataHeader{ bucket_count: a, bucket_header_list_addr: b })
-    )
-);
-
-named_args!(pub parse_bucket_header_list(i: usize)<FDBBucketHeaderList>,
-    map!(
-        count!(
-            map!(le_u32, |a| FDBBucketHeader{ row_header_list_head_addr: a }),
-        i),
-    FDBBucketHeaderList::from)
-);
-
-named!(
-    parse_column_header<FDBColumnHeader>,
-    do_parse!(
-        column_data_type: le_u32
-            >> column_name_addr: le_u32
-            >> (FDBColumnHeader {
-                column_data_type,
-                column_name_addr
-            })
-    )
-);
-
-named_args!(pub parse_column_header_list(i: usize)<FDBColumnHeaderList>,
-    map!(count!(parse_column_header, i), FDBColumnHeaderList::from)
-);
-
-named!(pub parse_row_header_list_entry<FDBRowHeaderListEntry>,
-    do_parse!(
-        a: le_u32 >>
-        b: le_u32 >>
-        (FDBRowHeaderListEntry { row_header_addr: a, row_header_list_next_addr: b })
-    )
-);
-
-named!(pub parse_row_header<FDBRowHeader>,
-    do_parse!(
-        a: le_u32 >>
-        b: le_u32 >>
-        (FDBRowHeader { field_count: a, field_data_list_addr: b })
-    )
-);
-
-pub fn parse_field_data(i: &[u8]) -> IResult<&[u8], FDBFieldData> {
-    let (i, data_type) = le_u32(i)?;
-    let (i, byte_slice) = take!(i, 4)?;
-    // This cannot fail
-    let value: [u8; 4] = byte_slice.try_into().unwrap();
-    Ok((i, FDBFieldData { data_type, value }))
+fn u8_4(i: &[u8]) -> IResult<&[u8], [u8; 4]> {
+    let (i, slice) = take!(i, 4)?;
+    Ok((i, slice.try_into().unwrap()))
 }
 
-named_args!(pub parse_field_data_list(i: usize)<FDBFieldDataList>,
-    map!(count!(parse_field_data, i), FDBFieldDataList::from)
-);
+pub trait ParseLE: Sized {
+    const BYTE_COUNT: usize;
+    type Buf: AsMut<[u8]> + Default;
+    fn parse(i: &[u8]) -> IResult<&[u8], Self>;
+}
 
-named!(
-    parse_table_header<FDBTableHeader>,
-    do_parse!(
-        table_def_header_addr: le_u32
-            >> table_data_header_addr: le_u32
-            >> (FDBTableHeader {
-                table_def_header_addr,
-                table_data_header_addr
-            })
-    )
-);
+impl ParseLE for u32 {
+    const BYTE_COUNT: usize = 4;
+    type Buf = [u8; 4];
+    fn parse(input: &[u8]) -> IResult<&[u8], u32> {
+        le_u32(input)
+    }
+}
 
-named_args!(pub parse_table_headers(i: usize)<FDBTableHeaderList>,
-    map!(count!(parse_table_header, i), FDBTableHeaderList::from)
-);
+impl ParseLE for (u32, u32) {
+    const BYTE_COUNT: usize = 8;
+    type Buf = [u8; 8];
+    fn parse(input: &[u8]) -> IResult<&[u8], (u32, u32)> {
+        tuple((le_u32, le_u32))(input)
+    }
+}
 
-named!(pub parse_header<FDBHeader>,
-    do_parse!(
-        a: le_u32 >>
-        b: le_u32 >>
-        (FDBHeader{table_count: a, table_header_list_addr: b})
-    )
-);
+impl ParseLE for (u32, [u8; 4]) {
+    const BYTE_COUNT: usize = 8;
+    type Buf = [u8; 8];
+    fn parse(input: &[u8]) -> IResult<&[u8], (u32, [u8; 4])> {
+        tuple((le_u32, u8_4))(input)
+    }
+}
+
+impl ParseLE for (u32, u32, u32) {
+    const BYTE_COUNT: usize = 12;
+    type Buf = [u8; 12];
+    fn parse(input: &[u8]) -> IResult<&[u8], (u32, u32, u32)> {
+        tuple((le_u32, le_u32, le_u32))(input)
+    }
+}
+
+pub trait ParseFDB {
+    type IO: ParseLE;
+    fn new(i: Self::IO) -> Self;
+}
+
+pub fn parse<T: ParseFDB>(input: &[u8]) -> IResult<&[u8], T> {
+    map(T::IO::parse, T::new)(input)
+}
+
+impl ParseFDB for FDBTableDefHeader {
+    type IO = (u32, u32, u32);
+
+    fn new((a, b, c): Self::IO) -> Self {
+        FDBTableDefHeader {
+            column_count: a,
+            table_name_addr: b,
+            column_header_list_addr: c,
+        }
+    }
+}
+
+impl ParseFDB for FDBTableDataHeader {
+    type IO = (u32, u32);
+
+    fn new((a, b): Self::IO) -> Self {
+        FDBTableDataHeader {
+            bucket_count: a,
+            bucket_header_list_addr: b,
+        }
+    }
+}
+
+impl ParseFDB for FDBColumnHeader {
+    type IO = (u32, u32);
+
+    fn new((a, b): Self::IO) -> Self {
+        FDBColumnHeader {
+            column_data_type: a,
+            column_name_addr: b,
+        }
+    }
+}
+
+impl ParseFDB for FDBRowHeaderListEntry {
+    type IO = (u32, u32);
+
+    fn new((a, b): Self::IO) -> Self {
+        FDBRowHeaderListEntry {
+            row_header_addr: a,
+            row_header_list_next_addr: b,
+        }
+    }
+}
+
+impl ParseFDB for FDBRowHeader {
+    type IO = (u32, u32);
+
+    fn new((a, b): Self::IO) -> Self {
+        FDBRowHeader {
+            field_count: a,
+            field_data_list_addr: b,
+        }
+    }
+}
+
+impl ParseFDB for FDBTableHeader {
+    type IO = (u32, u32);
+
+    fn new((a, b): Self::IO) -> Self {
+        FDBTableHeader {
+            table_def_header_addr: a,
+            table_data_header_addr: b,
+        }
+    }
+}
+
+impl ParseFDB for FDBHeader {
+    type IO = (u32, u32);
+
+    fn new((a, b): Self::IO) -> Self {
+        FDBHeader {
+            table_count: a,
+            table_header_list_addr: b,
+        }
+    }
+}
+
+impl ParseFDB for FDBBucketHeader {
+    type IO = u32;
+
+    fn new(a: Self::IO) -> Self {
+        FDBBucketHeader {
+            row_header_list_head_addr: a,
+        }
+    }
+}
+
+impl ParseFDB for FDBFieldData {
+    type IO = (u32, [u8; 4]);
+
+    fn new((data_type, value): Self::IO) -> Self {
+        FDBFieldData { data_type, value }
+    }
+}

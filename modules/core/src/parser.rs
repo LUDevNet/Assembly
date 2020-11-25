@@ -1,19 +1,14 @@
 //! # Parser methods for the general types
 use super::types::{ObjectID, ObjectTemplate, Quaternion, Vector3f, WorldID};
 //use encoding::{all::UTF_16LE, DecoderTrap, Encoding};
-use nom::{
-    bytes::complete::take,
-    combinator::{map, map_opt, map_res},
-    multi::length_data,
-    sequence::tuple,
-};
+use nom::{error::FromExternalError, bytes::complete::take, combinator::{map, map_opt, map_res}, multi::length_data, sequence::tuple};
 use nom::{
     error::ParseError,
     number::complete::{le_f32, le_u32, le_u8},
     IResult,
 };
 use num_traits::FromPrimitive;
-use std::char::decode_utf16;
+use std::{string::FromUtf8Error, char::decode_utf16};
 
 /// Helper method to dump some values
 #[allow(dead_code)]
@@ -94,7 +89,7 @@ fn map_wstring(val: &[u8]) -> Result<String, ()> {
 /// Parse a u8 wstring
 pub fn parse_u8_wstring<'a, E>(input: &'a [u8]) -> Res<'a, String, E>
 where
-    E: ParseError<&'a [u8]>,
+    E: ParseError<&'a [u8]> + FromExternalError<&'a [u8], ()>,
 {
     le_u8(input).and_then(|(input, count)| {
         let len = usize::from(count) * 2;
@@ -105,7 +100,7 @@ where
 /// Parse a u32 wstring
 pub fn parse_u32_wstring<'a, E>(input: &'a [u8]) -> Res<'a, String, E>
 where
-    E: ParseError<&'a [u8]>,
+    E: ParseError<&'a [u8]> + FromExternalError<&'a [u8], ()>,
 {
     le_u32(input).and_then(|(input, count)| {
         let len = count * 2;
@@ -116,7 +111,7 @@ where
 /// Parse a string with u16 length specifier
 pub fn parse_string_u16<'a, E>(input: &'a [u8], i: u16) -> Res<'a, String, E>
 where
-    E: ParseError<&'a [u8]>,
+    E: ParseError<&'a [u8]> + FromExternalError<&'a [u8], FromUtf8Error>,
 {
     map_res(map(take(i), Vec::from), String::from_utf8)(input)
 }
@@ -124,7 +119,7 @@ where
 /// Parse a string after an u8 length specifier
 pub fn parse_u8_string<'a, E>(input: &'a [u8]) -> Res<'a, String, E>
 where
-    E: ParseError<&'a [u8]>,
+    E: ParseError<&'a [u8]> + FromExternalError<&'a [u8], FromUtf8Error>,
 {
     map_res(map(length_data(le_u8), Vec::from), String::from_utf8)(input)
 }
@@ -132,7 +127,7 @@ where
 /// Parse a string after an u32 length specifier
 pub fn parse_u32_string<'a, E>(input: &'a [u8]) -> Res<'a, String, E>
 where
-    E: ParseError<&'a [u8]>,
+    E: ParseError<&'a [u8]> + FromExternalError<&'a [u8], FromUtf8Error>,
 {
     map_res(map(length_data(le_u32), Vec::from), String::from_utf8)(input)
 }

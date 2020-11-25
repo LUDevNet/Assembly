@@ -8,8 +8,6 @@ pub struct FDBHeader {
 }
 
 impl FDBHeader {
-    pub const BYTE_COUNT: usize = 8;
-
     #[inline]
     pub fn table_headers_byte_count(&self) -> usize {
         self.table_count as usize * FDBTableHeader::BYTE_COUNT
@@ -38,6 +36,14 @@ pub struct FDBTableDefHeader {
 impl FDBTableDefHeader {
     pub const BYTE_COUNT: usize = 12;
 
+    pub fn new(column_count: u32, table_name_addr: u32, column_header_list_addr: u32) -> Self {
+        Self {
+            column_count,
+            table_name_addr,
+            column_header_list_addr,
+        }
+    }
+
     #[inline]
     pub fn column_header_list_byte_count(&self) -> usize {
         self.column_count as usize * FDBColumnHeader::BYTE_COUNT
@@ -63,8 +69,6 @@ pub struct FDBTableDataHeader {
 }
 
 impl FDBTableDataHeader {
-    pub const BYTE_COUNT: usize = 8;
-
     #[inline]
     pub fn bucket_header_list_byte_count(&self) -> usize {
         self.bucket_count as usize * FDBBucketHeader::BYTE_COUNT
@@ -79,6 +83,10 @@ pub struct FDBBucketHeader {
 
 impl FDBBucketHeader {
     pub const BYTE_COUNT: usize = 8;
+
+    pub fn new(row_header_list_head_addr: u32) -> Self {
+        Self { row_header_list_head_addr }
+    }
 }
 
 #[derive(Debug)]

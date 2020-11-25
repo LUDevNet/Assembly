@@ -2,8 +2,8 @@
 use super::file::*;
 use super::parser;
 
-use assembly_core::anyhow::anyhow;
-use assembly_core::reader::{FileResult, ParseError};
+use assembly_core::reader::{FileError, FileResult};
+use assembly_core::{nom::Finish, reader::ParseAt};
 
 use std::io::prelude::*;
 use std::{io::SeekFrom, num::NonZeroU32};
@@ -62,8 +62,9 @@ where
     pub fn get_chunk_header(&mut self) -> FileResult<ChunkHeader> {
         let mut header_bytes = [0; 20];
         self.inner.read_exact(&mut header_bytes)?;
-        let (_rest, header) =
-            parser::parse_chunk_header(&header_bytes).map_err(ParseError::from)?;
+        let (_rest, header) = parser::parse_chunk_header(&header_bytes)
+            .finish()
+            .at(0xbeef, &header_bytes)?;
         Ok(header)
     }
 
@@ -71,8 +72,9 @@ where
     pub fn get_meta_chunk_data(&mut self) -> FileResult<FileMetaChunkData> {
         let mut meta_chunk_data_bytes = [0 as u8; 20];
         self.inner.read_exact(&mut meta_chunk_data_bytes)?;
-        let (_rest, meta_chunk_data) =
-            parser::parse_file_meta_chunk_data(&meta_chunk_data_bytes).map_err(ParseError::from)?;
+        let (_rest, meta_chunk_data) = parser::parse_file_meta_chunk_data(&meta_chunk_data_bytes)
+            .finish()
+            .at(0xbeef, &meta_chunk_data_bytes)?;
         Ok(meta_chunk_data)
     }
 
@@ -88,7 +90,7 @@ where
         let header_1000 = self.get_chunk_header()?;
 
         if !header_1000.id == 1000 {
-            return Err(anyhow!("Expected first chunk to be of type 1000"));
+            return Err(FileError::Custom("Expected first chunk to be of type 1000"));
         }
 
         self.seek_to(&header_1000)?;
@@ -100,24 +102,26 @@ where
                 let header_2000 = res?;
 
                 if header_2000.id != 2000 {
-                    return Err(anyhow!("Expected 2000 chunk to be of type 2000"));
+                    return Err(FileError::Custom("Expected 2000 chunk to be of type 2000"));
                 }
 
                 let buf = self.load_buf(meta.chunk_2000_offset, &header_2000)?;
                 let env = parser::parse_env_chunk_data(&buf)
-                    .map_err(|e| anyhow!("Could not parse environment chunk:\n{}", e))?
-                    .1;
+                    .finish()
+                    .at(meta.chunk_2000_offset.into(), &buf)?.1;
 
                 // first section
                 let sec1_base = (env.section1_address - header_2000.offset) as usize;
                 let sec1 = parser::parse_section1(meta.version, &buf[sec1_base..])
-                    .map_err(|e| anyhow!("Could not parse section 1:\n{}", e))?
+                    .finish()
+                    .at(env.section1_address.into(), &buf[sec1_base..])?
                     .1;
 
                 // sky section
                 let sky_base = (env.sky_address - header_2000.offset) as usize;
                 let sky = parser::parse_sky_section(&buf[sky_base..])
-                    .map_err(|e| anyhow!("Could not parse sky section:\n{}", e))?
+                    .finish()
+                    .at(env.sky_address.into(), &buf[sky_base..])?
                     .1;
 
                 // TODO: third section
@@ -131,17 +135,18 @@ where
                 let header_2001 = res?;
 
                 if header_2001.id != 2001 {
-                    return Err(anyhow!("Expected 2001 chunk to be of type 2001"));
+                    return Err(FileError::Custom("Expected 2001 chunk to be of type 2001"));
                 }
 
                 let buf = self.load_buf(meta.chunk_2001_offset, &header_2001)?;
                 let obj = parser::parse_objects_chunk_data(meta.version, &buf)
-                    .map_err(|e| anyhow!("Could not parse objects chunk:\n{}", e))?
+                    .finish()    
+                    .at(meta.chunk_2001_offset.into(), &buf)?
                     .1;
 
                 let obj = obj
                     .parse_settings()
-                    .map_err(|_| anyhow!("Failed to parse object settings"))?;
+                    .map_err(|_| FileError::Custom("Failed to parse object settings"))?;
 
                 Ok(obj.objects)
             })

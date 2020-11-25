@@ -1,46 +1,54 @@
 //! Common error and result handling facilities
 use displaydoc::Display;
-use nom::{error::ErrorKind, Err as NomError};
-use std::{error::Error, io::Error as IoError, num::TryFromIntError};
+use nom::{error::ErrorKind, Offset};
+use std::{io, num::TryFromIntError};
 use thiserror::Error;
 
 /// Error when parsing a file
-#[derive(Debug, Display)]
+#[derive(Error, Debug, Display)]
 pub enum FileError {
-    /// Read Error {0:?}
-    Read(IoError),
-    /// Seek Error {0:?}
-    Seek(IoError),
+    /// IO Error {0:?}
+    IO(#[from] io::Error),
     /// Count Error {0:?}
     Count(TryFromIntError),
     /// Nom Incomplete
     Incomplete,
-    /// Nom Error {0:?}
-    ParseError(ErrorKind),
-    /// Nom Failure {0:?}
-    ParseFailure(ErrorKind),
+    /// Nom Error at {addr}+{offset}: {code:?}
+    Parse {
+        /// Address of the error
+        addr: u64,
+        /// How far the parser got beyond addr
+        offset: usize,
+        /// The nom error kind
+        code: ErrorKind,
+    },
     /// Encoding {0:?}
     StringEncoding(String),
 
     #[cfg(debug_assertions)]
     /// Not Implemented
     NotImplemented,
+    /// {0}
+    Custom(&'static str),
 }
 
-impl Error for FileError {}
+/// Trait to hand over a parse error past a buffer
+pub trait ParseAt<T>: Sized {
+    /// Call this after a <IResult as Finish>::finish
+    fn at(self, addr: u64, slice: &[u8]) -> Result<T, FileError>;
+}
 
-impl From<NomError<(&[u8], ErrorKind)>> for FileError {
-    fn from(e: NomError<(&[u8], ErrorKind)>) -> FileError {
-        match e {
-            // Need to translate the error here, as this lives longer than the input
-            nom::Err::Incomplete(_) => FileError::Incomplete,
-            nom::Err::Error((_, k)) => FileError::ParseError(k),
-            nom::Err::Failure((_, k)) => FileError::ParseFailure(k),
-        }
+impl<T> ParseAt<T> for Result<T, nom::error::Error<&[u8]>> {
+    fn at(self, addr: u64, slice: &[u8]) -> Result<T, FileError> {
+        self.map_err(|e| {
+            FileError::Parse {
+                addr, code: e.code, offset: slice.offset(e.input)
+            }
+        })
     }
 }
 
-/// Nom error
+/*/// Nom error
 #[derive(Debug, Error)]
 pub enum ParseError {
     /// Parsing was not successful
@@ -54,16 +62,15 @@ pub enum ParseError {
     Incomplete,
 }
 
-impl From<NomError<(&[u8], ErrorKind)>> for ParseError {
-    fn from(e: NomError<(&[u8], ErrorKind)>) -> ParseError {
-        match e {
-            // Need to translate the error here, as this lives longer than the input
-            nom::Err::Incomplete(_) => ParseError::Incomplete,
-            nom::Err::Error((r, k)) => ParseError::Error(r.len(), k),
-            nom::Err::Failure((r, k)) => ParseError::Failure(r.len(), k),
+impl<I: InputLength> From<nom::Err<nom::error::Error<I>>> for ParseError {
+    fn from(error: nom::Err<nom::error::Error<I>>) -> Self {
+        match error {
+            nom::Err::Error(e) => Self::Error(e.input.input_len(), e.code),
+            nom::Err::Failure(e) => Self::Failure(e.input.input_len(), e.code),
+            nom::Err::Incomplete(_) => Self::Incomplete,
         }
     }
-}
+}*/
 
 /// Result when parsing a file
-pub type FileResult<T> = Result<T, anyhow::Error>;
+pub type FileResult<T> = Result<T, FileError>;
