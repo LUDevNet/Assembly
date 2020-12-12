@@ -7,6 +7,7 @@ use std::{
     borrow::{Borrow, Cow},
     convert::TryInto,
     fmt::Debug,
+    ops::Deref,
 };
 
 #[repr(transparent)]
@@ -15,9 +16,48 @@ pub struct Latin1String {
     inner: Box<[u8]>,
 }
 
+impl Latin1String {
+    /// Create a new string
+    ///
+    /// ## Safety
+    ///
+    /// Must not contain null bytes
+    pub unsafe fn new(inner: Box<[u8]>) -> Self {
+        Self { inner }
+    }
+
+    /// Create a new instance from a rust string.
+    ///
+    /// **Note**: This encodes any unavailable unicode codepoints as their equivalent HTML-Entity.
+    /// This is an implementation detail of the `encoding_rs` crate and not really useful for this crate.
+    pub fn encode(string: &str) -> Cow<Latin1Str> {
+        let (res, _enc, _has_replaced_chars) = WINDOWS_1252.encode(string);
+        match res {
+            Cow::Owned(o) => Cow::Owned(Self {
+                inner: o.into_boxed_slice(),
+            }),
+            Cow::Borrowed(b) => Cow::Borrowed(unsafe { Latin1Str::from_bytes_unchecked(b) }),
+        }
+    }
+}
+
 impl Borrow<Latin1Str> for Latin1String {
     fn borrow(&self) -> &Latin1Str {
         unsafe { Latin1Str::from_bytes_unchecked(&self.inner) }
+    }
+}
+
+impl Deref for Latin1String {
+    type Target = Latin1Str;
+
+    fn deref(&self) -> &Self::Target {
+        self.borrow()
+    }
+}
+
+impl From<Cow<'_, Latin1Str>> for Latin1String {
+    fn from(cow: Cow<'_, Latin1Str>) -> Self {
+        cow.into_owned()
     }
 }
 
@@ -68,6 +108,22 @@ impl Latin1Str {
     /// Get the bytes of the string
     pub fn as_bytes(&self) -> &[u8] {
         &self.inner
+    }
+
+    /// Get the bytes of the string
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    /// Check whether the str is empty
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
+    /// Calculates the number of 4-byte units that are needed to store
+    /// this string with at least one null terminator.
+    pub fn req_buf_len(&self) -> usize {
+        self.inner.len() / 4 + 1
     }
 
     /// Decode the string
@@ -235,5 +291,22 @@ impl<'a> DoubleEndedIterator for FDBFieldDataSlice<'a> {
         } else {
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Latin1Str;
+
+    #[test]
+    fn test_req_bytes() {
+        assert_eq!(1, Latin1Str::new(b"a").req_buf_len());
+        assert_eq!(1, Latin1Str::new(b"ab").req_buf_len());
+        assert_eq!(1, Latin1Str::new(b"abc").req_buf_len());
+        assert_eq!(2, Latin1Str::new(b"abcd").req_buf_len());
+        assert_eq!(2, Latin1Str::new(b"abcde").req_buf_len());
+        assert_eq!(2, Latin1Str::new(b"abcdef").req_buf_len());
+        assert_eq!(2, Latin1Str::new(b"abcdefg").req_buf_len());
+        assert_eq!(3, Latin1Str::new(b"abcdefgh").req_buf_len());
     }
 }
