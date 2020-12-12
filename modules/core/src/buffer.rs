@@ -1,6 +1,6 @@
 //! Reading data directly from a buffer
-use thiserror::Error;
 use displaydoc::Display;
+use thiserror::Error;
 
 /// Errors from casting a minimally-aligned type
 #[derive(Debug, Error, Display)]
@@ -53,7 +53,11 @@ pub fn cast_slice<T: MinimallyAligned>(buffer: &[u8], offset: u32, len: u32) -> 
 }
 
 /// Try to cast a buffer to a slice
-pub fn try_cast_slice<T: MinimallyAligned>(buffer: &[u8], offset: u32, len: u32) -> Result<&[T], CastError> {
+pub fn try_cast_slice<T: MinimallyAligned>(
+    buffer: &[u8],
+    offset: u32,
+    len: u32,
+) -> Result<&[T], CastError> {
     let base = buffer.as_ptr();
     let buf_len = buffer.len();
 
@@ -100,7 +104,7 @@ impl Repr for LEU16 {
     }
 }
 
-unsafe impl MinimallyAligned for LEU32 { }
+unsafe impl MinimallyAligned for LEU32 {}
 
 impl Repr for LEU32 {
     type Value = u32;
@@ -109,7 +113,7 @@ impl Repr for LEU32 {
     }
 }
 
-unsafe impl MinimallyAligned for LEI64 { }
+unsafe impl MinimallyAligned for LEI64 {}
 
 impl Repr for LEI64 {
     type Value = i64;

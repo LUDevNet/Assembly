@@ -38,14 +38,14 @@
 
 #![warn(missing_docs)]
 
-pub mod mem;
 pub mod core;
-pub mod ro;
 pub mod file;
 pub mod io;
+pub mod mem;
 pub mod parser;
 pub mod query;
 pub mod reader;
+pub mod ro;
 pub mod store;
 
 pub use self::core::Schema;

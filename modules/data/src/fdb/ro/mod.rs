@@ -47,19 +47,29 @@ impl<'a, T> Handle<'a, T> {
     }
 
     /// Map a cast reference
-    pub(crate) fn try_map_cast<R: MinimallyAligned>(&self, offset: u32) -> Result<RefHandle<'a, R>, CastError> {
+    pub(crate) fn try_map_cast<R: MinimallyAligned>(
+        &self,
+        offset: u32,
+    ) -> Result<RefHandle<'a, R>, CastError> {
         let raw: &'a R = self.buffer.try_cast(offset)?;
         Ok(self.wrap(raw))
     }
 
     /// Map a casted slice
-    pub(crate) fn try_map_cast_slice<R: MinimallyAligned>(&self, offset: u32, count: u32) -> Result<RefHandle<'a, [R]>, CastError> {
+    pub(crate) fn try_map_cast_slice<R: MinimallyAligned>(
+        &self,
+        offset: u32,
+        count: u32,
+    ) -> Result<RefHandle<'a, [R]>, CastError> {
         let raw: &'a [R] = self.buffer.try_cast_slice(offset, count)?;
         Ok(self.wrap(raw))
     }
 
     /// Map a casted array
-    pub(crate) fn try_map_cast_array<R: MinimallyAligned>(&self, array: ArrayHeader) -> Result<RefHandle<'a, [R]>, CastError> {
+    pub(crate) fn try_map_cast_array<R: MinimallyAligned>(
+        &self,
+        array: ArrayHeader,
+    ) -> Result<RefHandle<'a, [R]>, CastError> {
         let raw: &'a [R] = self.buffer.try_cast_slice(array.base_offset, array.count)?;
         Ok(self.wrap(raw))
     }
@@ -67,19 +77,31 @@ impl<'a, T> Handle<'a, T> {
     /// Map something with a closure
     pub fn map<X>(self, mapper: impl Fn(Buffer<'a>, T) -> X) -> Handle<'a, X> {
         let raw = mapper(self.buffer, self.raw);
-        Handle { buffer: self.buffer, raw }
+        Handle {
+            buffer: self.buffer,
+            raw,
+        }
     }
 
     /// Map the value with a closure
     pub fn map_val<X>(self, mapper: impl Fn(T) -> X) -> Handle<'a, X> {
         let raw = mapper(self.raw);
-        Handle { buffer: self.buffer, raw }
+        Handle {
+            buffer: self.buffer,
+            raw,
+        }
     }
 
     /// Map something with a closure
-    pub fn try_map<X, E>(self, mapper: impl Fn(Buffer<'a>, T) -> Result<X, E>) -> Result<Handle<'a, X>, E> {
+    pub fn try_map<X, E>(
+        self,
+        mapper: impl Fn(Buffer<'a>, T) -> Result<X, E>,
+    ) -> Result<Handle<'a, X>, E> {
         let raw = mapper(self.buffer, self.raw)?;
-        Ok(Handle { buffer: self.buffer, raw })
+        Ok(Handle {
+            buffer: self.buffer,
+            raw,
+        })
     }
 }
 

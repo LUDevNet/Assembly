@@ -2,9 +2,9 @@
 use std::num::ParseIntError;
 
 use super::core::{Field, ValueType};
+use assembly_core::displaydoc::Display;
 use hsieh_hash::digest;
 use thiserror::Error;
-use assembly_core::displaydoc::Display;
 
 /// A struct that can act as a PK filter
 ///

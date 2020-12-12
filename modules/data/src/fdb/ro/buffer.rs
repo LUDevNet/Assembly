@@ -5,7 +5,10 @@ use crate::fdb::file::{
     FDBHeader, FDBRowHeader, FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader,
     FDBTableHeader,
 };
-use assembly_core::{buffer::{CastError, MinimallyAligned}, displaydoc::Display};
+use assembly_core::{
+    buffer::{CastError, MinimallyAligned},
+    displaydoc::Display,
+};
 use bytemuck::from_bytes;
 use std::{
     convert::TryInto,
@@ -50,12 +53,19 @@ impl<'a> Buffer<'a> {
     }
 
     /// Try to cast to T
-    pub fn try_cast<T: MinimallyAligned>(self, offset: u32) -> std::result::Result<&'a T, CastError> {
+    pub fn try_cast<T: MinimallyAligned>(
+        self,
+        offset: u32,
+    ) -> std::result::Result<&'a T, CastError> {
         assembly_core::buffer::try_cast(self.as_bytes(), offset)
     }
 
     /// Try to cast to T
-    pub fn try_cast_slice<T: MinimallyAligned>(self, offset: u32, len: u32) -> std::result::Result<&'a [T], CastError> {
+    pub fn try_cast_slice<T: MinimallyAligned>(
+        self,
+        offset: u32,
+        len: u32,
+    ) -> std::result::Result<&'a [T], CastError> {
         assembly_core::buffer::try_cast_slice(self.as_bytes(), offset, len)
     }
 

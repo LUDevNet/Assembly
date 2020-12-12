@@ -3,7 +3,7 @@ use crate::fdb::file::{
     FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
 };
 use crate::fdb::{core::ValueType, file::ArrayHeader};
-use assembly_core::buffer::{LEU32, MinimallyAligned, Repr};
+use assembly_core::buffer::{MinimallyAligned, Repr, LEU32};
 
 /// An FDB header usable for unaligned reads
 #[repr(C, align(1))]
@@ -220,18 +220,21 @@ mod tests {
     #[test]
     fn check_unaligned_read() {
         let buffer: &[u8] = &[0, 0, 0, 0, 0, 8, 0, 0, 0];
-        
+
         // Is this actually unaligned?
         let base = unsafe { buffer.as_ptr().offset(1) };
         assert_eq!(1, base as usize % 4);
-        
+
         // Can we successfully get the value?
         let header = unsafe { &*(base as *const FDBHeaderC) };
-        assert_eq!(header.extract(), FDBHeader {
-            tables: ArrayHeader {
-                count: 0,
-                base_offset: 8,
+        assert_eq!(
+            header.extract(),
+            FDBHeader {
+                tables: ArrayHeader {
+                    count: 0,
+                    base_offset: 8,
+                }
             }
-        });
+        );
     }
 }

@@ -197,19 +197,19 @@ pub enum FDBFieldValue {
     /// A piece of Latin-1 encoded text
     Text {
         /// The base of the string
-        addr: u32
+        addr: u32,
     },
     /// A boolean
     Boolean(bool),
     /// An indirect 64 bit integer
     BigInt {
         /// The offset of the value
-        addr: u32
+        addr: u32,
     },
     /// A (base64 encoded?) null-terminated string
     VarChar {
         /// The base of the string
-        addr: u32
+        addr: u32,
     },
 }
 
@@ -233,7 +233,7 @@ pub struct FDBRowHeaderList(pub Vec<FDBRowHeader>);
 /// A vector of [`FDBFieldData`]
 pub struct FDBFieldDataList(pub Vec<FDBFieldData>);
 
-impl From<FDBTableHeaderList> for Vec<FDBTableHeader>  {
+impl From<FDBTableHeaderList> for Vec<FDBTableHeader> {
     fn from(list: FDBTableHeaderList) -> Self {
         list.0
     }

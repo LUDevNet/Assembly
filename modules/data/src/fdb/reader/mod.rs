@@ -85,14 +85,13 @@ fn parse_list_at<R: Seek + Read + ?Sized, T: ParseFDB>(
     let mut list = Vec::with_capacity(count as usize);
     for _ in 0..count {
         reader.read_exact(buf.as_mut())?;
-        let (_rest, t) =
-            T::parse(buf.as_mut())
-                .finish()
-                .map_err(|e| FileError::Parse {
-                    addr,
-                    offset: offset + buf_len - e.input.len(),
-                    code: e.code,
-                })?;
+        let (_rest, t) = T::parse(buf.as_mut())
+            .finish()
+            .map_err(|e| FileError::Parse {
+                addr,
+                offset: offset + buf_len - e.input.len(),
+                code: e.code,
+            })?;
         list.push(t);
         offset += buf_len;
     }
@@ -158,12 +157,7 @@ where
     /// Get a row header list entry
     fn get_row_header_list_entry(&mut self, addr: u32) -> FileResult<FDBRowHeaderListEntry> {
         let mut bytes = [0; std::mem::size_of::<FDBRowHeaderListEntry>()];
-        parse_at(
-            self,
-            addr,
-            &mut bytes,
-            FDBRowHeaderListEntry::parse,
-        )
+        parse_at(self, addr, &mut bytes, FDBRowHeaderListEntry::parse)
     }
 
     /// Get a row header

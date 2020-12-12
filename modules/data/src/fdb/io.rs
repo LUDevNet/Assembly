@@ -7,12 +7,12 @@
 //! This uses the methods defined in the `reader` module and produces the data
 //! structure defined in the `core` module.
 
-use super::reader::builder::DatabaseBuilder;
 use super::core::*;
 use super::file::{
     FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBRowHeader, FDBTableDataHeader,
     FDBTableDefHeader, FDBTableHeader,
 };
+use super::reader::builder::DatabaseBuilder;
 use super::reader::{DatabaseBufReader, DatabaseReader};
 use assembly_core::reader::{FileError, FileResult};
 use std::convert::TryFrom;

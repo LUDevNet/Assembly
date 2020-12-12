@@ -33,7 +33,7 @@ pub fn main() -> Result<(), anyhow::Error> {
         let tables = db.tables()?;
         for table in tables.iter() {
             let table = table?;
-            
+
             // get the name
             let name = table.name();
 

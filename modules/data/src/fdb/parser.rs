@@ -96,7 +96,7 @@ impl ParseFDB for FDBTableDataHeader {
 
     fn new((a, b): Self::IO) -> Self {
         FDBTableDataHeader {
-            buckets: ArrayHeader::new((a,b)),
+            buckets: ArrayHeader::new((a, b)),
         }
     }
 }
@@ -127,7 +127,9 @@ impl ParseFDB for FDBRowHeader {
     type IO = (u32, u32);
 
     fn new(io: Self::IO) -> Self {
-        FDBRowHeader { fields: ArrayHeader::from(io) }
+        FDBRowHeader {
+            fields: ArrayHeader::from(io),
+        }
     }
 }
 

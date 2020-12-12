@@ -3,10 +3,14 @@
 //! This API uses handles that store the data of one header alongside
 //! a reference into the in-memory file.
 
-use super::{Handle, buffer::{Buffer, BufferError}, slice::{
+use super::{
+    buffer::{Buffer, BufferError},
+    slice::{
         FDBBucketHeaderSlice, FDBColumnHeaderSlice, FDBFieldDataSlice, FDBTableHeaderSlice,
         Latin1Str,
-    }};
+    },
+    Handle,
+};
 use crate::fdb::{
     core::ValueType,
     file::{
