@@ -21,7 +21,7 @@ fn load_database(filename: &str) -> Result<(), anyhow::Error> {
     match schema.table("sysdiagrams") {
         Some(table) => {
             for row in table {
-                match &row.fields_ref()[4] {
+                match &row.fields()[4] {
                     Field::Text(text) => {
                         let sysdiagram = SysDiagram::try_from(&text[..])?;
                         /*for table in sysdiagram.tables {

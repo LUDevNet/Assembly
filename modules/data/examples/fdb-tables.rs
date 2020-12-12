@@ -1,4 +1,4 @@
-use assembly_data::fdb::align::Database;
+use assembly_data::fdb::mem::Database;
 use memmap::Mmap;
 use prettytable::{Cell as PCell, Row as PRow, Table as PTable};
 use std::fs::File;
@@ -30,8 +30,10 @@ pub fn main() -> Result<(), anyhow::Error> {
         output.set_titles(PRow::new(vec![PCell::new("Name")]));
 
         // loop through all tables
-        let tables = db.tables();
+        let tables = db.tables()?;
         for table in tables.iter() {
+            let table = table?;
+            
             // get the name
             let name = table.name();
 

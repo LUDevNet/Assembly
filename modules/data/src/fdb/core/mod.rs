@@ -16,6 +16,8 @@
 //! Each Table has a list of columns with the names and default data
 //! Types corresponding to the layout of each row.
 
+pub mod iter;
+
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -88,12 +90,19 @@ impl From<u32> for ValueType {
 /// A database single field
 #[derive(Debug, Clone, PartialEq)]
 pub enum Field {
+    /// The NULL value
     Nothing,
+    /// A 32 bit integer
     Integer(i32),
+    /// A 32 bit IEEE floating point number
     Float(f32),
+    /// A string
     Text(String),
+    /// A boolean
     Boolean(bool),
+    /// A 64 bit integer
     BigInt(i64),
+    /// A (base64 encoded?) byte buffer
     VarChar(String),
 }
 
@@ -136,16 +145,24 @@ impl From<Vec<Field>> for Row {
 }
 
 impl Row {
+    /// Create a new, empty row
     pub fn new() -> Row {
         Row(Vec::new())
     }
 
-    pub fn fields(self) -> Vec<Field> {
+    /// Return the fields of this row
+    pub fn into_fields(self) -> Vec<Field> {
         self.0
     }
 
-    pub fn fields_ref(&self) -> &Vec<Field> {
+    /// Get a reference to the fields vector
+    pub fn fields(&self) -> &Vec<Field> {
         &self.0
+    }
+
+    /// Get a mutable reference to the fields vector
+    pub fn fields_mut(&mut self) -> &mut Vec<Field> {
+        &mut self.0
     }
 }
 
@@ -178,7 +195,9 @@ impl Bucket {
 /// Name and default type for one field in each row
 #[derive(Debug)]
 pub struct Column {
+    /// The name of the column
     pub name: String,
+    /// The type of the column
     pub field_type: ValueType,
 }
 
@@ -194,17 +213,21 @@ impl From<(&str, ValueType)> for Column {
 /// A list of columns with types and a name
 #[derive(Debug)]
 pub struct TableDef {
+    /// The columns of the table in the same order as in the rows
     pub columns: Vec<Column>,
+    /// The name of the table
     pub name: String,
 }
 
 /// An array of buckets, and a collection of rows
 #[derive(Debug, Default)]
 pub struct TableData {
+    /// The buckets in this table
     pub buckets: Vec<Bucket>,
 }
 
 impl TableData {
+    /// Creates a new instance
     pub fn new() -> Self {
         TableData {
             buckets: Vec::new(),
@@ -220,31 +243,48 @@ pub struct Table {
 }
 
 impl Table {
+    /// Creates a new table from a definition and data struct
     pub fn from(definition: TableDef, data: TableData) -> Self {
         Table { definition, data }
     }
 
+    /// Creates a new table without data
     pub fn new(definition: TableDef) -> Self {
         let data = TableData::new();
         Table { definition, data }
     }
 
-    pub fn buckets(self) -> Vec<Bucket> {
+    /// Extract the buckets vector
+    pub fn into_buckets(self) -> Vec<Bucket> {
         self.data.buckets
     }
 
-    pub fn buckets_ref(&self) -> &Vec<Bucket> {
+    /// Returns a reference to the slice of buckets
+    pub fn buckets(&self) -> &[Bucket] {
         &self.data.buckets
     }
 
-    pub fn columns(self) -> Vec<Column> {
+    /// Returns a mutable reference to the vector of buckets
+    pub fn buckets_mut(&mut self) -> &mut Vec<Bucket> {
+        &mut self.data.buckets
+    }
+
+    /// Extract the columns vector
+    pub fn into_columns(self) -> Vec<Column> {
         self.definition.columns
     }
 
-    pub fn columns_ref(&self) -> &Vec<Column> {
+    /// Returns a reference to the slice of columns
+    pub fn columns(&self) -> &[Column] {
         &self.definition.columns
     }
 
+    /// Returns a mutable reference to the vector of columns
+    pub fn columns_mut(&mut self) -> &mut Vec<Column> {
+        &mut self.definition.columns
+    }
+
+    /// Returns the name of the table
     pub fn name(&self) -> &str {
         self.definition.name.as_ref()
     }
@@ -278,6 +318,7 @@ impl Schema {
         self.tables.get_mut(name)
     }
 
+    /// Returns the number of tables
     pub fn table_count(&self) -> usize {
         self.tables.len()
     }

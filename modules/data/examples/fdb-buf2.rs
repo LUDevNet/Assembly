@@ -1,5 +1,5 @@
 use anyhow::Error;
-use assembly_data::fdb::de::buffer::Buffer;
+use assembly_data::fdb::ro::buffer::Buffer;
 use memmap::Mmap;
 use std::{fs::File, path::PathBuf};
 use structopt::StructOpt;

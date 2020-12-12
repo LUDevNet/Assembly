@@ -16,6 +16,8 @@ thiserror = "1.0"
 memchr = "2.3"
 encoding_rs = "0.8"
 derive-new = "0.5"
+bytemuck = "1.4"
+bytemuck_derive = "1"
 
 [dev-dependencies]
 prettytable-rs = "0.8"

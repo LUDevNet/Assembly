@@ -1,10 +1,9 @@
 extern crate getopts;
 use anyhow::anyhow;
 use assembly_data::fdb::{
-    builder::DatabaseBuilder,
     core::ValueType,
     query::pk_filter,
-    reader::{DatabaseBufReader, DatabaseReader},
+    reader::{builder::DatabaseBuilder, DatabaseBufReader, DatabaseReader},
 };
 use getopts::Options;
 use prettytable::{Cell as PCell, Row as PRow, Table as PTable};
@@ -47,7 +46,7 @@ fn run(filename: &str, tablename: &str, key: &str) -> Result<(), anyhow::Error> 
     let value_type = ValueType::from(chlv[0].column_data_type);
     let filter = pk_filter(key, value_type)?;
 
-    let bc = tth.bucket_count;
+    let bc = tth.buckets.count;
 
     let bhlv: Vec<_> = loader.get_bucket_header_list(&tth)?.into();
     let hash = filter.hash();

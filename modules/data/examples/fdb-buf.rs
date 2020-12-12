@@ -1,5 +1,5 @@
 use anyhow::Error;
-use assembly_data::fdb::align::{Database, Tables};
+use assembly_data::fdb::mem::{Database, Tables};
 use memmap::Mmap;
 use std::{fs::File, path::PathBuf, time::Instant};
 use structopt::StructOpt;
@@ -18,10 +18,11 @@ fn main() -> Result<(), Error> {
     let buffer: &[u8] = &mmap;
 
     let db = Database::new(buffer);
-    let tables: Tables<'_> = db.tables();
+    let tables: Tables<'_> = db.tables()?;
     println!("#Tables: {}", tables.len());
 
     for table in tables.iter() {
+        let table = table?;
         let table_name = table.name();
         println!("{}", table_name);
 

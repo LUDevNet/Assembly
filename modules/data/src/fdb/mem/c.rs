@@ -1,9 +1,9 @@
-use crate::fdb::core::ValueType;
 use crate::fdb::file::{
     FDBBucketHeader, FDBColumnHeader, FDBFieldValue, FDBHeader, FDBRowHeader,
     FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
 };
-use assembly_core::buffer::{Unaligned, LEU32};
+use crate::fdb::{core::ValueType, file::ArrayHeader};
+use assembly_core::buffer::{LEU32, MinimallyAligned, Repr};
 
 /// An FDB header usable for unaligned reads
 #[repr(C, align(1))]
@@ -72,17 +72,23 @@ pub struct FDBFieldDataC {
     pub(super) value: FDBFieldValueC,
 }
 
-unsafe impl Unaligned for FDBHeaderC {
+unsafe impl MinimallyAligned for FDBHeaderC {}
+
+impl Repr for FDBHeaderC {
     type Value = FDBHeader;
     fn extract(&self) -> Self::Value {
         FDBHeader {
-            table_count: self.table_count.extract(),
-            table_header_list_addr: self.table_header_list_addr.extract(),
+            tables: ArrayHeader {
+                count: self.table_count.extract(),
+                base_offset: self.table_header_list_addr.extract(),
+            },
         }
     }
 }
 
-unsafe impl Unaligned for FDBTableHeaderC {
+unsafe impl MinimallyAligned for FDBTableHeaderC {}
+
+impl Repr for FDBTableHeaderC {
     type Value = FDBTableHeader;
     fn extract(&self) -> Self::Value {
         FDBTableHeader {
@@ -92,7 +98,9 @@ unsafe impl Unaligned for FDBTableHeaderC {
     }
 }
 
-unsafe impl Unaligned for FDBTableDefHeaderC {
+unsafe impl MinimallyAligned for FDBTableDefHeaderC {}
+
+impl Repr for FDBTableDefHeaderC {
     type Value = FDBTableDefHeader;
     fn extract(&self) -> Self::Value {
         FDBTableDefHeader {
@@ -103,17 +111,23 @@ unsafe impl Unaligned for FDBTableDefHeaderC {
     }
 }
 
-unsafe impl Unaligned for FDBTableDataHeaderC {
+unsafe impl MinimallyAligned for FDBTableDataHeaderC {}
+
+impl Repr for FDBTableDataHeaderC {
     type Value = FDBTableDataHeader;
     fn extract(&self) -> Self::Value {
         FDBTableDataHeader {
-            bucket_count: self.bucket_count.extract(),
-            bucket_header_list_addr: self.bucket_header_list_addr.extract(),
+            buckets: ArrayHeader {
+                count: self.bucket_count.extract(),
+                base_offset: self.bucket_header_list_addr.extract(),
+            },
         }
     }
 }
 
-unsafe impl Unaligned for FDBColumnHeaderC {
+unsafe impl MinimallyAligned for FDBColumnHeaderC {}
+
+impl Repr for FDBColumnHeaderC {
     type Value = FDBColumnHeader;
     fn extract(&self) -> Self::Value {
         FDBColumnHeader {
@@ -123,7 +137,9 @@ unsafe impl Unaligned for FDBColumnHeaderC {
     }
 }
 
-unsafe impl Unaligned for FDBBucketHeaderC {
+unsafe impl MinimallyAligned for FDBBucketHeaderC {}
+
+impl Repr for FDBBucketHeaderC {
     type Value = FDBBucketHeader;
     fn extract(&self) -> Self::Value {
         FDBBucketHeader {
@@ -132,7 +148,9 @@ unsafe impl Unaligned for FDBBucketHeaderC {
     }
 }
 
-unsafe impl Unaligned for FDBRowHeaderListEntryC {
+unsafe impl MinimallyAligned for FDBRowHeaderListEntryC {}
+
+impl Repr for FDBRowHeaderListEntryC {
     type Value = FDBRowHeaderListEntry;
     fn extract(&self) -> Self::Value {
         FDBRowHeaderListEntry {
@@ -142,17 +160,23 @@ unsafe impl Unaligned for FDBRowHeaderListEntryC {
     }
 }
 
-unsafe impl Unaligned for FDBRowHeaderC {
+unsafe impl MinimallyAligned for FDBRowHeaderC {}
+
+impl Repr for FDBRowHeaderC {
     type Value = FDBRowHeader;
     fn extract(&self) -> Self::Value {
         FDBRowHeader {
-            field_count: self.field_count.extract(),
-            field_data_list_addr: self.field_data_list_addr.extract(),
+            fields: ArrayHeader {
+                count: self.field_count.extract(),
+                base_offset: self.field_data_list_addr.extract(),
+            },
         }
     }
 }
 
-unsafe impl Unaligned for FDBFieldDataC {
+unsafe impl MinimallyAligned for FDBFieldDataC {}
+
+impl Repr for FDBFieldDataC {
     type Value = FDBFieldValue;
     fn extract(&self) -> Self::Value {
         let data_type = ValueType::from(self.data_type.extract());
@@ -172,5 +196,42 @@ unsafe impl Unaligned for FDBFieldDataC {
             },
             ValueType::Unknown(i) => unimplemented!("Cannot read unknown value type {}", i),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_align_of() {
+        assert_eq!(1, std::mem::align_of::<FDBHeaderC>());
+        assert_eq!(1, std::mem::align_of::<FDBTableHeaderC>());
+        assert_eq!(1, std::mem::align_of::<FDBTableDefHeaderC>());
+        assert_eq!(1, std::mem::align_of::<FDBTableDataHeaderC>());
+        assert_eq!(1, std::mem::align_of::<FDBColumnHeaderC>());
+        assert_eq!(1, std::mem::align_of::<FDBBucketHeaderC>());
+        assert_eq!(1, std::mem::align_of::<FDBRowHeaderListEntryC>());
+        assert_eq!(1, std::mem::align_of::<FDBRowHeaderC>());
+        assert_eq!(1, std::mem::align_of::<FDBFieldDataC>());
+        assert_eq!(1, std::mem::align_of::<FDBFieldValueC>());
+    }
+
+    #[test]
+    fn check_unaligned_read() {
+        let buffer: &[u8] = &[0, 0, 0, 0, 0, 8, 0, 0, 0];
+        
+        // Is this actually unaligned?
+        let base = unsafe { buffer.as_ptr().offset(1) };
+        assert_eq!(1, base as usize % 4);
+        
+        // Can we successfully get the value?
+        let header = unsafe { &*(base as *const FDBHeaderC) };
+        assert_eq!(header.extract(), FDBHeader {
+            tables: ArrayHeader {
+                count: 0,
+                base_offset: 8,
+            }
+        });
     }
 }

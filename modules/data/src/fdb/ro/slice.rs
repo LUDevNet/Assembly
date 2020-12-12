@@ -1,3 +1,5 @@
+//! # Handling of slice references into the in-memory DB file
+
 use crate::fdb::file::{FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBTableHeader};
 use encoding_rs::WINDOWS_1252;
 use memchr::memchr;
@@ -8,6 +10,7 @@ use std::{
 };
 
 #[repr(transparent)]
+/// An owned latin-1 encoded string
 pub struct Latin1String {
     inner: Box<[u8]>,
 }
@@ -20,6 +23,7 @@ impl Borrow<Latin1Str> for Latin1String {
 
 #[repr(transparent)]
 #[derive(PartialEq, PartialOrd, Eq, Ord)]
+/// A borrowed latin-1 encoded string (like `&str`)
 pub struct Latin1Str {
     #[allow(dead_code)]
     inner: [u8],
@@ -61,10 +65,12 @@ impl Latin1Str {
         &*(text as *const [u8] as *const Latin1Str)
     }
 
+    /// Get the bytes of the string
     pub fn as_bytes(&self) -> &[u8] {
         &self.inner
     }
 
+    /// Decode the string
     pub fn decode(&self) -> Cow<str> {
         WINDOWS_1252.decode(self.as_bytes()).0
     }

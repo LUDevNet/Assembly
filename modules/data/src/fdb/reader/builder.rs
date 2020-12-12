@@ -1,11 +1,14 @@
-use super::core::{Field, ValueType};
-use super::file::FDBFieldData;
-use super::reader::{DatabaseBufReader, DatabaseReader};
+//! # Extension for constructing Rustic values
+
+use super::super::core::{Field, ValueType};
+use super::super::file::FDBFieldData;
+use super::{DatabaseBufReader, DatabaseReader};
 use assembly_core::displaydoc::Display;
 use thiserror::Error;
 
 use std::io::{self, BufRead, Seek};
 
+/// Errors from a [`DatabaseBuilder`]
 #[derive(Debug, Error, Display)]
 pub enum BuildError {
     /// Unknown Type ID {0}
@@ -14,14 +17,17 @@ pub enum BuildError {
     IO(#[from] io::Error),
 }
 
+/// Result type for [`DatabaseBuilder`]
 pub type BuildResult<T> = Result<T, BuildError>;
 
 impl<T: ?Sized> DatabaseBuilder for T where T: DatabaseBufReader + DatabaseReader + Seek + BufRead {}
 
+/// Extension trait for `Seek + BufRead + DatabaseBufReader + DatabaseReader`
 pub trait DatabaseBuilder
 where
     Self: Seek + BufRead + DatabaseBufReader + DatabaseReader,
 {
+    /// Try to load a field value
     fn try_load_field(&mut self, data: &FDBFieldData) -> BuildResult<Field> {
         let bytes = data.value;
         match ValueType::from(data.data_type) {

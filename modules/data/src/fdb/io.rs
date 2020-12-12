@@ -1,4 +1,13 @@
-use super::builder::DatabaseBuilder;
+//! # General-Purpose file loader
+//!
+//! This is the original entry point to the FDB loading API. A [`SchemaLoader`] wraps
+//! an implementation of [`BufRead`] and loads the data from the file into an
+//! instance of [`Schema`].
+//!
+//! This uses the methods defined in the `reader` module and produces the data
+//! structure defined in the `core` module.
+
+use super::reader::builder::DatabaseBuilder;
 use super::core::*;
 use super::file::{
     FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBRowHeader, FDBTableDataHeader,
@@ -10,7 +19,9 @@ use std::convert::TryFrom;
 use std::fs;
 use std::io::{BufRead, BufReader, Seek};
 
+/// Configuration for the [`SchemaLoader`]
 pub trait LoaderConfig {
+    /// Whether to process to table specified by `def`
     fn load_table_data(&self, def: &TableDef) -> bool;
 }
 
@@ -19,6 +30,7 @@ pub struct LoaderConfigImpl<P>
 where
     P: Fn(&TableDef) -> bool,
 {
+    /// The policy for tables
     pub table_data_policy: P,
 }
 

@@ -1,8 +1,11 @@
+//! # \[WIP\] Experiment for arena-storage of a database
+
 #![allow(unused)]
 use crate::fdb::core::ValueType;
-use crate::fdb::de::slice::Latin1String;
+use crate::fdb::ro::slice::Latin1String;
 use std::collections::BTreeMap;
 
+/// The whole database
 pub struct Schema {
     tables: Vec<Table>,
 }
@@ -15,6 +18,7 @@ impl Schema {
     }
 }
 
+/// A single table
 pub struct Table {
     columns: Vec<Column>,
     strings: BTreeMap<usize, Vec<Latin1String>>,
@@ -39,18 +43,22 @@ impl Table {
     }
 }
 
+/// A single column
 pub struct Column {
     name_str_index: (usize, usize),
     data_type: ValueType,
 }
 
+/// A single bucket
 pub struct Bucket {
     first_row: usize,
 }
 
+/// A single row
 pub struct Row {
     first_field_index: usize,
     next_row: usize,
 }
 
+/// A single field
 pub struct Field {}

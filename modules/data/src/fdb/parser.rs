@@ -1,4 +1,4 @@
-//! The parsing of structures
+//! # Parse structures from a byte buffer
 
 use super::file::*;
 use assembly_core::nom::{
@@ -11,9 +11,13 @@ fn u8_4(i: &[u8]) -> IResult<&[u8], [u8; 4]> {
     Ok((i, slice.try_into().unwrap()))
 }
 
-pub trait ParseLE: Sized {
+/// Marker trait that implies that `Self` can be parsed in little-endian mode
+pub trait ParseLE: Sized + Copy {
+    /// Same as `std::mem::size_of::<Self>()`
     const BYTE_COUNT: usize;
+    /// A byte array of the same length that can be parsed as `Self`
     type Buf: AsMut<[u8]> + Default;
+    /// Function to parse the buffer into self
     fn parse(i: &[u8]) -> IResult<&[u8], Self>;
 }
 
@@ -49,13 +53,30 @@ impl ParseLE for (u32, u32, u32) {
     }
 }
 
-pub trait ParseFDB {
+/// Trait that implements parsing from a FDB file
+pub trait ParseFDB: Sized + Copy {
+    /// The [`ParseLE`] compatible type that is equivalent to `Self`
     type IO: ParseLE;
+    /// Create `Self` from an instance of IO
     fn new(i: Self::IO) -> Self;
+
+    /// Parse an FDB structure from a input slice
+    ///
+    /// This function chains [`ParseLE::parse`] with [`ParseFDB::new`]
+    fn parse(input: &[u8]) -> IResult<&[u8], Self> {
+        map(Self::IO::parse, Self::new)(input)
+    }
 }
 
-pub fn parse<T: ParseFDB>(input: &[u8]) -> IResult<&[u8], T> {
-    map(T::IO::parse, T::new)(input)
+impl ParseFDB for ArrayHeader {
+    type IO = (u32, u32);
+
+    fn new((a, b): Self::IO) -> Self {
+        ArrayHeader {
+            count: a,
+            base_offset: b,
+        }
+    }
 }
 
 impl ParseFDB for FDBTableDefHeader {
@@ -75,8 +96,7 @@ impl ParseFDB for FDBTableDataHeader {
 
     fn new((a, b): Self::IO) -> Self {
         FDBTableDataHeader {
-            bucket_count: a,
-            bucket_header_list_addr: b,
+            buckets: ArrayHeader::new((a,b)),
         }
     }
 }
@@ -106,11 +126,8 @@ impl ParseFDB for FDBRowHeaderListEntry {
 impl ParseFDB for FDBRowHeader {
     type IO = (u32, u32);
 
-    fn new((a, b): Self::IO) -> Self {
-        FDBRowHeader {
-            field_count: a,
-            field_data_list_addr: b,
-        }
+    fn new(io: Self::IO) -> Self {
+        FDBRowHeader { fields: ArrayHeader::from(io) }
     }
 }
 
@@ -130,8 +147,7 @@ impl ParseFDB for FDBHeader {
 
     fn new((a, b): Self::IO) -> Self {
         FDBHeader {
-            table_count: a,
-            table_header_list_addr: b,
+            tables: ArrayHeader::from((a, b)),
         }
     }
 }

@@ -1,6 +1,9 @@
-use super::core::{Bucket, Field, Row, Table};
+//! # Implementations of `IntoIterator` for the core model
+
+use super::{Bucket, Field, Row, Table};
 use std::{iter::FlatMap, slice::Iter as SliceIter, vec::IntoIter as VecIntoIter};
 
+/// An iterator over a vector of fields in a row.
 pub type FieldVecIter = VecIntoIter<Field>;
 
 impl IntoIterator for Row {
@@ -8,10 +11,11 @@ impl IntoIterator for Row {
     type IntoIter = FieldVecIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.fields().into_iter()
+        self.into_fields().into_iter()
     }
 }
 
+/// An iterator over a slice of fields in a row reference.
 pub type FieldRefIter<'a> = SliceIter<'a, Field>;
 
 impl<'a> IntoIterator for &'a Row {
@@ -19,11 +23,13 @@ impl<'a> IntoIterator for &'a Row {
     type IntoIter = FieldRefIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.fields_ref().iter()
+        self.fields().iter()
     }
 }
 
+/// An iterator over a vector of rows in a bucket.
 pub type RowVecIter = VecIntoIter<Row>;
+/// An iterator over a slice of rows in a bucket reference.
 pub type RowSliceIter<'a> = SliceIter<'a, Row>;
 
 impl IntoIterator for Bucket {
@@ -44,8 +50,11 @@ impl<'a> IntoIterator for &'a Bucket {
     }
 }
 
+/// An iterator over a vector of buckets in a table.
 pub type TableBucketIter = VecIntoIter<Bucket>;
+/// A static pointer to a function from `Bucket` to a row iterator.
 pub type BucketRowIterMapper = fn(Bucket) -> RowVecIter;
+/// A flattened iterator over all rows in a table, disregarding buckets.
 pub type TableRowIter = FlatMap<TableBucketIter, RowVecIter, BucketRowIterMapper>;
 
 impl IntoIterator for Table {
@@ -53,12 +62,15 @@ impl IntoIterator for Table {
     type IntoIter = TableRowIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.buckets().into_iter().flat_map(Bucket::into_iter)
+        self.into_buckets().into_iter().flat_map(Bucket::into_iter)
     }
 }
 
+/// An iterator over a slice of buckets in a table reference.
 pub type TableBucketRefIter<'a> = SliceIter<'a, Bucket>;
+/// A static pointer to a function from `Bucket` reference to a `Row` reference iterator.
 pub type BucketRowRefIterMapper<'a> = fn(&'a Bucket) -> RowSliceIter<'a>;
+/// A flattened iterator over all row references in a table, disregarding buckets.
 pub type TableRowRefIter<'a> =
     FlatMap<TableBucketRefIter<'a>, RowSliceIter<'a>, BucketRowRefIterMapper<'a>>;
 
@@ -67,6 +79,6 @@ impl<'a> IntoIterator for &'a Table {
     type IntoIter = TableRowRefIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.buckets_ref().iter().flat_map(<&Bucket>::into_iter)
+        self.buckets().iter().flat_map(<&Bucket>::into_iter)
     }
 }

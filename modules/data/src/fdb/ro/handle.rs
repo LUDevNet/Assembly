@@ -1,10 +1,12 @@
-use super::{
-    buffer::{Buffer, BufferError},
-    slice::{
+//! The low-level Handle API
+//!
+//! This API uses handles that store the data of one header alongside
+//! a reference into the in-memory file.
+
+use super::{Handle, buffer::{Buffer, BufferError}, slice::{
         FDBBucketHeaderSlice, FDBColumnHeaderSlice, FDBFieldDataSlice, FDBTableHeaderSlice,
         Latin1Str,
-    },
-};
+    }};
 use crate::fdb::{
     core::ValueType,
     file::{
@@ -14,27 +16,14 @@ use crate::fdb::{
 };
 use std::borrow::Cow;
 
-#[derive(Copy, Clone, Debug)]
-pub struct Handle<'a, T> {
-    buffer: Buffer<'a>,
-    raw: T,
-}
-pub type Res<'a, T> = Result<Handle<'a, T>, BufferError>;
+/// Custom result type for this module
+pub type Result<'a, T> = std::result::Result<Handle<'a, T>, BufferError>;
 
-impl<'a, T> Handle<'a, T> {
-    pub fn raw(&self) -> &T {
-        &self.raw
-    }
+/// The basic database handle
+pub type Database<'a> = Handle<'a, ()>;
 
-    fn wrap<R>(&self, raw: R) -> Handle<'a, R> {
-        Handle {
-            buffer: self.buffer,
-            raw,
-        }
-    }
-}
-
-impl<'a> Handle<'a, ()> {
+impl<'a> Database<'a> {
+    /// Create a new database handle
     pub fn new(buffer: &'a [u8]) -> Self {
         Self {
             buffer: Buffer::new(buffer),
@@ -42,22 +31,25 @@ impl<'a> Handle<'a, ()> {
         }
     }
 
-    pub fn header(&self) -> Res<'a, FDBHeader> {
-        let header = self.buffer.header(0)?;
+    /// Get the header for the local database
+    pub fn header(&self) -> Result<'a, FDBHeader> {
+        let header = self.buffer.header()?;
         Ok(self.wrap(header))
     }
 }
 
 impl<'a> Handle<'a, FDBHeader> {
+    /// Get the number of tables
     pub fn table_count(&self) -> u32 {
-        self.raw.table_count
+        self.raw.tables.count
     }
 
-    pub fn table_header_list(&self) -> Res<'a, FDBTableHeaderSlice<'a>> {
+    /// Get the table header slice
+    pub fn table_header_list(&self) -> Result<'a, FDBTableHeaderSlice<'a>> {
         let len = self.table_count() as usize * 8;
         let buf = self
             .buffer
-            .get_len_at(self.raw.table_header_list_addr as usize, len)?;
+            .get_len_at(self.raw.tables.base_offset as usize, len)?;
         Ok(self.wrap(FDBTableHeaderSlice(buf)))
     }
 }
@@ -92,14 +84,16 @@ impl<'a> DoubleEndedIterator for Handle<'a, FDBTableHeaderSlice<'a>> {
 }
 
 impl<'a> Handle<'a, FDBTableHeader> {
-    pub fn table_def_header(&self) -> Res<'a, FDBTableDefHeader> {
+    /// Get the table definition header
+    pub fn table_def_header(&self) -> Result<'a, FDBTableDefHeader> {
         let raw = self
             .buffer
             .table_def_header(self.raw.table_def_header_addr)?;
         Ok(self.wrap(raw))
     }
 
-    pub fn table_data_header(&self) -> Res<'a, FDBTableDataHeader> {
+    /// Get the table data header
+    pub fn table_data_header(&self) -> Result<'a, FDBTableDataHeader> {
         let raw = self
             .buffer
             .table_data_header(self.raw.table_data_header_addr)?;
@@ -108,16 +102,19 @@ impl<'a> Handle<'a, FDBTableHeader> {
 }
 
 impl<'a> Handle<'a, FDBTableDefHeader> {
+    /// Get the number of columns
     pub fn column_count(&self) -> u32 {
         self.raw.column_count
     }
 
-    pub fn table_name(&self) -> Res<'a, &'a Latin1Str> {
+    /// Get the name of the table
+    pub fn table_name(&self) -> Result<'a, &'a Latin1Str> {
         let raw = self.buffer.string(self.raw.table_name_addr)?;
         Ok(self.wrap(raw))
     }
 
-    pub fn column_header_list(&self) -> Res<'a, FDBColumnHeaderSlice<'a>> {
+    /// Get the column header list
+    pub fn column_header_list(&self) -> Result<'a, FDBColumnHeaderSlice<'a>> {
         let len = self.column_count() as usize * 8;
         let buf = self
             .buffer
@@ -156,26 +153,30 @@ impl<'a> DoubleEndedIterator for Handle<'a, FDBColumnHeaderSlice<'a>> {
 }
 
 impl<'a> Handle<'a, FDBColumnHeader> {
-    pub fn column_name(&self) -> Res<'a, &'a Latin1Str> {
+    /// Get the name of the column
+    pub fn column_name(&self) -> Result<'a, &'a Latin1Str> {
         let raw = self.buffer.string(self.raw.column_name_addr)?;
         Ok(self.wrap(raw))
     }
 
+    /// Get the type of the column
     pub fn column_data_type(&self) -> ValueType {
         ValueType::from(self.raw.column_data_type)
     }
 }
 
 impl<'a> Handle<'a, FDBTableDataHeader> {
+    /// Get the number of buckets
     pub fn bucket_count(&self) -> u32 {
-        self.raw.bucket_count
+        self.raw.buckets.count
     }
 
-    pub fn bucket_header_list(&self) -> Res<'a, FDBBucketHeaderSlice<'a>> {
+    /// Get the slice of buckets
+    pub fn bucket_header_list(&self) -> Result<'a, FDBBucketHeaderSlice<'a>> {
         let len = self.bucket_count() as usize * 4;
         let buf = self
             .buffer
-            .get_len_at(self.raw.bucket_header_list_addr as usize, len)?;
+            .get_len_at(self.raw.buckets.base_offset as usize, len)?;
         Ok(self.wrap(FDBBucketHeaderSlice(buf)))
     }
 }
@@ -210,7 +211,8 @@ impl<'a> DoubleEndedIterator for Handle<'a, FDBBucketHeaderSlice<'a>> {
 }
 
 impl<'a> Handle<'a, FDBBucketHeader> {
-    pub fn first(&self) -> Option<Res<'a, FDBRowHeaderListEntry>> {
+    /// Get the first row header entry or `None`
+    pub fn first(&self) -> Option<Result<'a, FDBRowHeaderListEntry>> {
         let addr = self.raw.row_header_list_head_addr;
         if addr == 0xFFFFFFFF {
             None
@@ -223,16 +225,18 @@ impl<'a> Handle<'a, FDBBucketHeader> {
         }
     }
 
+    /// Get an iterator over all buckets
     pub fn bucket_iter(&self) -> Handle<'a, FDBRowHeaderRef> {
         self.wrap(FDBRowHeaderRef(self.raw.row_header_list_head_addr))
     }
 }
 
 #[derive(Debug, Copy, Clone)]
+/// A newtype for a row header reference
 pub struct FDBRowHeaderRef(u32);
 
 impl<'a> Iterator for Handle<'a, FDBRowHeaderRef> {
-    type Item = Res<'a, FDBRowHeader>;
+    type Item = Result<'a, FDBRowHeader>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let addr = self.raw.0;
@@ -260,7 +264,8 @@ impl<'a> Iterator for Handle<'a, FDBRowHeaderRef> {
 }
 
 impl<'a> Handle<'a, FDBRowHeaderListEntry> {
-    pub fn next(&self) -> Option<Res<'a, FDBRowHeaderListEntry>> {
+    /// Get the next row header list entry instance
+    pub fn next(&self) -> Option<Result<'a, FDBRowHeaderListEntry>> {
         let addr = self.raw.row_header_list_next_addr;
         if addr == 0xFFFFFFFF {
             None
@@ -273,22 +278,25 @@ impl<'a> Handle<'a, FDBRowHeaderListEntry> {
         }
     }
 
-    pub fn row_header(&self) -> Res<'a, FDBRowHeader> {
+    /// Get the associated row header.
+    pub fn row_header(&self) -> Result<'a, FDBRowHeader> {
         let e = self.buffer.row_header(self.raw.row_header_addr)?;
         Ok(self.wrap(e))
     }
 }
 
 impl<'a> Handle<'a, FDBRowHeader> {
+    /// Get the number of fields
     pub fn field_count(&self) -> u32 {
-        self.raw.field_count
+        self.raw.fields.count
     }
 
-    pub fn field_data_list(&self) -> Res<'a, FDBFieldDataSlice> {
+    /// Get the slice of fields
+    pub fn field_data_list(&self) -> Result<'a, FDBFieldDataSlice> {
         let len = self.field_count() as usize * 8;
         let buf = self
             .buffer
-            .get_len_at(self.raw.field_data_list_addr as usize, len)?;
+            .get_len_at(self.raw.fields.base_offset as usize, len)?;
         Ok(self.wrap(FDBFieldDataSlice(buf)))
     }
 }
@@ -323,6 +331,7 @@ impl<'a> DoubleEndedIterator for Handle<'a, FDBFieldDataSlice<'a>> {
 }
 
 impl<'a> Handle<'a, &'a Latin1Str> {
+    /// Decode the string contained in this handle
     pub fn to_str(&self) -> Cow<'a, str> {
         self.raw.decode()
     }

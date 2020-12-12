@@ -3,9 +3,10 @@
 //! This module provides a struct which can be used to access
 //! a FDB file in any order the user desires.
 
+pub mod builder;
+
 use std::io::{self, BufRead, Read, Seek, SeekFrom};
 
-use super::parser;
 use super::{
     file::*,
     parser::{ParseFDB, ParseLE},
@@ -17,11 +18,13 @@ use assembly_core::{
 };
 use encoding_rs::WINDOWS_1252;
 
+/// Implementation of [`DatabaseReader::get_row_header_addr_iterator`]
 pub struct FDBRowHeaderAddrIterator<'a, T: ?Sized> {
     next_addr: u32,
     file: &'a mut T,
 }
 
+/// Extension trait to `Seek + BufRead` for reading strings
 pub trait DatabaseBufReader
 where
     Self: Seek + BufRead,
@@ -83,7 +86,7 @@ fn parse_list_at<R: Seek + Read + ?Sized, T: ParseFDB>(
     for _ in 0..count {
         reader.read_exact(buf.as_mut())?;
         let (_rest, t) =
-            parser::parse::<T>(buf.as_mut())
+            T::parse(buf.as_mut())
                 .finish()
                 .map_err(|e| FileError::Parse {
                     addr,
@@ -95,6 +98,7 @@ fn parse_list_at<R: Seek + Read + ?Sized, T: ParseFDB>(
     }
     Ok(list)
 }
+/// Extension to `Seek + Read` to read an FDB file
 pub trait DatabaseReader
 where
     Self: Seek + Read,
@@ -102,20 +106,20 @@ where
     /// Read the schema header
     fn get_header(&mut self) -> FileResult<FDBHeader> {
         let mut bytes = [0; 8];
-        parse_at(self, 0u64, &mut bytes, parser::parse::<FDBHeader>)
+        parse_at(self, 0u64, &mut bytes, FDBHeader::parse)
     }
 
     /// Read the table header
     fn get_table_header_list(&mut self, header: FDBHeader) -> FileResult<FDBTableHeaderList> {
-        let addr = header.table_header_list_addr;
-        let count = header.table_count;
+        let addr = header.tables.base_offset;
+        let count = header.tables.count;
         parse_list_at(self, addr, count).map(FDBTableHeaderList::from)
     }
 
     /// Read the table def header
     fn get_table_def_header(&mut self, addr: u32) -> FileResult<FDBTableDefHeader> {
-        let mut bytes = [0; FDBTableDefHeader::BYTE_COUNT];
-        parse_at(self, addr, &mut bytes, parser::parse::<FDBTableDefHeader>)
+        let mut bytes = [0; std::mem::size_of::<FDBTableDefHeader>()];
+        parse_at(self, addr, &mut bytes, FDBTableDefHeader::parse)
     }
 
     /// Get a 64bit integer
@@ -138,7 +142,7 @@ where
     /// Get the table data header
     fn get_table_data_header(&mut self, addr: u32) -> FileResult<FDBTableDataHeader> {
         let mut bytes = bytes::<<FDBTableDataHeader as ParseFDB>::IO>();
-        parse_at(self, addr, &mut bytes, parser::parse::<FDBTableDataHeader>)
+        parse_at(self, addr, &mut bytes, FDBTableDataHeader::parse)
     }
 
     /// Get the table bucket header list
@@ -146,33 +150,35 @@ where
         &mut self,
         header: &FDBTableDataHeader,
     ) -> FileResult<FDBBucketHeaderList> {
-        let addr = header.bucket_header_list_addr;
-        let count = header.bucket_count;
+        let addr = header.buckets.base_offset;
+        let count = header.buckets.count;
         parse_list_at(self, addr, count).map(FDBBucketHeaderList::from)
     }
 
     /// Get a row header list entry
     fn get_row_header_list_entry(&mut self, addr: u32) -> FileResult<FDBRowHeaderListEntry> {
-        let mut bytes = [0; FDBRowHeaderListEntry::BYTE_COUNT];
+        let mut bytes = [0; std::mem::size_of::<FDBRowHeaderListEntry>()];
         parse_at(
             self,
             addr,
             &mut bytes,
-            parser::parse::<FDBRowHeaderListEntry>,
+            FDBRowHeaderListEntry::parse,
         )
     }
 
     /// Get a row header
     fn get_row_header(&mut self, addr: u32) -> FileResult<FDBRowHeader> {
-        let mut bytes: [u8; 8] = [0; FDBRowHeader::BYTE_COUNT];
-        parse_at(self, addr, &mut bytes, parser::parse::<FDBRowHeader>)
+        let mut bytes: [u8; 8] = [0; std::mem::size_of::<FDBRowHeader>()];
+        parse_at(self, addr, &mut bytes, FDBRowHeader::parse)
     }
 
+    /// Returns a vector of `FDBFieldData`
     fn get_field_data_list(&mut self, header: FDBRowHeader) -> FileResult<FDBFieldDataList> {
-        parse_list_at(self, header.field_data_list_addr, header.field_count)
+        parse_list_at(self, header.fields.base_offset, header.fields.count)
             .map(FDBFieldDataList::from)
     }
 
+    /// Returns an iterator over `FDBRowHeader` offsets
     fn get_row_header_addr_iterator<'a>(
         &'a mut self,
         addr: u32,
