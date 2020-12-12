@@ -1,6 +1,6 @@
 [package]
 name = "assembly-core"
-version = "0.2.0-beta.0"
+version = "0.2.0-beta.1"
 authors = ["Xiphoseer"]
 edition = "2018"
 homepage = "https://xiphoseer.github.io"
