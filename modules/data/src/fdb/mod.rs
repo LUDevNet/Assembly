@@ -15,6 +15,8 @@
 //!
 //! ## Using this library
 //!
+//! You can use the `mem` module to load a database from an in-memory buffer:
+//!
 //! ```
 //! use assembly_data::fdb::mem::Database;
 //!
@@ -23,17 +25,6 @@
 //! let tables = db.tables().unwrap();
 //!
 //! assert_eq!(0, tables.len());
-//! ```
-//!
-//! If you just want to load the database from a file, use the following:
-//!
-//! ```rust,ignore
-//! use assembly::fdb::core::Schema;
-//!
-//! match Schema::try_from("some/path") {
-//!     Ok(schema) => {...},
-//!     Err(error) => {...},
-//! }
 //! ```
 
 #![warn(missing_docs)]

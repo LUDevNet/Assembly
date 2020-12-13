@@ -11,6 +11,7 @@ use std::{
 };
 
 #[repr(transparent)]
+#[derive(Ord, PartialOrd, Eq, PartialEq)]
 /// An owned latin-1 encoded string
 pub struct Latin1String {
     inner: Box<[u8]>,

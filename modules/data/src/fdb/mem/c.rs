@@ -220,7 +220,8 @@ mod tests {
 
     #[test]
     fn check_unaligned_read() {
-        let buffer: &[u8] = &[0, 0, 0, 0, 0, 8, 0, 0, 0];
+        let test: &[u32] = &[0x00000000, 0x00000800, 0x00000000];
+        let buffer: &[u8] = unsafe { std::slice::from_raw_parts(test.as_ptr() as *const u8, 12) };
 
         // Is this actually unaligned?
         let base = unsafe { buffer.as_ptr().offset(1) };

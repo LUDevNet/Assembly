@@ -1,4 +1,39 @@
-//! # \[WIP\] Experiment for arena-storage of a database
+//! # Arena-Store &amp; Writer
+//!
+//! This module contains a (currently write-only) structure that represents a complete
+//! FDB file. This structure can be used to create new FDB files.
+//!
+//! ## Usage
+//!
+//! ```
+//! use assembly_data::fdb::{
+//!     core::{ValueType, Field},
+//!     ro::slice::Latin1String,
+//!     store::{Database, Table},
+//! };
+//!
+//! // Create a new database
+//! let mut db = Database::new();
+//!
+//! // Create a table
+//! let mut table = Table::new(16);
+//!
+//! // Add columns to the table
+//! table.push_column(Latin1String::encode("ID"), ValueType::Integer);
+//!
+//! // Add data to the table
+//! table.push_row(1, &[Field::Integer(1)]);
+//! table.push_row(2, &[Field::Integer(2)]);
+//! table.push_row(5, &[Field::Integer(5)]);
+//! table.push_row(6, &[Field::Integer(6)]);
+//!
+//! // Add table to the database
+//! db.push_table(Latin1String::encode("Table"), table);
+//!
+//! // Write the database to a type that implements [`std::io::Write`]
+//! let mut out: Vec<u8> = Vec::new();
+//! db.write(&mut out).expect("success");
+//! ```
 
 use crate::fdb::core::ValueType;
 use crate::fdb::ro::slice::Latin1String;
@@ -20,11 +55,6 @@ use super::{
 #[cfg(test)]
 mod tests;
 
-/// The whole database
-pub struct Database {
-    tables: Vec<Table>,
-}
-
 fn write_array_header<O: io::Write>(array: &ArrayHeader, out: &mut O) -> io::Result<()> {
     out.write_all(&array.count.to_le_bytes())?;
     out.write_all(&array.base_offset.to_le_bytes())?;
@@ -43,13 +73,39 @@ fn write_str<O: io::Write>(string: &Latin1Str, out: &mut O) -> io::Result<()> {
     Ok(())
 }
 
+/// The whole database
+pub struct Database {
+    tables: BTreeMap<Latin1String, Table>,
+}
+
+impl Default for Database {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Database {
+    /// Create a new database
+    pub fn new() -> Self {
+        Self {
+            tables: BTreeMap::new(),
+        }
+    }
+
+    /// Push a table to the database
+    pub fn push_table<S>(&mut self, name: S, table: Table)
+    where
+        S: Into<Latin1String>,
+    {
+        self.tables.insert(name.into(), table);
+    }
+
     /// Computes the size of the serialized database
     pub fn compute_size(&self) -> usize {
         let table_size: usize = self
             .tables
             .iter()
-            .map(|t| t.compute_size())
+            .map(|(n, t)| t.compute_size(n))
             .map(|x| x.def + x.data)
             .sum();
         8 // FDBHeader
@@ -68,7 +124,7 @@ impl Database {
             tables: ArrayHeader { base_offset, count },
         };
         write_array_header(&header.tables, out)?;
-        let len_vec: Vec<_> = self.tables.iter().map(Table::compute_size).collect();
+        let len_vec: Vec<_> = self.tables.iter().map(|(n, t)| t.compute_size(n)).collect();
         let mut start_vec = Vec::with_capacity(self.tables.len());
         let table_list_base = base_offset + count * std::mem::size_of::<FDBTableHeader>() as u32;
         let mut start = table_list_base;
@@ -88,7 +144,7 @@ impl Database {
         }
 
         let mut start = table_list_base;
-        for table in &self.tables {
+        for (table_name, table) in &self.tables {
             // Serialize table definition
             let column_count = table.columns.len().try_into().unwrap();
             let column_header_list_addr = start + std::mem::size_of::<FDBTableDefHeader>() as u32;
@@ -104,7 +160,7 @@ impl Database {
             out.write_all(&table_def_header.table_name_addr.to_le_bytes())?;
             out.write_all(&table_def_header.column_header_list_addr.to_le_bytes())?;
 
-            let mut column_name_addr = table_name_addr + (table.name.req_buf_len() as u32 * 4);
+            let mut column_name_addr = table_name_addr + (table_name.req_buf_len() as u32 * 4);
             for column in &table.columns {
                 let column_header = FDBColumnHeader {
                     column_data_type: column.data_type.into(),
@@ -115,7 +171,7 @@ impl Database {
                 column_name_addr += column.name.req_buf_len() as u32 * 4;
             }
 
-            write_str(&table.name, out)?;
+            write_str(table_name, out)?;
             for column in &table.columns {
                 write_str(&column.name, out)?;
             }
@@ -248,7 +304,6 @@ struct TableSize {
 
 /// A single table
 pub struct Table {
-    name: Latin1String,
     columns: Vec<Column>,
     strings: BTreeMap<usize, Vec<Latin1String>>,
     i64s: Vec<i64>,
@@ -259,7 +314,7 @@ pub struct Table {
 
 impl Table {
     /// Creates a new table
-    pub fn new(name: impl Into<Latin1String>, bucket_count: usize) -> Self {
+    pub fn new(bucket_count: usize) -> Self {
         Table {
             buckets: vec![
                 Bucket {
@@ -269,7 +324,6 @@ impl Table {
             ],
             columns: vec![],
             fields: vec![],
-            name: name.into(),
             strings: BTreeMap::new(),
             rows: vec![],
             i64s: vec![],
@@ -277,7 +331,10 @@ impl Table {
     }
 
     /// Add a column to this table
-    pub fn push_column(&mut self, data_type: ValueType, name: impl Into<Latin1String>) {
+    pub fn push_column<S>(&mut self, name: S, data_type: ValueType)
+    where
+        S: Into<Latin1String>,
+    {
         self.columns.push(Column {
             data_type,
             name: name.into(),
@@ -332,15 +389,15 @@ impl Table {
                     let lstrings = self.strings.entry(lkey).or_default();
                     let inner = lstrings.len();
                     lstrings.push(s);
-                    Field::Text { outer: lkey, inner }
+                    Field::VarChar { outer: lkey, inner }
                 }
             });
         }
     }
 
-    fn compute_def_size(&self) -> usize {
+    fn compute_def_size(&self, name: &Latin1Str) -> usize {
         std::mem::size_of::<FDBTableDefHeader>()
-            + self.name.req_buf_len() * 4
+            + name.req_buf_len() * 4
             + std::mem::size_of::<FDBColumnHeader>() * self.columns.len()
             + self
                 .columns
@@ -361,35 +418,35 @@ impl Table {
             + std::mem::size_of::<u64>() * self.i64s.len()
     }
 
-    fn compute_size(&self) -> TableSize {
+    fn compute_size(&self, name: &Latin1Str) -> TableSize {
         TableSize {
-            def: self.compute_def_size(),
+            def: self.compute_def_size(name),
             data: self.compute_data_size(),
         }
     }
 }
 
 /// A single column
-pub struct Column {
+struct Column {
     name: Latin1String,
     data_type: ValueType,
 }
 
 /// A single bucket
 #[derive(Debug, Copy, Clone)]
-pub struct Bucket {
+struct Bucket {
     first_row_last: Option<(usize, usize)>,
 }
 
 /// A single row
-pub struct Row {
+struct Row {
     first_field_index: usize,
     count: u32,
     next_row: Option<usize>,
 }
 
 /// A single field
-pub enum Field {
+enum Field {
     /// The `NULL` value
     Nothing,
     /// A 32 bit signed integer
