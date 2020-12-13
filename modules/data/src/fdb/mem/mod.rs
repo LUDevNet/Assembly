@@ -344,6 +344,7 @@ impl<'a> Column<'a> {
 }
 
 /// Reference to a single bucket
+#[derive(Debug)]
 pub struct Bucket<'a> {
     buf: &'a [u8],
     first: Option<&'a FDBRowHeaderListEntryC>,
@@ -356,6 +357,11 @@ impl<'a> Bucket<'a> {
             buf: self.buf,
             next: self.first,
         }
+    }
+
+    /// Check whether the bucket is empty
+    pub fn is_empty(&self) -> bool {
+        self.first.is_none()
     }
 }
 

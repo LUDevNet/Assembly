@@ -89,6 +89,7 @@ pub struct LEU16([u8; 2]);
 
 /// little-endian u32
 #[repr(C, align(1))]
+#[derive(Debug)]
 pub struct LEU32([u8; 4]);
 
 /// little-endian u64

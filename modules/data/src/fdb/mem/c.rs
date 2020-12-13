@@ -49,6 +49,7 @@ pub struct FDBBucketHeaderC {
 
 /// An FDB row header list entry usable for unaligned reads
 #[repr(C, align(1))]
+#[derive(Debug)]
 pub struct FDBRowHeaderListEntryC {
     pub(super) row_header_addr: LEU32,
     pub(super) row_header_list_next_addr: LEU32,

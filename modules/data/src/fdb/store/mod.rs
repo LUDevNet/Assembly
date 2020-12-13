@@ -1,15 +1,12 @@
 //! # \[WIP\] Experiment for arena-storage of a database
 
-#![allow(unused)]
-use assembly_core::nom::number::complete::u32;
-
 use crate::fdb::core::ValueType;
 use crate::fdb::ro::slice::Latin1String;
 use std::{
     collections::BTreeMap,
     convert::{TryFrom, TryInto},
     hint::unreachable_unchecked,
-    io, unreachable,
+    io,
 };
 
 use super::{
@@ -19,6 +16,9 @@ use super::{
     },
     ro::slice::Latin1Str,
 };
+
+#[cfg(test)]
+mod tests;
 
 /// The whole database
 pub struct Database {
@@ -32,7 +32,7 @@ fn write_array_header<O: io::Write>(array: &ArrayHeader, out: &mut O) -> io::Res
 }
 
 fn write_str<O: io::Write>(string: &Latin1Str, out: &mut O) -> io::Result<()> {
-    out.write_all(string.as_bytes());
+    out.write_all(string.as_bytes())?;
     match string.len() % 4 {
         0 => out.write_all(&[0, 0, 0, 0])?,
         1 => out.write_all(&[0, 0, 0])?,
@@ -121,17 +121,119 @@ impl Database {
             }
 
             // Serialize table data
-            let base_offset = column_name_addr + std::mem::size_of::<FDBTableDataHeader>() as u32;
+            let bucket_base_offset =
+                column_name_addr + std::mem::size_of::<FDBTableDataHeader>() as u32;
+            let bucket_count = table.buckets.len().try_into().unwrap();
             let table_data_header = FDBTableDataHeader {
                 buckets: ArrayHeader {
-                    count: 0,
-                    base_offset,
+                    count: bucket_count,
+                    base_offset: bucket_base_offset,
                 },
             };
             write_array_header(&table_data_header.buckets, out)?;
 
+            let row_header_list_base =
+                bucket_base_offset + bucket_count * std::mem::size_of::<FDBBucketHeader>() as u32;
+
+            for bucket in &table.buckets {
+                let bucket_header = FDBBucketHeader {
+                    row_header_list_head_addr: bucket
+                        .first_row_last
+                        .map(|(index, _)| {
+                            row_header_list_base
+                                + (index * std::mem::size_of::<FDBRowHeaderListEntry>()) as u32
+                        })
+                        .unwrap_or(0xffffffff),
+                };
+                out.write_all(&bucket_header.row_header_list_head_addr.to_le_bytes())?;
+            }
+
+            let row_count: u32 = table.rows.len().try_into().unwrap();
+            let row_header_base = row_header_list_base
+                + row_count * std::mem::size_of::<FDBRowHeaderListEntry>() as u32;
+
+            for (index, row) in table.rows.iter().enumerate() {
+                let row_list_entry = FDBRowHeaderListEntry {
+                    row_header_addr: row_header_base
+                        + (index * std::mem::size_of::<FDBRowHeader>()) as u32,
+                    row_header_list_next_addr: row
+                        .next_row
+                        .map(|index| {
+                            row_header_list_base
+                                + (index * std::mem::size_of::<FDBRowHeaderListEntry>()) as u32
+                        })
+                        .unwrap_or(0xffffffff),
+                };
+                out.write_all(&row_list_entry.row_header_addr.to_le_bytes())?;
+                out.write_all(&row_list_entry.row_header_list_next_addr.to_le_bytes())?;
+            }
+
+            let field_base_offset =
+                row_header_base + row_count * std::mem::size_of::<FDBRowHeader>() as u32;
+
+            for row in &table.rows {
+                let row_header = FDBRowHeader {
+                    fields: ArrayHeader {
+                        base_offset: field_base_offset
+                            + (row.first_field_index * std::mem::size_of::<FDBFieldData>()) as u32,
+                        count: row.count,
+                    },
+                };
+                write_array_header(&row_header.fields, out)?;
+            }
+
+            let i64s_base_offset = field_base_offset
+                + (table.fields.len() * std::mem::size_of::<FDBFieldData>()) as u32;
+            let strings_base_offset =
+                i64s_base_offset + (table.i64s.len() * std::mem::size_of::<u64>()) as u32;
+
+            let mut string_len_base = strings_base_offset;
+            let mut string_len_offsets = BTreeMap::new();
+            for (&key, value) in &table.strings {
+                let string_len = key * 4;
+                string_len_offsets.insert(key, string_len_base);
+                string_len_base += (string_len * value.len()) as u32;
+            }
+
+            for field in &table.fields {
+                let (key, value) = match field {
+                    Field::Nothing => (0, [0; 4]),
+                    Field::Integer(i) => (1, i.to_le_bytes()),
+                    Field::Float(f) => (3, f.to_le_bytes()),
+                    Field::Text { outer, inner } => (4, {
+                        let v =
+                            string_len_offsets.get(&outer).unwrap() + (inner * outer * 4) as u32;
+                        v.to_le_bytes()
+                    }),
+                    Field::Boolean(b) => (5, if *b { [1, 0, 0, 0] } else { [0; 4] }),
+                    Field::BigInt { index } => (6, {
+                        let v = i64s_base_offset + (*index * std::mem::size_of::<u64>()) as u32;
+                        v.to_le_bytes()
+                    }),
+                    Field::VarChar { outer, inner } => (8, {
+                        let v =
+                            string_len_offsets.get(outer).unwrap() + (*inner * *outer * 4) as u32;
+                        v.to_le_bytes()
+                    }),
+                };
+                out.write_all(&u32::to_le_bytes(key))?;
+                out.write_all(&value)?;
+            }
+
+            // Write out all i64s
+            for &num in &table.i64s {
+                out.write_all(&num.to_le_bytes())?;
+            }
+
+            // Write out all strings
+            for value in table.strings.values() {
+                for string in value {
+                    write_str(string, out)?;
+                }
+            }
+
             // Increment final offset
-            start = base_offset;
+            start = string_len_base;
         }
 
         Ok(())
@@ -149,7 +251,7 @@ pub struct Table {
     name: Latin1String,
     columns: Vec<Column>,
     strings: BTreeMap<usize, Vec<Latin1String>>,
-    u64s: Vec<u64>,
+    i64s: Vec<i64>,
     buckets: Vec<Bucket>,
     rows: Vec<Row>,
     fields: Vec<Field>,
@@ -157,15 +259,20 @@ pub struct Table {
 
 impl Table {
     /// Creates a new table
-    pub fn new(name: impl Into<Latin1String>) -> Self {
+    pub fn new(name: impl Into<Latin1String>, bucket_count: usize) -> Self {
         Table {
-            buckets: vec![],
+            buckets: vec![
+                Bucket {
+                    first_row_last: None
+                };
+                bucket_count
+            ],
             columns: vec![],
             fields: vec![],
             name: name.into(),
             strings: BTreeMap::new(),
             rows: vec![],
-            u64s: vec![],
+            i64s: vec![],
         }
     }
 
@@ -175,6 +282,60 @@ impl Table {
             data_type,
             name: name.into(),
         })
+    }
+
+    /// Push a row into this table
+    pub fn push_row(&mut self, pk: usize, fields: &[super::core::Field]) {
+        let first_field_index = self.fields.len();
+        let row = self.rows.len();
+
+        // find out where to place it
+        let bucket_index = pk % self.buckets.len();
+        let bucket = &mut self.buckets[bucket_index];
+
+        // Add to linked list
+        if let Some((_, last)) = &mut bucket.first_row_last {
+            self.rows[*last].next_row = Some(row);
+            *last = row;
+        } else {
+            bucket.first_row_last = Some((row, row))
+        }
+
+        self.rows.push(Row {
+            first_field_index,
+            count: fields.len().try_into().unwrap(),
+            next_row: None,
+        });
+
+        for field in fields {
+            self.fields.push(match field {
+                super::core::Field::Nothing => Field::Nothing,
+                super::core::Field::Integer(i) => Field::Integer(*i),
+                super::core::Field::Float(f) => Field::Float(*f),
+                super::core::Field::Text(string) => {
+                    let s = Latin1String::encode(string).into_owned();
+                    let lkey = s.req_buf_len();
+                    let lstrings = self.strings.entry(lkey).or_default();
+                    let inner = lstrings.len();
+                    lstrings.push(s);
+                    Field::Text { outer: lkey, inner }
+                }
+                super::core::Field::Boolean(b) => Field::Boolean(*b),
+                super::core::Field::BigInt(v) => {
+                    let index = self.i64s.len();
+                    self.i64s.push(*v);
+                    Field::BigInt { index }
+                }
+                super::core::Field::VarChar(string) => {
+                    let s = Latin1String::encode(string).into_owned();
+                    let lkey = s.req_buf_len();
+                    let lstrings = self.strings.entry(lkey).or_default();
+                    let inner = lstrings.len();
+                    lstrings.push(s);
+                    Field::Text { outer: lkey, inner }
+                }
+            });
+        }
     }
 
     fn compute_def_size(&self) -> usize {
@@ -197,7 +358,7 @@ impl Table {
             + std::mem::size_of::<FDBRowHeader>() * self.rows.len()
             + std::mem::size_of::<FDBFieldData>() * self.fields.len()
             + 4 * string_size
-            + std::mem::size_of::<u64>() * self.u64s.len()
+            + std::mem::size_of::<u64>() * self.i64s.len()
     }
 
     fn compute_size(&self) -> TableSize {
@@ -215,85 +376,45 @@ pub struct Column {
 }
 
 /// A single bucket
+#[derive(Debug, Copy, Clone)]
 pub struct Bucket {
-    first_row: usize,
+    first_row_last: Option<(usize, usize)>,
 }
 
 /// A single row
 pub struct Row {
     first_field_index: usize,
-    next_row: usize,
+    count: u32,
+    next_row: Option<usize>,
 }
 
 /// A single field
-pub struct Field {}
-
-#[cfg(test)]
-mod tests {
-    use crate::fdb::mem;
-
-    use super::*;
-
-    #[test]
-    fn test_write_empty() {
-        let mut out = Vec::new();
-        let db = Database { tables: vec![] };
-        db.write(&mut out).unwrap();
-        let cmp: &[u8] = &[0, 0, 0, 0, 8, 0, 0, 0];
-        assert_eq!(&out[..], cmp);
-    }
-
-    #[test]
-    fn test_write_table_without_columns() {
-        let mut out = Vec::new();
-        let db = Database {
-            tables: vec![Table::new(Latin1String::encode("Foobar"))],
-        };
-        db.write(&mut out).unwrap();
-        let cmp: &'static [u8] = &[
-            1, 0, 0, 0, 8, 0, 0, 0, // FDBHeader
-            16, 0, 0, 0, 36, 0, 0, 0, // FDBTableHeader
-            0, 0, 0, 0, 28, 0, 0, 0, 28, 0, 0, 0, // FDBTableDefHeader
-            b'F', b'o', b'o', b'b', b'a', b'r', 0, 0, // Name
-            0, 0, 0, 0, 44, 0, 0, 0, // FDBTableDataHeader
-        ];
-        assert_eq!(&out[..], cmp);
-
-        let odb = mem::Database::new(&out);
-        let otb = odb.tables().unwrap();
-        assert_eq!(otb.len(), 1);
-        let foobar = otb.get(0).expect("table #0").expect("table load");
-        assert_eq!(foobar.column_count(), 0);
-        assert_eq!(foobar.name(), "Foobar");
-    }
-
-    #[test]
-    fn test_write_table_with_columns() {
-        let mut out = Vec::new();
-        let mut table = Table::new(Latin1String::encode("Foobar"));
-        table.push_column(ValueType::Integer, Latin1String::encode("foo"));
-        let db = Database {
-            tables: vec![table],
-        };
-        db.write(&mut out).unwrap();
-        let cmp: &'static [u8] = &[
-            1, 0, 0, 0, 8, 0, 0, 0, // FDBHeader
-            16, 0, 0, 0, 48, 0, 0, 0, // FDBTableHeader
-            1, 0, 0, 0, 36, 0, 0, 0, 28, 0, 0, 0, // FDBTableDefHeader
-            1, 0, 0, 0, 44, 0, 0, 0, // FDBColumnHeader
-            b'F', b'o', b'o', b'b', b'a', b'r', 0, 0, // table `Foobar`
-            b'f', b'o', b'o', 0, // column `Foobar`.`foo`
-            0, 0, 0, 0, 56, 0, 0, 0, // FDBTableDataHeader
-        ];
-        assert_eq!(&out[..], cmp);
-
-        let odb = mem::Database::new(&out);
-        let otb = odb.tables().unwrap();
-        assert_eq!(otb.len(), 1);
-        let foobar = otb.get(0).expect("table #0").expect("table load");
-        assert_eq!(foobar.name(), "Foobar");
-        let columns: Vec<_> = foobar.column_iter().collect();
-        assert_eq!(columns.len(), 1);
-        assert_eq!(columns[0].name(), "foo");
-    }
+pub enum Field {
+    /// The `NULL` value
+    Nothing,
+    /// A 32 bit signed integer
+    Integer(i32),
+    /// A 32 bit IEEE floating point number
+    Float(f32),
+    /// A piece of Latin-1 encoded text
+    Text {
+        /// The length-key of the string
+        outer: usize,
+        /// The index in the strings array
+        inner: usize,
+    },
+    /// A boolean
+    Boolean(bool),
+    /// An indirect 64 bit integer
+    BigInt {
+        /// The offset of the value
+        index: usize,
+    },
+    /// A (base64 encoded?) null-terminated string
+    VarChar {
+        /// The length-key of the string
+        outer: usize,
+        /// The index in the strings array
+        inner: usize,
+    },
 }
