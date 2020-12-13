@@ -1,5 +1,5 @@
 use assembly_data::fdb::mem::Database;
-use memmap::Mmap;
+use mapr::Mmap;
 use prettytable::{Cell as PCell, Row as PRow, Table as PTable};
 use std::fs::File;
 use structopt::StructOpt;
@@ -11,7 +11,7 @@ struct Options {
     file: String,
 }
 
-pub fn main() -> Result<(), anyhow::Error> {
+pub fn main() -> color_eyre::Result<()> {
     // Load the options
     let opt = Options::from_args();
     assembly_core::time(|| {

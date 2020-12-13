@@ -1,6 +1,5 @@
-use anyhow::Error;
 use assembly_data::fdb::ro::Handle;
-use memmap::Mmap;
+use mapr::Mmap;
 use std::{fs::File, path::PathBuf, time::Instant};
 use structopt::StructOpt;
 
@@ -9,7 +8,8 @@ struct Options {
     file: PathBuf,
 }
 
-fn main() -> Result<(), Error> {
+fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
     let opt = Options::from_args();
     let start = Instant::now();
 

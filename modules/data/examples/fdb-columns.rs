@@ -1,14 +1,17 @@
-extern crate getopts;
-use anyhow::anyhow;
 use assembly_data::fdb::{
     core::ValueType,
     reader::{DatabaseBufReader, DatabaseReader},
 };
-use getopts::Options;
+use color_eyre::eyre::eyre;
 use prettytable::{Cell as PCell, Row as PRow, Table as PTable};
-use std::{env, fs::File, io::BufReader};
+use std::{
+    fs::File,
+    io::BufReader,
+    path::{Path, PathBuf},
+};
+use structopt::StructOpt;
 
-fn run(filename: &str, tablename: &str) -> Result<(), anyhow::Error> {
+fn run(filename: &Path, tablename: &str) -> color_eyre::Result<()> {
     //println!("Loading tables... (this may take a while)");
     let file = File::open(filename)?;
     let mut loader = BufReader::new(file);
@@ -30,7 +33,7 @@ fn run(filename: &str, tablename: &str) -> Result<(), anyhow::Error> {
                     break Ok((name, tdh, tth));
                 }
             }
-            None => break Err(anyhow!("Table not found!")),
+            None => break Err(eyre!("Table not found!")),
         }
     }?;
 
@@ -58,30 +61,14 @@ fn run(filename: &str, tablename: &str) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-fn print_usage(program: &str, opts: Options) {
-    let brief = format!("Usage: {} FILE TABLE KEY [options]", program);
-    print!("{}", opts.usage(&brief));
+#[derive(StructOpt)]
+struct Options {
+    file: PathBuf,
+    table: String,
 }
 
-pub fn main() -> Result<(), anyhow::Error> {
-    let args: Vec<String> = env::args().collect();
-    let program = args[0].clone();
-
-    let mut opts = Options::new();
-    opts.optflag("h", "help", "print this help menu");
-    let matches = match opts.parse(&args[1..]) {
-        Ok(m) => m,
-        Err(f) => panic!(f.to_string()),
-    };
-    if matches.opt_present("h") {
-        print_usage(&program, opts);
-        return Ok(());
-    }
-    let (file, table) = if matches.free.len() >= 2 {
-        (&matches.free[0], &matches.free[1])
-    } else {
-        print_usage(&program, opts);
-        return Ok(());
-    };
-    run(file, table)
+pub fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
+    let opts = Options::from_args();
+    run(&opts.file, &opts.table)
 }
