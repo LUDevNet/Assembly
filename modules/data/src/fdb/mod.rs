@@ -40,6 +40,7 @@
 
 #![warn(missing_docs)]
 
+pub mod common;
 pub mod core;
 pub mod file;
 pub mod io;

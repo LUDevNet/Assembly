@@ -5,14 +5,11 @@
 
 use super::{
     buffer::{Buffer, BufferError},
-    slice::{
-        FDBBucketHeaderSlice, FDBColumnHeaderSlice, FDBFieldDataSlice, FDBTableHeaderSlice,
-        Latin1Str,
-    },
+    slice::{FDBBucketHeaderSlice, FDBColumnHeaderSlice, FDBFieldDataSlice, FDBTableHeaderSlice},
     Handle,
 };
 use crate::fdb::{
-    core::ValueType,
+    common::{Latin1Str, ValueType},
     file::{
         FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBHeader, FDBRowHeader,
         FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,

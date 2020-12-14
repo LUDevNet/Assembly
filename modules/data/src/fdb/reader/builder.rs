@@ -1,8 +1,7 @@
 //! # Extension for constructing Rustic values
 
-use super::super::core::{Field, ValueType};
-use super::super::file::FDBFieldData;
 use super::{DatabaseBufReader, DatabaseReader};
+use crate::fdb::{common::ValueType, core::Field, file::FDBFieldData};
 use assembly_core::displaydoc::Display;
 use thiserror::Error;
 

@@ -1,9 +1,11 @@
 //! # General methods for aligned access to a byte buffer
 
-use super::slice::Latin1Str;
-use crate::fdb::file::{
-    FDBHeader, FDBRowHeader, FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader,
-    FDBTableHeader,
+use crate::fdb::{
+    common::Latin1Str,
+    file::{
+        FDBHeader, FDBRowHeader, FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader,
+        FDBTableHeader,
+    },
 };
 use assembly_core::{
     buffer::{CastError, MinimallyAligned},

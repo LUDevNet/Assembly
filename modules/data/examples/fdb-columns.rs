@@ -1,5 +1,5 @@
 use assembly_data::fdb::{
-    core::ValueType,
+    common::ValueType,
     reader::{DatabaseBufReader, DatabaseReader},
 };
 use color_eyre::eyre::eyre;

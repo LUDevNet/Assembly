@@ -14,8 +14,8 @@ use memchr::memchr;
 
 mod c;
 use super::{
-    core::ValueType,
-    ro::{slice::Latin1Str, Handle, RefHandle},
+    common::{Latin1Str, ValueType},
+    ro::{Handle, RefHandle},
 };
 use c::{
     FDBBucketHeaderC, FDBColumnHeaderC, FDBFieldDataC, FDBHeaderC, FDBRowHeaderC,

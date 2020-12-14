@@ -35,8 +35,7 @@
 //! db.write(&mut out).expect("success");
 //! ```
 
-use crate::fdb::core::ValueType;
-use crate::fdb::ro::slice::Latin1String;
+use crate::fdb::common::{Latin1Str, Latin1String, ValueType};
 use std::{
     collections::BTreeMap,
     convert::{TryFrom, TryInto},
@@ -44,12 +43,9 @@ use std::{
     io,
 };
 
-use super::{
-    file::{
-        ArrayHeader, FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBHeader, FDBRowHeader,
-        FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
-    },
-    ro::slice::Latin1Str,
+use super::file::{
+    ArrayHeader, FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBHeader, FDBRowHeader,
+    FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
 };
 
 #[cfg(test)]

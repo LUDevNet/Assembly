@@ -1,7 +1,7 @@
 //! ## Query the database
 use std::num::ParseIntError;
 
-use super::core::{Field, ValueType};
+use super::{common::ValueType, core::Field};
 use assembly_core::displaydoc::Display;
 use hsieh_hash::digest;
 use thiserror::Error;
