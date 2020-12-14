@@ -5,6 +5,7 @@ use assembly_data::fdb::{
 use color_eyre::eyre::eyre;
 use prettytable::{Cell as PCell, Row as PRow, Table as PTable};
 use std::{
+    convert::TryFrom,
     fs::File,
     io::BufReader,
     path::{Path, PathBuf},
@@ -47,7 +48,7 @@ fn run(filename: &Path, tablename: &str) -> color_eyre::Result<()> {
 
     for ch in chlv.iter() {
         let cn = loader.get_string(ch.column_name_addr)?;
-        let vt = ValueType::from(ch.column_data_type);
+        let vt = ValueType::try_from(ch.column_data_type).unwrap();
 
         let cr = PRow::new(vec![PCell::new(&cn), PCell::new(&vt.to_string())]);
 

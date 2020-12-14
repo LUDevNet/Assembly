@@ -5,6 +5,8 @@
 
 use std::{
     borrow::{Borrow, Cow},
+    convert::TryFrom,
+    error::Error,
     fmt,
     ops::Deref,
 };
@@ -152,8 +154,6 @@ pub enum ValueType {
     BigInt,
     /// A short string
     VarChar,
-    /// An unknown value
-    Unknown(u32),
 }
 
 impl fmt::Display for ValueType {
@@ -166,13 +166,12 @@ impl fmt::Display for ValueType {
             ValueType::Boolean => write!(f, "BOOLEAN"),
             ValueType::BigInt => write!(f, "BIGINT"),
             ValueType::VarChar => write!(f, "VARCHAR"),
-            ValueType::Unknown(i) => write!(f, "UNKNOWN({})", i),
         }
     }
 }
 
-impl From<ValueType> for u32 {
-    fn from(value_type: ValueType) -> u32 {
+impl From<ValueType> for u8 {
+    fn from(value_type: ValueType) -> u8 {
         match value_type {
             ValueType::Nothing => 0,
             ValueType::Integer => 1,
@@ -181,22 +180,47 @@ impl From<ValueType> for u32 {
             ValueType::Boolean => 5,
             ValueType::BigInt => 6,
             ValueType::VarChar => 8,
-            ValueType::Unknown(key) => key,
         }
     }
 }
 
-impl From<u32> for ValueType {
-    fn from(value_type: u32) -> ValueType {
+impl From<ValueType> for u32 {
+    fn from(value_type: ValueType) -> u32 {
+        u8::from(value_type).into()
+    }
+}
+
+/// This represents a value type that could not be parsed
+#[derive(Debug, PartialEq, Eq)]
+pub struct UnknownValueType(u32);
+
+impl UnknownValueType {
+    /// Get the value that could not be interpreted
+    pub fn value(&self) -> u32 {
+        self.0
+    }
+}
+
+impl Error for UnknownValueType {}
+impl fmt::Display for UnknownValueType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Unknown FDB value type {}", self.0)
+    }
+}
+
+impl TryFrom<u32> for ValueType {
+    type Error = UnknownValueType;
+
+    fn try_from(value_type: u32) -> Result<ValueType, Self::Error> {
         match value_type {
-            0 => ValueType::Nothing,
-            1 => ValueType::Integer,
-            3 => ValueType::Float,
-            4 => ValueType::Text,
-            5 => ValueType::Boolean,
-            6 => ValueType::BigInt,
-            8 => ValueType::VarChar,
-            k => ValueType::Unknown(k),
+            0 => Ok(ValueType::Nothing),
+            1 => Ok(ValueType::Integer),
+            3 => Ok(ValueType::Float),
+            4 => Ok(ValueType::Text),
+            5 => Ok(ValueType::Boolean),
+            6 => Ok(ValueType::BigInt),
+            8 => Ok(ValueType::VarChar),
+            _ => Err(UnknownValueType(value_type)),
         }
     }
 }

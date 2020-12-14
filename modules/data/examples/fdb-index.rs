@@ -6,6 +6,7 @@ use assembly_data::fdb::{
 use color_eyre::eyre::eyre;
 use prettytable::{Cell as PCell, Row as PRow, Table as PTable};
 use std::{
+    convert::TryFrom,
     fs::File,
     io::BufReader,
     path::{Path, PathBuf},
@@ -46,7 +47,7 @@ fn run(filename: &Path, tablename: &str, key: &str) -> color_eyre::Result<()> {
         cnl.push(PCell::new(&cn));
     }
 
-    let value_type = ValueType::from(chlv[0].column_data_type);
+    let value_type = ValueType::try_from(chlv[0].column_data_type).unwrap();
     let filter = pk_filter(key, value_type)?;
 
     let bc = tth.buckets.count;

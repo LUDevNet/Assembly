@@ -21,7 +21,7 @@ use c::{
     FDBBucketHeaderC, FDBColumnHeaderC, FDBFieldDataC, FDBHeaderC, FDBRowHeaderC,
     FDBRowHeaderListEntryC, FDBTableDataHeaderC, FDBTableDefHeaderC, FDBTableHeaderC,
 };
-use std::{borrow::Cow, cmp::Ordering};
+use std::{borrow::Cow, cmp::Ordering, convert::TryFrom};
 
 fn get_latin1_str(buf: &[u8], offset: u32) -> &Latin1Str {
     let (_, haystack) = buf.split_at(offset as usize);
@@ -186,7 +186,8 @@ fn map_column_header<'a>(buf: &'a [u8]) -> impl Fn(&'a FDBColumnHeaderC) -> Colu
     move |header: &FDBColumnHeaderC| {
         let column_header = header.extract();
         let name = get_latin1_str(buf, column_header.column_name_addr);
-        let domain = ValueType::from(column_header.column_data_type);
+        // FIXME: remove unwrap
+        let domain = ValueType::try_from(column_header.column_data_type).unwrap();
 
         Column { name, domain }
     }
@@ -407,7 +408,8 @@ pub struct Row<'a> {
 #[allow(clippy::needless_lifetimes)] // <- clippy gets this wrong
 fn map_field<'a>(buf: &'a [u8]) -> impl Fn(&'a FDBFieldDataC) -> Field<'a> {
     move |data: &FDBFieldDataC| {
-        let data_type = ValueType::from(data.data_type.extract());
+        // TODO: Remove unwrap
+        let data_type = ValueType::try_from(data.data_type.extract()).unwrap();
         let bytes = data.value.0;
         match data_type {
             ValueType::Nothing => Field::Nothing,
@@ -429,7 +431,6 @@ fn map_field<'a>(buf: &'a [u8]) -> impl Fn(&'a FDBFieldDataC) -> Field<'a> {
                 let text = get_latin1_str(buf, addr);
                 Field::VarChar(text)
             }
-            ValueType::Unknown(i) => unimplemented!("Cannot read unknown value type {}", i),
         }
     }
 }

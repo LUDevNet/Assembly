@@ -9,13 +9,13 @@ use super::{
     Handle,
 };
 use crate::fdb::{
-    common::{Latin1Str, ValueType},
+    common::{Latin1Str, UnknownValueType, ValueType},
     file::{
         FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBHeader, FDBRowHeader,
         FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
     },
 };
-use std::borrow::Cow;
+use std::{borrow::Cow, convert::TryFrom, result::Result as StdResult};
 
 /// Custom result type for this module
 pub type Result<'a, T> = std::result::Result<Handle<'a, T>, BufferError>;
@@ -161,8 +161,8 @@ impl<'a> Handle<'a, FDBColumnHeader> {
     }
 
     /// Get the type of the column
-    pub fn column_data_type(&self) -> ValueType {
-        ValueType::from(self.raw.column_data_type)
+    pub fn column_data_type(&self) -> StdResult<ValueType, UnknownValueType> {
+        ValueType::try_from(self.raw.column_data_type)
     }
 }
 
