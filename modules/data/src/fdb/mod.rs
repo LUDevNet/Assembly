@@ -50,5 +50,3 @@ pub mod query;
 pub mod reader;
 pub mod ro;
 pub mod store;
-
-pub use self::core::Schema;

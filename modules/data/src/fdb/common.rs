@@ -66,6 +66,12 @@ impl From<Cow<'_, Latin1Str>> for Latin1String {
     }
 }
 
+impl From<&Latin1Str> for Latin1String {
+    fn from(src: &Latin1Str) -> Latin1String {
+        src.to_owned()
+    }
+}
+
 #[repr(transparent)]
 #[derive(PartialEq, PartialOrd, Eq, Ord)]
 /// A borrowed latin-1 encoded string (like `&str`)

@@ -338,6 +338,11 @@ impl<'a> Column<'a> {
         self.name.decode()
     }
 
+    /// Returns the name of a column
+    pub fn name_raw(&self) -> &'a Latin1Str {
+        self.name
+    }
+
     /// Returns the default value type of the column
     pub fn value_type(&self) -> ValueType {
         self.domain
