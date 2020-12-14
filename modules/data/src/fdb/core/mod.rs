@@ -50,20 +50,6 @@ impl fmt::Display for Field {
     }
 }
 
-impl From<&Field> for ValueType {
-    fn from(val: &Field) -> Self {
-        match val {
-            Field::Nothing => ValueType::Nothing,
-            Field::Integer(_) => ValueType::Integer,
-            Field::Float(_) => ValueType::Float,
-            Field::Text(_) => ValueType::Text,
-            Field::Boolean(_) => ValueType::Boolean,
-            Field::BigInt(_) => ValueType::BigInt,
-            Field::VarChar(_) => ValueType::VarChar,
-        }
-    }
-}
-
 /// A sequence of fields
 #[derive(Debug, Default)]
 pub struct Row(Vec<Field>);

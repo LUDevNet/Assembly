@@ -150,8 +150,11 @@ pub trait Context {
     type Bytes;
 }
 
-/// A database single field
-#[derive(Debug, Clone, PartialEq, Copy)]
+/// A single field value in the database
+///
+/// This is a generic enum that is the template for all
+/// other `Field` types in this crate.
+#[derive(Debug, PartialEq)]
 pub enum Value<T: Context> {
     /// The NULL value
     Nothing,
@@ -167,6 +170,47 @@ pub enum Value<T: Context> {
     BigInt(T::I64),
     /// A (base64 encoded?) byte buffer
     VarChar(T::Bytes),
+}
+
+impl<T: Context> Clone for Value<T>
+where
+    T::String: Clone,
+    T::Bytes: Clone,
+    T::I64: Clone,
+{
+    fn clone(&self) -> Self {
+        match self {
+            Value::Nothing => Value::Nothing,
+            Value::Integer(v) => Value::Integer(*v),
+            Value::Float(v) => Value::Float(*v),
+            Value::Text(v) => Value::Text(v.clone()),
+            Value::Boolean(v) => Value::Boolean(*v),
+            Value::BigInt(v) => Value::BigInt(v.clone()),
+            Value::VarChar(v) => Value::VarChar(v.clone()),
+        }
+    }
+}
+
+impl<T: Context> Copy for Value<T>
+where
+    T::String: Copy,
+    T::Bytes: Copy,
+    T::I64: Copy,
+{
+}
+
+impl<T: Context> From<&Value<T>> for ValueType {
+    fn from(val: &Value<T>) -> Self {
+        match val {
+            Value::Nothing => ValueType::Nothing,
+            Value::Integer(_) => ValueType::Integer,
+            Value::Float(_) => ValueType::Float,
+            Value::Text(_) => ValueType::Text,
+            Value::Boolean(_) => ValueType::Boolean,
+            Value::BigInt(_) => ValueType::BigInt,
+            Value::VarChar(_) => ValueType::VarChar,
+        }
+    }
 }
 
 /// Value datatypes used in the database
