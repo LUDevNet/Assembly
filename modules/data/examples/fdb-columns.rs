@@ -5,9 +5,12 @@ use prettytable::{Cell as PCell, Row as PRow, Table as PTable};
 use std::{fs::File, path::PathBuf};
 use structopt::StructOpt;
 
+/// Show all columns and their types for some table
 #[derive(StructOpt)]
 struct Options {
+    /// The FDB file
     file: PathBuf,
+    /// The name of a table
     table: String,
 }
 

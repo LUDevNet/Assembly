@@ -7,7 +7,7 @@ use structopt::StructOpt;
 use color_eyre::eyre::{self, WrapErr};
 
 #[derive(StructOpt)]
-/// Copies one FDB file to another
+/// Reads an FDB file an creates another one with the same content
 struct Options {
     /// The FDB file to copy from
     src: PathBuf,
