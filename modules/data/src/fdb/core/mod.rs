@@ -21,90 +21,20 @@ pub mod iter;
 use std::collections::BTreeMap;
 use std::fmt;
 
-/// Value datatypes used in the database
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum ValueType {
-    /// The NULL value
-    Nothing,
-    /// A 32-bit signed integer
-    Integer,
-    /// A 32-bit IEEE floating point number
-    Float,
-    /// A long string
-    Text,
-    /// A boolean
-    Boolean,
-    /// A 64 bit integer
-    BigInt,
-    /// A short string
-    VarChar,
-    /// An unknown value
-    Unknown(u32),
+use super::common::{Context, Value, ValueType};
+
+/// The `Value` context for `core::Field`
+#[derive(Debug, PartialEq, Eq)]
+pub struct OwnedContext;
+
+impl Context for OwnedContext {
+    type String = String;
+    type I64 = i64;
+    type Bytes = String;
 }
 
-impl fmt::Display for ValueType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ValueType::Nothing => write!(f, "NULL"),
-            ValueType::Integer => write!(f, "INTEGER"),
-            ValueType::Float => write!(f, "FLOAT"),
-            ValueType::Text => write!(f, "TEXT"),
-            ValueType::Boolean => write!(f, "BOOLEAN"),
-            ValueType::BigInt => write!(f, "BIGINT"),
-            ValueType::VarChar => write!(f, "VARCHAR"),
-            ValueType::Unknown(i) => write!(f, "UNKNOWN({})", i),
-        }
-    }
-}
-
-impl From<ValueType> for u32 {
-    fn from(value_type: ValueType) -> u32 {
-        match value_type {
-            ValueType::Nothing => 0,
-            ValueType::Integer => 1,
-            ValueType::Float => 3,
-            ValueType::Text => 4,
-            ValueType::Boolean => 5,
-            ValueType::BigInt => 6,
-            ValueType::VarChar => 8,
-            ValueType::Unknown(key) => key,
-        }
-    }
-}
-
-impl From<u32> for ValueType {
-    fn from(value_type: u32) -> ValueType {
-        match value_type {
-            0 => ValueType::Nothing,
-            1 => ValueType::Integer,
-            3 => ValueType::Float,
-            4 => ValueType::Text,
-            5 => ValueType::Boolean,
-            6 => ValueType::BigInt,
-            8 => ValueType::VarChar,
-            k => ValueType::Unknown(k),
-        }
-    }
-}
-
-/// A database single field
-#[derive(Debug, Clone, PartialEq)]
-pub enum Field {
-    /// The NULL value
-    Nothing,
-    /// A 32 bit integer
-    Integer(i32),
-    /// A 32 bit IEEE floating point number
-    Float(f32),
-    /// A string
-    Text(String),
-    /// A boolean
-    Boolean(bool),
-    /// A 64 bit integer
-    BigInt(i64),
-    /// A (base64 encoded?) byte buffer
-    VarChar(String),
-}
+/// An owned field value
+pub type Field = Value<OwnedContext>;
 
 impl fmt::Display for Field {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

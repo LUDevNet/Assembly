@@ -7,8 +7,8 @@
 //!
 //! ```
 //! use assembly_data::fdb::{
-//!     core::{ValueType, Field},
-//!     ro::slice::Latin1String,
+//!     common::{ValueType, Latin1String},
+//!     core::{Field},
 //!     store::{Database, Table},
 //! };
 //!

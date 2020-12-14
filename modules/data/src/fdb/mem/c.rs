@@ -1,8 +1,10 @@
+use std::convert::TryFrom;
+
 use crate::fdb::file::{
     FDBBucketHeader, FDBColumnHeader, FDBFieldValue, FDBHeader, FDBRowHeader,
     FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
 };
-use crate::fdb::{core::ValueType, file::ArrayHeader};
+use crate::fdb::{common::ValueType, file::ArrayHeader};
 use assembly_core::buffer::{MinimallyAligned, Repr, LEU32};
 
 /// An FDB header usable for unaligned reads
@@ -180,7 +182,8 @@ unsafe impl MinimallyAligned for FDBFieldDataC {}
 impl Repr for FDBFieldDataC {
     type Value = FDBFieldValue;
     fn extract(&self) -> Self::Value {
-        let data_type = ValueType::from(self.data_type.extract());
+        // FIXME: Remove unwrap
+        let data_type = ValueType::try_from(self.data_type.extract()).unwrap();
         match data_type {
             ValueType::Nothing => FDBFieldValue::Nothing,
             ValueType::Integer => FDBFieldValue::Integer(i32::from_le_bytes(self.value.0)),
@@ -195,7 +198,6 @@ impl Repr for FDBFieldDataC {
             ValueType::VarChar => FDBFieldValue::VarChar {
                 addr: u32::from_le_bytes(self.value.0),
             },
-            ValueType::Unknown(i) => unimplemented!("Cannot read unknown value type {}", i),
         }
     }
 }

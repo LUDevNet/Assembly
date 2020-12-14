@@ -137,6 +137,38 @@ impl Latin1Str {
     }
 }
 
+/// Type-Parameters to [`Value`]
+///
+/// This trait is used to parameterize `Value` to produce the concrete types
+/// that are used elsewhere in this crate.
+pub trait Context {
+    /// The type that holds a `ValueType::String`
+    type String;
+    /// The type that holds a `ValueType::BigInt`
+    type I64;
+    /// The type that holds a `ValueType::VarChar`
+    type Bytes;
+}
+
+/// A database single field
+#[derive(Debug, Clone, PartialEq, Copy)]
+pub enum Value<T: Context> {
+    /// The NULL value
+    Nothing,
+    /// A 32 bit integer
+    Integer(i32),
+    /// A 32 bit IEEE floating point number
+    Float(f32),
+    /// A string
+    Text(T::String),
+    /// A boolean
+    Boolean(bool),
+    /// A 64 bit integer
+    BigInt(T::I64),
+    /// A (base64 encoded?) byte buffer
+    VarChar(T::Bytes),
+}
+
 /// Value datatypes used in the database
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ValueType {
@@ -230,7 +262,7 @@ mod tests {
     use super::Latin1Str;
 
     #[test]
-    fn test_req_bytes() {
+    fn test_latin1_req_bytes() {
         assert_eq!(1, Latin1Str::new(b"a").req_buf_len());
         assert_eq!(1, Latin1Str::new(b"ab").req_buf_len());
         assert_eq!(1, Latin1Str::new(b"abc").req_buf_len());

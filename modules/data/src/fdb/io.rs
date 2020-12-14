@@ -7,13 +7,13 @@
 //! This uses the methods defined in the `reader` module and produces the data
 //! structure defined in the `core` module.
 
-use super::core::*;
 use super::file::{
     FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBRowHeader, FDBTableDataHeader,
     FDBTableDefHeader, FDBTableHeader,
 };
 use super::reader::builder::DatabaseBuilder;
 use super::reader::{DatabaseBufReader, DatabaseReader};
+use super::{common::ValueType, core::*};
 use assembly_core::reader::{FileError, FileResult};
 use std::convert::TryFrom;
 use std::fs;
@@ -113,7 +113,8 @@ where
 
     /// Try to load a column
     pub fn try_load_column(&mut self, header: FDBColumnHeader) -> FileResult<Column> {
-        let col_type = ValueType::from(header.column_data_type);
+        // FIXME: remove unwrap
+        let col_type = ValueType::try_from(header.column_data_type).unwrap();
         let col_name = self.inner.get_string(header.column_name_addr)?;
         Ok(Column::from((col_name.as_ref(), col_type)))
     }
