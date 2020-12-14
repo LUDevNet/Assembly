@@ -1,104 +1,125 @@
 use assembly_data::fdb::{
-    common::ValueType,
+    core,
+    mem::{self, Database, Field, Table},
     query::pk_filter,
-    reader::{builder::DatabaseBuilder, DatabaseBufReader, DatabaseReader},
 };
-use color_eyre::eyre::eyre;
+use color_eyre::eyre::{eyre, WrapErr};
+use mapr::Mmap;
 use prettytable::{Cell as PCell, Row as PRow, Table as PTable};
-use std::{
-    convert::TryFrom,
-    fs::File,
-    io::BufReader,
-    path::{Path, PathBuf},
-};
+use std::{fs::File, path::PathBuf};
 use structopt::StructOpt;
 
-fn run(filename: &Path, tablename: &str, key: &str) -> color_eyre::Result<()> {
-    //println!("Loading tables... (this may take a while)");
-    let file = File::open(filename)?;
-    let mut loader = BufReader::new(file);
+#[derive(StructOpt)]
+/// Shows all rows for a single key in a table
+struct Options {
+    /// The FDB file
+    file: PathBuf,
+    /// The table to use
+    table: String,
+    /// The key to use
+    key: String,
+}
 
-    let h = loader.get_header()?;
-    let thl = loader.get_table_header_list(h)?;
-
-    let thlv: Vec<_> = thl.into();
-    let mut iter = thlv.iter();
-
-    let (_tn, tdh, tth) = loop {
-        match iter.next() {
-            Some(th) => {
-                let tdh = loader.get_table_def_header(th.table_def_header_addr)?;
-                let name = loader.get_string(tdh.table_name_addr)?;
-
-                if name == tablename {
-                    let tth = loader.get_table_data_header(th.table_data_header_addr)?;
-                    break Ok((name, tdh, tth));
-                }
-            }
-            None => break Err(eyre!("Table not found")),
-        }
-    }?;
-
-    let chl = loader.get_column_header_list(&tdh)?;
-    let chlv: Vec<_> = chl.into();
-    let mut cnl = Vec::with_capacity(tdh.column_count as usize);
-    for ch in chlv.iter() {
-        let cn = loader.get_string(ch.column_name_addr)?;
-        cnl.push(PCell::new(&cn));
+fn field_to_cell(field: mem::Field) -> PCell {
+    match field {
+        Field::Nothing => PCell::new("NULL"),
+        Field::Integer(v) => PCell::new(&format!("{} (i32)", v)),
+        Field::Float(v) => PCell::new(&format!("{} (f32)", v)),
+        Field::Text(v) => PCell::new(&format!("{:?}", v)),
+        Field::Boolean(v) => PCell::new(if v { "true" } else { "false" }),
+        Field::BigInt(v) => PCell::new(&format!("{} (i64)", v)),
+        Field::VarChar(v) => PCell::new(&format!("{:?}", v)),
     }
+}
 
-    let value_type = ValueType::try_from(chlv[0].column_data_type).unwrap();
-    let filter = pk_filter(key, value_type)?;
+fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
+    let opts = Options::from_args();
 
-    let bc = tth.buckets.count;
+    // Load the database file
+    let file = File::open(&opts.file)
+        .wrap_err_with(|| format!("Failed to open input file '{}'", opts.file.display()))?;
+    let mmap = unsafe { Mmap::map(&file)? };
+    let buffer: &[u8] = &mmap;
 
-    let bhlv: Vec<_> = loader.get_bucket_header_list(&tth)?.into();
-    let hash = filter.hash();
+    // Start using the database
+    let db = Database::new(buffer);
 
-    let bh = bhlv[(hash % bc) as usize];
-    let rhlha = bh.row_header_list_head_addr;
+    // Find table
+    let table = db
+        .tables()?
+        .by_name(&opts.table)
+        .ok_or_else(|| eyre!("Failed to find table {:?}", &opts.table))?;
+    let table: Table = table.wrap_err_with(|| format!("Failed to load table {:?}", &opts.table))?;
+    let index_col = table.column_at(0).expect("Table has no columns");
 
-    let rhi = loader.get_row_header_addr_iterator(rhlha);
+    // Setup key filer
+    let value_type = index_col.value_type();
+    let filter = pk_filter(opts.key, value_type)?;
 
-    let mut count = 0;
+    // Find the bucket
+    let bucket = table
+        .bucket_at(filter.hash() as usize % table.bucket_count())
+        .ok_or_else(|| eyre!("Failed to find bucket"))?;
+
+    // Collect relevant rows
+    let mut rows: Vec<_> = bucket
+        .row_iter()
+        .filter(|row| {
+            if let Some(index_field) = row.field_at(0) {
+                match index_field {
+                    Field::Integer(v) => filter.filter(&core::Field::Integer(v)),
+                    Field::Text(v) => filter.filter(&core::Field::Text(v.decode().into_owned())),
+                    _ => false,
+                }
+            } else {
+                false
+            }
+        })
+        .map(|r| r.field_iter())
+        .collect();
+
+    // Prepare output
     let mut output = PTable::new();
     output.set_format(*prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
-    output.set_titles(PRow::new(cnl));
 
-    for orha in rhi.collect::<Vec<_>>() {
-        let rha = orha?;
-        let rh = loader.get_row_header(rha)?;
-
-        let fdlv: Vec<_> = loader.get_field_data_list(rh)?.into();
-
-        let ff = loader.try_load_field(&fdlv[0])?;
-        if filter.filter(&ff) {
-            let mut fv = Vec::with_capacity(fdlv.len());
-            fv.push(PCell::new(&ff.to_string()));
-
-            for fd in &fdlv[1..] {
-                let f = loader.try_load_field(&fd)?;
-                fv.push(PCell::new(&f.to_string()));
+    let row_count = rows.len();
+    let column_count = table.column_count();
+    if column_count > row_count {
+        let mut first = true;
+        for col in table.column_iter() {
+            let mut out_cells = Vec::with_capacity(row_count + 1);
+            out_cells.push(PCell::new(col.name().as_ref()));
+            for iter in rows.iter_mut() {
+                let field = iter.next().unwrap();
+                out_cells.push(field_to_cell(field));
             }
-            count += 1;
-            output.add_row(PRow::new(fv));
+            let prow = PRow::new(out_cells);
+            if first {
+                output.set_titles(prow);
+                first = false;
+            } else {
+                output.add_row(prow);
+            }
+        }
+    } else {
+        let mut title_cells = Vec::with_capacity(column_count);
+        for col in table.column_iter() {
+            title_cells.push(PCell::new(col.name().as_ref()));
+        }
+        output.set_titles(PRow::new(title_cells));
+
+        for row_iter in rows {
+            let mut out_cells = Vec::with_capacity(column_count);
+            for field in row_iter {
+                out_cells.push(field_to_cell(field));
+            }
+            output.add_row(PRow::new(out_cells));
         }
     }
 
     output.printstd();
-    println!("Printed {} row(s)", count);
+    println!("Printed {} row(s)", row_count);
 
     Ok(())
-}
-
-#[derive(StructOpt)]
-struct Options {
-    file: PathBuf,
-    table: String,
-    key: String,
-}
-
-pub fn main() -> color_eyre::Result<()> {
-    let opts = Options::from_args();
-    run(&opts.file, &opts.table, &opts.key)
 }
