@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use crate::fdb::file::{
     FDBBucketHeader, FDBColumnHeader, FDBFieldValue, FDBHeader, FDBRowHeader,
-    FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
+    FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader, IndirectValue,
 };
 use crate::fdb::{common::ValueType, file::ArrayHeader};
 use assembly_core::buffer::{MinimallyAligned, Repr, LEU32};
@@ -188,16 +188,16 @@ impl Repr for FDBFieldDataC {
             ValueType::Nothing => FDBFieldValue::Nothing,
             ValueType::Integer => FDBFieldValue::Integer(i32::from_le_bytes(self.value.0)),
             ValueType::Float => FDBFieldValue::Float(f32::from_le_bytes(self.value.0)),
-            ValueType::Text => FDBFieldValue::Text {
+            ValueType::Text => FDBFieldValue::Text(IndirectValue {
                 addr: u32::from_le_bytes(self.value.0),
-            },
+            }),
             ValueType::Boolean => FDBFieldValue::Boolean(self.value.0 != [0, 0, 0, 0]),
-            ValueType::BigInt => FDBFieldValue::BigInt {
+            ValueType::BigInt => FDBFieldValue::BigInt(IndirectValue {
                 addr: u32::from_le_bytes(self.value.0),
-            },
-            ValueType::VarChar => FDBFieldValue::VarChar {
+            }),
+            ValueType::VarChar => FDBFieldValue::VarChar(IndirectValue {
                 addr: u32::from_le_bytes(self.value.0),
-            },
+            }),
         }
     }
 }

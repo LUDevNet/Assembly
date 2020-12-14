@@ -10,6 +10,8 @@
 //! covers the whole 32 bits.
 use bytemuck_derive::{Pod, Zeroable};
 
+use super::common::{Context, Value};
+
 pub mod lists;
 
 #[derive(Copy, Clone, Debug, Pod, Zeroable, PartialEq, Eq)]
@@ -192,33 +194,25 @@ pub struct FDBFieldData {
     pub value: [u8; 4],
 }
 
-/// A database field value repr
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum FDBFieldValue {
-    /// The `NULL` value
-    Nothing,
-    /// A 32 bit signed integer
-    Integer(i32),
-    /// A 32 bit IEEE floating point number
-    Float(f32),
-    /// A piece of Latin-1 encoded text
-    Text {
-        /// The base of the string
-        addr: u32,
-    },
-    /// A boolean
-    Boolean(bool),
-    /// An indirect 64 bit integer
-    BigInt {
-        /// The offset of the value
-        addr: u32,
-    },
-    /// A (base64 encoded?) null-terminated string
-    VarChar {
-        /// The base of the string
-        addr: u32,
-    },
+/// The `common::Context` for used to make `file::FDBFieldValue`
+pub struct FileContext;
+
+impl Context for FileContext {
+    type String = IndirectValue;
+    type I64 = IndirectValue;
+    type Bytes = IndirectValue;
 }
+
+/// An indirect value in the file
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct IndirectValue {
+    /// The base of the value
+    pub addr: u32,
+}
+
+/// A database field value repr
+pub type FDBFieldValue = Value<FileContext>;
 
 #[cfg(test)]
 mod tests {

@@ -199,6 +199,62 @@ where
 {
 }
 
+impl<T: Context> Value<T> {
+    /// Returns `Some` with the value if the field contains an [`Value::Integer`].
+    pub fn into_opt_integer(self) -> Option<i32> {
+        if let Self::Integer(value) = self {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    /// Returns `Some` with the value if the field contains a [`Value::Float`].
+    pub fn into_opt_float(self) -> Option<f32> {
+        if let Self::Float(value) = self {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    /// Returns `Some` with the value if the field contains a [`Value::Text`].
+    pub fn into_opt_text(self) -> Option<T::String> {
+        if let Self::Text(value) = self {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    /// Returns `Some` with the value if the field contains a [`Value::Boolean`].
+    pub fn into_opt_boolean(self) -> Option<bool> {
+        if let Self::Boolean(value) = self {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    /// Returns `Some` with the value if the field contains a [`Value::BigInt`].
+    pub fn into_opt_big_int(self) -> Option<T::I64> {
+        if let Self::BigInt(value) = self {
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    /// Returns `Some` with the value if the field contains a [`Value::VarChar`].
+    pub fn into_opt_varchar(self) -> Option<T::Bytes> {
+        if let Self::VarChar(value) = self {
+            Some(value)
+        } else {
+            None
+        }
+    }
+}
+
 impl<T: Context> From<&Value<T>> for ValueType {
     fn from(val: &Value<T>) -> Self {
         match val {

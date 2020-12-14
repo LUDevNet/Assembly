@@ -14,7 +14,7 @@ use memchr::memchr;
 
 mod c;
 use super::{
-    common::{Latin1Str, ValueType},
+    common::{Context, Latin1Str, Value, ValueType},
     ro::{Handle, RefHandle},
 };
 use c::{
@@ -453,76 +453,16 @@ impl<'a> Row<'a> {
 }
 
 #[derive(Debug, PartialEq)]
+/// The context for `mem::Field`
+pub struct MemContext<'a> {
+    _m: std::marker::PhantomData<fn() -> &'a ()>,
+}
+
+impl<'a> Context for MemContext<'a> {
+    type String = &'a Latin1Str;
+    type I64 = i64;
+    type Bytes = &'a Latin1Str;
+}
+
 /// Value of or reference to a field value
-pub enum Field<'a> {
-    /// The `NULL` value
-    Nothing,
-    /// A 32 bit signed integer
-    Integer(i32),
-    /// A 32 bit IEEE floating point number
-    Float(f32),
-    /// A latin-1 encoded string
-    Text(&'a Latin1Str),
-    /// A boolean
-    Boolean(bool),
-    /// A 64 bit integer.
-    BigInt(i64),
-    /// Reference to a (base64 encoded?) byte array.
-    VarChar(&'a Latin1Str),
-}
-
-impl<'a> Field<'a> {
-    /// Returns `Some` with the value if the field contains an [`Field::Integer`].
-    pub fn into_opt_integer(self) -> Option<i32> {
-        if let Self::Integer(value) = self {
-            Some(value)
-        } else {
-            None
-        }
-    }
-
-    /// Returns `Some` with the value if the field contains a [`Field::Float`].
-    pub fn into_opt_float(self) -> Option<f32> {
-        if let Self::Float(value) = self {
-            Some(value)
-        } else {
-            None
-        }
-    }
-
-    /// Returns `Some` with the value if the field contains a [`Field::Text`].
-    pub fn into_opt_text(self) -> Option<&'a Latin1Str> {
-        if let Self::Text(value) = self {
-            Some(value)
-        } else {
-            None
-        }
-    }
-
-    /// Returns `Some` with the value if the field contains a [`Field::Boolean`].
-    pub fn into_opt_boolean(self) -> Option<bool> {
-        if let Self::Boolean(value) = self {
-            Some(value)
-        } else {
-            None
-        }
-    }
-
-    /// Returns `Some` with the value if the field contains a [`Field::BigInt`].
-    pub fn into_opt_big_int(self) -> Option<i64> {
-        if let Self::BigInt(value) = self {
-            Some(value)
-        } else {
-            None
-        }
-    }
-
-    /// Returns `Some` with the value if the field contains a [`Field::VarChar`].
-    pub fn into_opt_varchar(self) -> Option<&'a Latin1Str> {
-        if let Self::VarChar(value) = self {
-            Some(value)
-        } else {
-            None
-        }
-    }
-}
+pub type Field<'a> = Value<MemContext<'a>>;
