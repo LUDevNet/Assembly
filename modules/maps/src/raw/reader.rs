@@ -1,11 +1,8 @@
 use super::file::*;
 use super::parser;
 use assembly_core::reader::FileResult;
-use assembly_core::{
-    byteorder::{ReadBytesExt, LE},
-    nom::Finish,
-    reader::ParseAt,
-};
+use assembly_core::{nom::Finish, reader::ParseAt};
+use byteorder::{ReadBytesExt, LE};
 
 use std::io::prelude::*;
 

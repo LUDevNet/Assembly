@@ -19,8 +19,6 @@ pub extern crate num_derive;
 #[doc(hidden)]
 pub extern crate nom;
 #[doc(hidden)]
-pub use byteorder;
-#[doc(hidden)]
 pub use displaydoc;
 #[doc(hidden)]
 pub use num_traits;

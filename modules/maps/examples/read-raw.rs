@@ -1,7 +1,7 @@
 extern crate structopt;
 
-use assembly_core::byteorder::{ReadBytesExt, LE};
 use assembly_maps::raw::reader::*;
+use byteorder::{ReadBytesExt, LE};
 
 use std::fs::File;
 use std::io::BufReader;

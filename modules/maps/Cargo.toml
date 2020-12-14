@@ -1,6 +1,6 @@
 [package]
 name = "assembly-maps"
-version = "0.2.0-beta.0"
+version = "0.2.0"
 authors = ["Xiphoseer"]
 edition = "2018"
 homepage = "https://xiphoseer.github.io"
@@ -10,9 +10,10 @@ license = "MIT"
 readme = "README.md"
 
 [dependencies]
-assembly-core = { path = "../core", version = "0.2.0-beta.0" }
+assembly-core = { path = "../core", version = "0.2.0" }
 num-traits = "0.2"
 thiserror = "1"
+byteorder = "1"
 displaydoc = "0.1"
 
 [dev-dependencies]
