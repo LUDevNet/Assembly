@@ -466,7 +466,7 @@ pub struct MemContext<'a> {
 impl<'a> Context for MemContext<'a> {
     type String = &'a Latin1Str;
     type I64 = i64;
-    type Bytes = &'a Latin1Str;
+    type XML = &'a Latin1Str;
 }
 
 /// Value of or reference to a field value

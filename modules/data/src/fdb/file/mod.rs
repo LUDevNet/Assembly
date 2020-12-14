@@ -201,7 +201,7 @@ pub struct FileContext;
 impl Context for FileContext {
     type String = IndirectValue;
     type I64 = IndirectValue;
-    type Bytes = IndirectValue;
+    type XML = IndirectValue;
 }
 
 /// An indirect value in the file

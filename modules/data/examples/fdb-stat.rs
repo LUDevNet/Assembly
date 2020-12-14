@@ -38,7 +38,7 @@ fn main() -> color_eyre::Result<()> {
     let mut text_field_count = 0;
     let mut bool_field_count = 0;
     let mut bigint_field_count = 0;
-    let mut bytes_field_count = 0;
+    let mut xml_field_count = 0;
 
     let mut null_column_count = 0;
     let mut int_column_count = 0;
@@ -46,7 +46,7 @@ fn main() -> color_eyre::Result<()> {
     let mut text_column_count = 0;
     let mut bool_column_count = 0;
     let mut bigint_column_count = 0;
-    let mut bytes_column_count = 0;
+    let mut xml_column_count = 0;
 
     for table in tables.iter() {
         let table = table?;
@@ -61,7 +61,7 @@ fn main() -> color_eyre::Result<()> {
                 ValueType::Text => text_column_count += 1,
                 ValueType::Boolean => bool_column_count += 1,
                 ValueType::BigInt => bigint_column_count += 1,
-                ValueType::VarChar => bytes_column_count += 1,
+                ValueType::VarChar => xml_column_count += 1,
             }
         }
 
@@ -81,7 +81,7 @@ fn main() -> color_eyre::Result<()> {
                         Value::Text(_) => text_field_count += 1,
                         Value::Boolean(_) => bool_field_count += 1,
                         Value::BigInt(_) => bigint_field_count += 1,
-                        Value::VarChar(_) => bytes_field_count += 1,
+                        Value::VarChar(_) => xml_field_count += 1,
                     }
                 }
             }
@@ -106,7 +106,7 @@ fn main() -> color_eyre::Result<()> {
     println!("text:   {}", text_column_count);
     println!("bool:   {}", bool_column_count);
     println!("bigint: {}", bigint_column_count);
-    println!("bytes:  {}", bytes_column_count);
+    println!("xml:  {}", xml_column_count);
     println!();
     println!("# Field Types");
     println!("null:   {}", null_field_count);
@@ -115,7 +115,7 @@ fn main() -> color_eyre::Result<()> {
     println!("text:   {}", text_field_count);
     println!("bool:   {}", bool_field_count);
     println!("bigint: {}", bigint_field_count);
-    println!("bytes:  {}", bytes_field_count);
+    println!("xml:  {}", xml_field_count);
     println!();
 
     let duration = start.elapsed();

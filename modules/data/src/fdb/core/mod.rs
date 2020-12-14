@@ -30,7 +30,7 @@ pub struct OwnedContext;
 impl Context for OwnedContext {
     type String = String;
     type I64 = i64;
-    type Bytes = String;
+    type XML = String;
 }
 
 /// An owned field value

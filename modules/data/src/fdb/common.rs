@@ -153,7 +153,7 @@ pub trait Context {
     /// The type that holds a `ValueType::BigInt`
     type I64;
     /// The type that holds a `ValueType::VarChar`
-    type Bytes;
+    type XML;
 }
 
 /// A single field value in the database
@@ -174,14 +174,14 @@ pub enum Value<T: Context> {
     Boolean(bool),
     /// A 64 bit integer
     BigInt(T::I64),
-    /// A (base64 encoded?) byte buffer
-    VarChar(T::Bytes),
+    /// A (XML?) string
+    VarChar(T::XML),
 }
 
 impl<T: Context> Clone for Value<T>
 where
     T::String: Clone,
-    T::Bytes: Clone,
+    T::XML: Clone,
     T::I64: Clone,
 {
     fn clone(&self) -> Self {
@@ -200,7 +200,7 @@ where
 impl<T: Context> Copy for Value<T>
 where
     T::String: Copy,
-    T::Bytes: Copy,
+    T::XML: Copy,
     T::I64: Copy,
 {
 }
@@ -252,7 +252,7 @@ impl<T: Context> Value<T> {
     }
 
     /// Returns `Some` with the value if the field contains a [`Value::VarChar`].
-    pub fn into_opt_varchar(self) -> Option<T::Bytes> {
+    pub fn into_opt_varchar(self) -> Option<T::XML> {
         if let Self::VarChar(value) = self {
             Some(value)
         } else {
@@ -290,7 +290,7 @@ pub enum ValueType {
     Boolean,
     /// A 64 bit integer
     BigInt,
-    /// A short string
+    /// An (XML?) string
     VarChar,
 }
 
