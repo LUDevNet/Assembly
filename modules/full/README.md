@@ -14,7 +14,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-assembly = "0.6"
+assembly = "0.7"
 ```
 
 ## Modules
@@ -27,7 +27,7 @@ modules, update your `Cargo.toml` to include:
 
 ```toml
 [dependencies.assembly]
-version = "0.6"
+version = "0.7"
 default-features = false
 features = ["data", "maps"]
 ```

@@ -10,7 +10,6 @@ license = "MIT"
 readme = "README.md"
 
 [dependencies]
-assembly-core = { path = "../core", version = "0.2.0-beta" }
 hsieh-hash = "0.1"
 thiserror = "1.0"
 memchr = "2.3"
@@ -18,6 +17,10 @@ encoding_rs = "0.8"
 derive-new = "0.5"
 bytemuck = "1.4"
 bytemuck_derive = "1"
+
+[dependencies.assembly-core]
+version = "0.2.0"
+path = "../core"
 
 [dev-dependencies]
 prettytable-rs = "0.8"
