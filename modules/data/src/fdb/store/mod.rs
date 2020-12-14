@@ -369,8 +369,13 @@ impl Table {
                     let s = Latin1String::encode(string).into_owned();
                     let lkey = s.req_buf_len();
                     let lstrings = self.strings.entry(lkey).or_default();
-                    let inner = lstrings.len();
-                    lstrings.push(s);
+                    let inner = if let Some(index) = lstrings.iter().position(|p| s == *p) {
+                        index
+                    } else {
+                        let len = lstrings.len();
+                        lstrings.push(s);
+                        len
+                    };
                     Field::Text { outer: lkey, inner }
                 }
                 super::core::Field::Boolean(b) => Field::Boolean(*b),
@@ -383,8 +388,13 @@ impl Table {
                     let s = Latin1String::encode(string).into_owned();
                     let lkey = s.req_buf_len();
                     let lstrings = self.strings.entry(lkey).or_default();
-                    let inner = lstrings.len();
-                    lstrings.push(s);
+                    let inner = if let Some(index) = lstrings.iter().position(|p| s == *p) {
+                        index
+                    } else {
+                        let len = lstrings.len();
+                        lstrings.push(s);
+                        len
+                    };
                     Field::VarChar { outer: lkey, inner }
                 }
             });
