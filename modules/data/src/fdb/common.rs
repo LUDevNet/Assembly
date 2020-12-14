@@ -294,17 +294,24 @@ pub enum ValueType {
     VarChar,
 }
 
+impl ValueType {
+    /// Get a static name for the type
+    pub fn static_name(&self) -> &'static str {
+        match self {
+            ValueType::Nothing => "NULL",
+            ValueType::Integer => "INTEGER",
+            ValueType::Float => "FLOAT",
+            ValueType::Text => "TEXT",
+            ValueType::Boolean => "BOOLEAN",
+            ValueType::BigInt => "BIGINT",
+            ValueType::VarChar => "VARCHAR",
+        }
+    }
+}
+
 impl fmt::Display for ValueType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ValueType::Nothing => write!(f, "NULL"),
-            ValueType::Integer => write!(f, "INTEGER"),
-            ValueType::Float => write!(f, "FLOAT"),
-            ValueType::Text => write!(f, "TEXT"),
-            ValueType::Boolean => write!(f, "BOOLEAN"),
-            ValueType::BigInt => write!(f, "BIGINT"),
-            ValueType::VarChar => write!(f, "VARCHAR"),
-        }
+        write!(f, "{}", self.static_name())
     }
 }
 

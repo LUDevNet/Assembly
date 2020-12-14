@@ -4,7 +4,9 @@ use std::{fs::File, path::PathBuf, time::Instant};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
+/// Prints the names of all tables and their columns
 struct Options {
+    /// The FDB file
     file: PathBuf,
 }
 
@@ -23,21 +25,12 @@ fn main() -> color_eyre::Result<()> {
     for table in tables.iter() {
         let table = table?;
         let table_name = table.name();
-        println!("{}", table_name);
+        println!("{} ({})", table_name, table.bucket_count());
 
         for column in table.column_iter() {
             let name = column.name();
             println!("- {}: {:?}", name, column.value_type());
         }
-
-        for bucket in table.bucket_iter() {
-            print!("|");
-            for _row in bucket.row_iter() {
-                print!(".");
-            }
-        }
-
-        println!("# {}", table.bucket_count());
     }
 
     let duration = start.elapsed();

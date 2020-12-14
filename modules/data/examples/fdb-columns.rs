@@ -1,56 +1,49 @@
-use assembly_data::fdb::{
-    common::ValueType,
-    reader::{DatabaseBufReader, DatabaseReader},
-};
-use color_eyre::eyre::eyre;
+use assembly_data::fdb::mem::{Database, Table};
+use color_eyre::eyre::{eyre, WrapErr};
+use mapr::Mmap;
 use prettytable::{Cell as PCell, Row as PRow, Table as PTable};
-use std::{
-    convert::TryFrom,
-    fs::File,
-    io::BufReader,
-    path::{Path, PathBuf},
-};
+use std::{fs::File, path::PathBuf};
 use structopt::StructOpt;
 
-fn run(filename: &Path, tablename: &str) -> color_eyre::Result<()> {
-    //println!("Loading tables... (this may take a while)");
-    let file = File::open(filename)?;
-    let mut loader = BufReader::new(file);
+#[derive(StructOpt)]
+struct Options {
+    file: PathBuf,
+    table: String,
+}
 
-    let h = loader.get_header()?;
-    let thl = loader.get_table_header_list(h)?;
+fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
+    let opts = Options::from_args();
 
-    let thlv: Vec<_> = thl.into();
-    let mut iter = thlv.iter();
+    // Load the database file
+    let file = File::open(&opts.file)
+        .wrap_err_with(|| format!("Failed to open input file '{}'", opts.file.display()))?;
+    let mmap = unsafe { Mmap::map(&file)? };
+    let buffer: &[u8] = &mmap;
 
-    let (_tn, tdh, _tth) = loop {
-        match iter.next() {
-            Some(th) => {
-                let tdh = loader.get_table_def_header(th.table_def_header_addr)?;
-                let name = loader.get_string(tdh.table_name_addr)?;
+    // Start using the database
+    let db = Database::new(buffer);
 
-                if name == tablename {
-                    let tth = loader.get_table_data_header(th.table_data_header_addr)?;
-                    break Ok((name, tdh, tth));
-                }
-            }
-            None => break Err(eyre!("Table not found!")),
-        }
-    }?;
+    // Find table
+    let table = db
+        .tables()?
+        .by_name(&opts.table)
+        .ok_or_else(|| eyre!("Failed to find table {:?}", &opts.table))?;
+    let table: Table = table.wrap_err_with(|| format!("Failed to load table {:?}", &opts.table))?;
 
     let mut count = 0;
     let mut output = PTable::new();
     output.set_format(*prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
     output.set_titles(PRow::new(vec![PCell::new("Name"), PCell::new("Type")]));
 
-    let chl = loader.get_column_header_list(&tdh)?;
-    let chlv: Vec<_> = chl.into();
+    for column in table.column_iter() {
+        let column_name = column.name();
+        let value_type = column.value_type();
 
-    for ch in chlv.iter() {
-        let cn = loader.get_string(ch.column_name_addr)?;
-        let vt = ValueType::try_from(ch.column_data_type).unwrap();
-
-        let cr = PRow::new(vec![PCell::new(&cn), PCell::new(&vt.to_string())]);
+        let cr = PRow::new(vec![
+            PCell::new(column_name.as_ref()),
+            PCell::new(value_type.static_name()),
+        ]);
 
         output.add_row(cr);
         count += 1;
@@ -60,16 +53,4 @@ fn run(filename: &Path, tablename: &str) -> color_eyre::Result<()> {
     println!("Printed {} row(s)", count);
 
     Ok(())
-}
-
-#[derive(StructOpt)]
-struct Options {
-    file: PathBuf,
-    table: String,
-}
-
-pub fn main() -> color_eyre::Result<()> {
-    color_eyre::install()?;
-    let opts = Options::from_args();
-    run(&opts.file, &opts.table)
 }
