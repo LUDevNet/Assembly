@@ -50,3 +50,6 @@ pub mod query;
 pub mod reader;
 pub mod ro;
 pub mod store;
+
+#[cfg(feature = "sqlite")]
+pub mod sqlite;

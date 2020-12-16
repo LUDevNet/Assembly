@@ -410,50 +410,73 @@ pub struct Row<'a> {
     fields: &'a [FDBFieldDataC],
 }
 
-#[allow(clippy::needless_lifetimes)] // <- clippy gets this wrong
-fn map_field<'a>(buf: &'a [u8]) -> impl Fn(&'a FDBFieldDataC) -> Field<'a> {
-    move |data: &FDBFieldDataC| {
-        // TODO: Remove unwrap
-        let data_type = ValueType::try_from(data.data_type.extract()).unwrap();
-        let bytes = data.value.0;
-        match data_type {
-            ValueType::Nothing => Field::Nothing,
-            ValueType::Integer => Field::Integer(i32::from_le_bytes(bytes)),
-            ValueType::Float => Field::Float(f32::from_le_bytes(bytes)),
-            ValueType::Text => {
-                let addr = u32::from_le_bytes(bytes);
-                let text = get_latin1_str(buf, addr);
-                Field::Text(text)
-            }
-            ValueType::Boolean => Field::Boolean(bytes != [0, 0, 0, 0]),
-            ValueType::BigInt => {
-                let addr = u32::from_le_bytes(bytes);
-                let val = buffer::cast::<LEI64>(buf, addr).extract();
-                Field::BigInt(val)
-            }
-            ValueType::VarChar => {
-                let addr = u32::from_le_bytes(bytes);
-                let text = get_latin1_str(buf, addr);
-                Field::VarChar(text)
-            }
+fn get_field<'a>(data: &'a FDBFieldDataC, buf: &'a [u8]) -> Field<'a> {
+    // TODO: Remove unwrap
+    let data_type = ValueType::try_from(data.data_type.extract()).unwrap();
+    let bytes = data.value.0;
+    match data_type {
+        ValueType::Nothing => Field::Nothing,
+        ValueType::Integer => Field::Integer(i32::from_le_bytes(bytes)),
+        ValueType::Float => Field::Float(f32::from_le_bytes(bytes)),
+        ValueType::Text => {
+            let addr = u32::from_le_bytes(bytes);
+            let text = get_latin1_str(buf, addr);
+            Field::Text(text)
         }
+        ValueType::Boolean => Field::Boolean(bytes != [0, 0, 0, 0]),
+        ValueType::BigInt => {
+            let addr = u32::from_le_bytes(bytes);
+            let val = buffer::cast::<LEI64>(buf, addr).extract();
+            Field::BigInt(val)
+        }
+        ValueType::VarChar => {
+            let addr = u32::from_le_bytes(bytes);
+            let text = get_latin1_str(buf, addr);
+            Field::VarChar(text)
+        }
+    }
+}
+
+/// An iterator over fields in a row
+pub struct FieldIter<'a> {
+    buf: &'a [u8],
+    iter: std::slice::Iter<'a, FDBFieldDataC>,
+}
+
+impl<'a> Iterator for FieldIter<'a> {
+    type Item = Field<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|data| get_field(data, self.buf))
     }
 }
 
 impl<'a> Row<'a> {
     /// Get the field at the index
     pub fn field_at(&self, index: usize) -> Option<Field<'a>> {
-        self.fields.get(index).map(map_field(self.buf))
+        self.fields.get(index).map(|data| get_field(data, self.buf))
     }
 
     /// Get the iterator over all fields
-    pub fn field_iter(&self) -> impl Iterator<Item = Field<'a>> {
-        self.fields.iter().map(map_field(self.buf))
+    pub fn field_iter(&self) -> FieldIter<'a> {
+        FieldIter {
+            iter: self.fields.iter(),
+            buf: self.buf,
+        }
     }
 
     /// Get the count of fields
     pub fn field_count(&self) -> usize {
         self.fields.len()
+    }
+}
+
+impl<'a> IntoIterator for Row<'a> {
+    type Item = Field<'a>;
+    type IntoIter = FieldIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.field_iter()
     }
 }
 
