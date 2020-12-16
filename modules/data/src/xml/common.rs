@@ -15,6 +15,21 @@ pub enum XmlError {
     EofWhileExpecting(&'static str),
 }
 
+/// Expect an `<?xml …` declaration
+pub fn expect_decl<B: BufRead>(xml: &mut Reader<B>, buf: &mut Vec<u8>) -> quick_xml::Result<()> {
+    loop {
+        match xml.read_event(buf)? {
+            Event::Text(_) => {}
+            Event::Decl(_) => {
+                buf.clear();
+                break Ok(());
+            }
+            _ => panic!(),
+        }
+        buf.clear();
+    }
+}
+
 /// Expect an opening tag `<{key} name="…">`
 pub fn expect_named_elem<B: BufRead>(
     xml: &mut Reader<B>,
