@@ -1,1 +1,1 @@
-//! The XML `<ModuleInfo>` format
+//! # The XML `<ModuleInfo>` format

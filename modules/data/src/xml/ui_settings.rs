@@ -1,4 +1,4 @@
-//! The XML `<UISettings>` format
+//! # The XML `<UISettings>` format
 //!
 //! This is use in:
 //! - The `res/uisettings.xml` file
