@@ -1,6 +1,6 @@
 [package]
 name = "assembly-data"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Xiphoseer"]
 edition = "2018"
 homepage = "https://xiphoseer.github.io"
@@ -27,3 +27,7 @@ prettytable-rs = "0.8"
 mapr = "0.8"
 structopt = "0.3"
 color-eyre = "0.5"
+
+[dev-dependencies.quick-xml]
+version = "0.20"
+features = ["encoding"]

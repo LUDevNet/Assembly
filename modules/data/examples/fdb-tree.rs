@@ -11,6 +11,7 @@ struct Options {
 }
 
 fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
     let opt = Options::from_args();
     let start = Instant::now();
 
