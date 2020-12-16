@@ -1,6 +1,6 @@
 [package]
 name = "assembly-data"
-version = "0.2.1"
+version = "0.2.2-beta.0"
 authors = ["Xiphoseer"]
 edition = "2018"
 homepage = "https://xiphoseer.github.io"
