@@ -1,4 +1,7 @@
-use assembly_core::displaydoc::Display;
+use assembly_data::xml::{
+    common::{expect_elem, expect_end, expect_named_elem, XmlError},
+    database::ValueType,
+};
 use color_eyre::eyre::WrapErr;
 use std::{
     collections::HashMap,
@@ -6,7 +9,6 @@ use std::{
     io::{BufRead, BufReader},
     path::PathBuf,
 };
-use thiserror::Error;
 
 use quick_xml::{events::Event, Reader};
 use structopt::StructOpt;
@@ -30,14 +32,6 @@ fn expect_decl<B: BufRead>(xml: &mut Reader<B>, buf: &mut Vec<u8>) -> quick_xml:
         }
         buf.clear();
     }
-}
-
-#[derive(Debug, Display, Error)]
-enum XmlError {
-    /// Failed to read the next XML event
-    Reader(#[from] quick_xml::Error),
-    /// Reached EOF while searching for {0}
-    EofWhileExpecting(&'static str),
 }
 
 fn expect_database<B: BufRead>(
@@ -64,7 +58,7 @@ fn expect_rows<B: BufRead>(xml: &mut Reader<B>, buf: &mut Vec<u8>) -> Result<(),
 
 struct Column {
     name: String,
-    data_type: String,
+    data_type: ValueType,
 }
 
 fn expect_column_or_end_columns<B: BufRead>(
@@ -85,7 +79,11 @@ fn expect_column_or_end_columns<B: BufRead>(
                         }
 
                         if attr.key == b"type" {
-                            data_type = Some(xml.decode(&attr.value).into_owned());
+                            data_type = Some(
+                                xml.decode(&attr.value)
+                                    .parse()
+                                    .expect("Expected well-known value type"),
+                            );
                         }
                     }
                     buf.clear();
@@ -141,89 +139,6 @@ fn expect_row_or_end_rows<B: BufRead>(
     }
 }
 
-fn expect_named_elem<B: BufRead>(
-    xml: &mut Reader<B>,
-    buf: &mut Vec<u8>,
-    key: &'static str,
-    parent: Option<&'static str>,
-) -> Result<Option<String>, XmlError> {
-    loop {
-        match xml.read_event(buf)? {
-            Event::Text(_) => {}
-            Event::Start(start) => {
-                if start.name() == key.as_bytes() {
-                    let mut name = String::new();
-                    for attr in start.attributes() {
-                        let attr = attr?;
-                        if attr.key == b"name" {
-                            name = xml.decode(&attr.value).into_owned();
-                            break;
-                        }
-                    }
-                    buf.clear();
-                    break Ok(Some(name));
-                } else {
-                    todo!();
-                }
-            }
-            Event::End(e) => {
-                assert_eq!(e.name(), parent.unwrap().as_bytes());
-                buf.clear();
-                return Ok(None);
-            }
-            Event::Eof => return Err(XmlError::EofWhileExpecting(key)),
-            _ => panic!(),
-        }
-        buf.clear();
-    }
-}
-
-fn expect_elem<B: BufRead>(
-    xml: &mut Reader<B>,
-    buf: &mut Vec<u8>,
-    key: &'static str,
-) -> Result<(), XmlError> {
-    loop {
-        match xml.read_event(buf)? {
-            Event::Text(_) => {}
-            Event::Start(start) => {
-                if start.name() == key.as_bytes() {
-                    buf.clear();
-                    break Ok(());
-                } else {
-                    todo!();
-                }
-            }
-            Event::Eof => return Err(XmlError::EofWhileExpecting(key)),
-            _ => panic!(),
-        }
-        buf.clear();
-    }
-}
-
-fn expect_end<B: BufRead>(
-    xml: &mut Reader<B>,
-    buf: &mut Vec<u8>,
-    key: &'static str,
-) -> Result<(), XmlError> {
-    loop {
-        match xml.read_event(buf)? {
-            Event::Text(_) => {}
-            Event::End(end) => {
-                if end.name() == key.as_bytes() {
-                    buf.clear();
-                    break Ok(());
-                } else {
-                    todo!();
-                }
-            }
-            Event::Eof => return Err(XmlError::EofWhileExpecting(key)),
-            _ => panic!(),
-        }
-        buf.clear();
-    }
-}
-
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     let opts = Options::from_args();
@@ -248,7 +163,7 @@ fn main() -> color_eyre::Result<()> {
         expect_columns(xml, buf)?;
 
         while let Some(col) = expect_column_or_end_columns(xml, buf)? {
-            println!("column '{}' ({})", col.name, col.data_type);
+            println!("column '{}' ({:?})", col.name, col.data_type);
         }
 
         expect_rows(xml, buf)?;
