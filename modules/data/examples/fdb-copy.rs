@@ -1,6 +1,6 @@
 use std::{fs::File, io::BufWriter, path::PathBuf, time::Instant};
 
-use assembly_data::fdb::{core, mem, store};
+use assembly_data::fdb::{core::Field, mem, store};
 use mapr::Mmap;
 use structopt::StructOpt;
 
@@ -29,6 +29,8 @@ fn main() -> eyre::Result<()> {
         .wrap_err_with(|| format!("Failed to crate output file '{}'", opts.dest.display()))?;
     let mut dest_out = BufWriter::new(dest_file);
 
+    println!("Copying file, this may take a few seconds...");
+
     let src_db = mem::Database::new(buffer);
     let mut dest_db = store::Database::new();
 
@@ -41,20 +43,12 @@ fn main() -> eyre::Result<()> {
             dest_table.push_column(src_column.name_raw(), src_column.value_type());
         }
 
-        let mut row_buffer: Vec<core::Field> = Vec::with_capacity(src_table.column_count());
+        let mut row_buffer: Vec<Field> = Vec::with_capacity(src_table.column_count());
 
         for (pk, src_bucket) in src_table.bucket_iter().enumerate() {
             for src_row in src_bucket.row_iter() {
                 for field in src_row.field_iter() {
-                    row_buffer.push(match field {
-                        mem::Field::Nothing => core::Field::Nothing,
-                        mem::Field::Integer(v) => core::Field::Integer(v),
-                        mem::Field::Float(v) => core::Field::Float(v),
-                        mem::Field::Text(v) => core::Field::Text(v.decode().into_owned()),
-                        mem::Field::Boolean(v) => core::Field::Boolean(v),
-                        mem::Field::BigInt(v) => core::Field::BigInt(v),
-                        mem::Field::VarChar(v) => core::Field::VarChar(v.decode().into_owned()),
-                    });
+                    row_buffer.push(Field::from(field));
                 }
                 dest_table.push_row(pk, &row_buffer[..]);
                 row_buffer.clear();

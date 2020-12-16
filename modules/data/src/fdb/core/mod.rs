@@ -21,7 +21,10 @@ pub mod iter;
 use std::collections::BTreeMap;
 use std::fmt;
 
-use super::common::{Context, Value, ValueType};
+use super::{
+    common::{Context, Value, ValueType},
+    mem::Field as MemField,
+};
 
 /// The `Value` context for `core::Field`
 #[derive(Debug, PartialEq, Eq)]
@@ -35,6 +38,20 @@ impl Context for OwnedContext {
 
 /// An owned field value
 pub type Field = Value<OwnedContext>;
+
+impl From<MemField<'_>> for Field {
+    fn from(src: MemField<'_>) -> Self {
+        match src {
+            MemField::Nothing => Field::Nothing,
+            MemField::Integer(v) => Field::Integer(v),
+            MemField::Float(v) => Field::Float(v),
+            MemField::Text(v) => Field::Text(v.decode().into_owned()),
+            MemField::Boolean(v) => Field::Boolean(v),
+            MemField::BigInt(v) => Field::BigInt(v),
+            MemField::VarChar(v) => Field::VarChar(v.decode().into_owned()),
+        }
+    }
+}
 
 impl fmt::Display for Field {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -156,6 +156,24 @@ pub trait Context {
     type XML;
 }
 
+/// Trait for mapping value from one context to another
+///
+/// This traits allows us to implement a generic [`Value::map`] function
+/// that works similar to three [`FnMut`] closures but can guarantee that
+/// only one of them ever borrows `Self` mutably at the same time.
+pub trait ValueMapperMut<TI, TO>
+where
+    TI: Context,
+    TO: Context,
+{
+    /// Called when mapping a string
+    fn map_string(&mut self, from: &TI::String) -> TO::String;
+    /// Called when mapping an i64
+    fn map_i64(&mut self, from: &TI::I64) -> TO::I64;
+    /// Called when mapping an XML value
+    fn map_xml(&mut self, from: &TI::XML) -> TO::XML;
+}
+
 /// A single field value in the database
 ///
 /// This is a generic enum that is the template for all
@@ -206,6 +224,23 @@ where
 }
 
 impl<T: Context> Value<T> {
+    /// Creates a value of a different context using the given mapper
+    pub fn map<O, M>(&self, mapper: &mut M) -> Value<O>
+    where
+        O: Context,
+        M: ValueMapperMut<T, O>,
+    {
+        match self {
+            Value::Nothing => Value::Nothing,
+            Value::Integer(v) => Value::Integer(*v),
+            Value::Float(v) => Value::Float(*v),
+            Value::Text(v) => Value::Text(mapper.map_string(v)),
+            Value::Boolean(v) => Value::Boolean(*v),
+            Value::BigInt(v) => Value::BigInt(mapper.map_i64(v)),
+            Value::VarChar(v) => Value::VarChar(mapper.map_xml(v)),
+        }
+    }
+
     /// Returns `Some` with the value if the field contains an [`Value::Integer`].
     pub fn into_opt_integer(self) -> Option<i32> {
         if let Self::Integer(value) = self {

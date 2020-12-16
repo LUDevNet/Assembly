@@ -35,39 +35,28 @@
 //! db.write(&mut out).expect("success");
 //! ```
 
-use crate::fdb::common::{Latin1Str, Latin1String, ValueType};
 use std::{
     collections::BTreeMap,
     convert::{TryFrom, TryInto},
-    hint::unreachable_unchecked,
     io,
+    mem::size_of,
 };
 
-use super::file::{
-    ArrayHeader, FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBHeader, FDBRowHeader,
-    FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
+use self::writer::WriteLE;
+
+use super::{
+    common::{Context, Latin1Str, Latin1String, Value, ValueMapperMut, ValueType},
+    core::OwnedContext,
+    file::{
+        ArrayHeader, FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBHeader, FDBRowHeader,
+        FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
+    },
 };
+
+mod writer;
 
 #[cfg(test)]
 mod tests;
-
-fn write_array_header<O: io::Write>(array: &ArrayHeader, out: &mut O) -> io::Result<()> {
-    out.write_all(&array.count.to_le_bytes())?;
-    out.write_all(&array.base_offset.to_le_bytes())?;
-    Ok(())
-}
-
-fn write_str<O: io::Write>(string: &Latin1Str, out: &mut O) -> io::Result<()> {
-    out.write_all(string.as_bytes())?;
-    match string.len() % 4 {
-        0 => out.write_all(&[0, 0, 0, 0])?,
-        1 => out.write_all(&[0, 0, 0])?,
-        2 => out.write_all(&[0, 0])?,
-        3 => out.write_all(&[0])?,
-        _ => unsafe { unreachable_unchecked() },
-    }
-    Ok(())
-}
 
 /// The whole database
 pub struct Database {
@@ -119,173 +108,19 @@ impl Database {
         let header = FDBHeader {
             tables: ArrayHeader { base_offset, count },
         };
-        write_array_header(&header.tables, out)?;
+        header.tables.write_le(out)?;
         let len_vec: Vec<_> = self.tables.iter().map(|(n, t)| t.compute_size(n)).collect();
         let mut start_vec = Vec::with_capacity(self.tables.len());
-        let table_list_base = base_offset + count * std::mem::size_of::<FDBTableHeader>() as u32;
+        let table_list_base = base_offset + count * size_of::<FDBTableHeader>() as u32;
         let mut start = table_list_base;
         for len in len_vec.iter().copied() {
             start_vec.push(start);
-
-            let table_def_header_addr = start;
-            let table_data_header_addr = start + u32::try_from(len.def).unwrap();
-            let table_header = FDBTableHeader {
-                table_def_header_addr,
-                table_data_header_addr,
-            };
-            out.write_all(&table_header.table_def_header_addr.to_le_bytes())?;
-            out.write_all(&table_header.table_data_header_addr.to_le_bytes())?;
-
-            start = table_data_header_addr + u32::try_from(len.data).unwrap();
+            Table::write_header(&mut start, &len, out)?;
         }
 
         let mut start = table_list_base;
         for (table_name, table) in &self.tables {
-            // Serialize table definition
-            let column_count = table.columns.len().try_into().unwrap();
-            let column_header_list_addr = start + std::mem::size_of::<FDBTableDefHeader>() as u32;
-            let table_name_addr = column_header_list_addr
-                + std::mem::size_of::<FDBColumnHeader>() as u32 * column_count;
-
-            let table_def_header = FDBTableDefHeader {
-                column_count,
-                table_name_addr,
-                column_header_list_addr,
-            };
-            out.write_all(&table_def_header.column_count.to_le_bytes())?;
-            out.write_all(&table_def_header.table_name_addr.to_le_bytes())?;
-            out.write_all(&table_def_header.column_header_list_addr.to_le_bytes())?;
-
-            let mut column_name_addr = table_name_addr + (table_name.req_buf_len() as u32 * 4);
-            for column in &table.columns {
-                let column_header = FDBColumnHeader {
-                    column_data_type: column.data_type.into(),
-                    column_name_addr,
-                };
-                out.write_all(&column_header.column_data_type.to_le_bytes())?;
-                out.write_all(&column_header.column_name_addr.to_le_bytes())?;
-                column_name_addr += column.name.req_buf_len() as u32 * 4;
-            }
-
-            write_str(table_name, out)?;
-            for column in &table.columns {
-                write_str(&column.name, out)?;
-            }
-
-            // Serialize table data
-            let bucket_base_offset =
-                column_name_addr + std::mem::size_of::<FDBTableDataHeader>() as u32;
-            let bucket_count = table.buckets.len().try_into().unwrap();
-            let table_data_header = FDBTableDataHeader {
-                buckets: ArrayHeader {
-                    count: bucket_count,
-                    base_offset: bucket_base_offset,
-                },
-            };
-            write_array_header(&table_data_header.buckets, out)?;
-
-            let row_header_list_base =
-                bucket_base_offset + bucket_count * std::mem::size_of::<FDBBucketHeader>() as u32;
-
-            for bucket in &table.buckets {
-                let bucket_header = FDBBucketHeader {
-                    row_header_list_head_addr: bucket
-                        .first_row_last
-                        .map(|(index, _)| {
-                            row_header_list_base
-                                + (index * std::mem::size_of::<FDBRowHeaderListEntry>()) as u32
-                        })
-                        .unwrap_or(0xffffffff),
-                };
-                out.write_all(&bucket_header.row_header_list_head_addr.to_le_bytes())?;
-            }
-
-            let row_count: u32 = table.rows.len().try_into().unwrap();
-            let row_header_base = row_header_list_base
-                + row_count * std::mem::size_of::<FDBRowHeaderListEntry>() as u32;
-
-            for (index, row) in table.rows.iter().enumerate() {
-                let row_list_entry = FDBRowHeaderListEntry {
-                    row_header_addr: row_header_base
-                        + (index * std::mem::size_of::<FDBRowHeader>()) as u32,
-                    row_header_list_next_addr: row
-                        .next_row
-                        .map(|index| {
-                            row_header_list_base
-                                + (index * std::mem::size_of::<FDBRowHeaderListEntry>()) as u32
-                        })
-                        .unwrap_or(0xffffffff),
-                };
-                out.write_all(&row_list_entry.row_header_addr.to_le_bytes())?;
-                out.write_all(&row_list_entry.row_header_list_next_addr.to_le_bytes())?;
-            }
-
-            let field_base_offset =
-                row_header_base + row_count * std::mem::size_of::<FDBRowHeader>() as u32;
-
-            for row in &table.rows {
-                let row_header = FDBRowHeader {
-                    fields: ArrayHeader {
-                        base_offset: field_base_offset
-                            + (row.first_field_index * std::mem::size_of::<FDBFieldData>()) as u32,
-                        count: row.count,
-                    },
-                };
-                write_array_header(&row_header.fields, out)?;
-            }
-
-            let i64s_base_offset = field_base_offset
-                + (table.fields.len() * std::mem::size_of::<FDBFieldData>()) as u32;
-            let strings_base_offset =
-                i64s_base_offset + (table.i64s.len() * std::mem::size_of::<u64>()) as u32;
-
-            let mut string_len_base = strings_base_offset;
-            let mut string_len_offsets = BTreeMap::new();
-            for (&key, value) in &table.strings {
-                let string_len = key * 4;
-                string_len_offsets.insert(key, string_len_base);
-                string_len_base += (string_len * value.len()) as u32;
-            }
-
-            for field in &table.fields {
-                let (key, value) = match field {
-                    Field::Nothing => (0, [0; 4]),
-                    Field::Integer(i) => (1, i.to_le_bytes()),
-                    Field::Float(f) => (3, f.to_le_bytes()),
-                    Field::Text { outer, inner } => (4, {
-                        let v =
-                            string_len_offsets.get(&outer).unwrap() + (inner * outer * 4) as u32;
-                        v.to_le_bytes()
-                    }),
-                    Field::Boolean(b) => (5, if *b { [1, 0, 0, 0] } else { [0; 4] }),
-                    Field::BigInt { index } => (6, {
-                        let v = i64s_base_offset + (*index * std::mem::size_of::<u64>()) as u32;
-                        v.to_le_bytes()
-                    }),
-                    Field::VarChar { outer, inner } => (8, {
-                        let v =
-                            string_len_offsets.get(outer).unwrap() + (*inner * *outer * 4) as u32;
-                        v.to_le_bytes()
-                    }),
-                };
-                out.write_all(&u32::to_le_bytes(key))?;
-                out.write_all(&value)?;
-            }
-
-            // Write out all i64s
-            for &num in &table.i64s {
-                out.write_all(&num.to_le_bytes())?;
-            }
-
-            // Write out all strings
-            for value in table.strings.values() {
-                for string in value {
-                    write_str(string, out)?;
-                }
-            }
-
-            // Increment final offset
-            start = string_len_base;
+            start = table.write(table_name, start, out)?;
         }
 
         Ok(())
@@ -301,11 +136,44 @@ struct TableSize {
 /// A single table
 pub struct Table {
     columns: Vec<Column>,
-    strings: BTreeMap<usize, Vec<Latin1String>>,
+    strings: StringArena,
     i64s: Vec<i64>,
     buckets: Vec<Bucket>,
     rows: Vec<Row>,
     fields: Vec<Field>,
+}
+
+type StringArena = BTreeMap<usize, Vec<Latin1String>>;
+
+struct StoreMapper<'t> {
+    strings: &'t mut StringArena,
+    i64s: &'t mut Vec<i64>,
+}
+
+impl<'t> ValueMapperMut<OwnedContext, StoreContext> for StoreMapper<'t> {
+    fn map_string(&mut self, from: &String) -> TextRef {
+        let s = Latin1String::encode(from).into_owned();
+        let lkey = s.req_buf_len();
+        let lstrings = self.strings.entry(lkey).or_default();
+        let inner = /*if let Some(index) = lstrings.iter().position(|p| s == *p) {
+            index
+        } else */{
+            let len = lstrings.len();
+            lstrings.push(s);
+            len
+        };
+        TextRef { outer: lkey, inner }
+    }
+
+    fn map_i64(&mut self, from: &i64) -> I64Ref {
+        let index = self.i64s.len();
+        self.i64s.push(*from);
+        I64Ref { index }
+    }
+
+    fn map_xml(&mut self, from: &String) -> TextRef {
+        self.map_string(from)
+    }
 }
 
 impl Table {
@@ -360,51 +228,181 @@ impl Table {
             next_row: None,
         });
 
+        let mut mapper = StoreMapper {
+            strings: &mut self.strings,
+            i64s: &mut self.i64s,
+        };
         for field in fields {
-            self.fields.push(match field {
-                super::core::Field::Nothing => Field::Nothing,
-                super::core::Field::Integer(i) => Field::Integer(*i),
-                super::core::Field::Float(f) => Field::Float(*f),
-                super::core::Field::Text(string) => {
-                    let s = Latin1String::encode(string).into_owned();
-                    let lkey = s.req_buf_len();
-                    let lstrings = self.strings.entry(lkey).or_default();
-                    let inner = if let Some(index) = lstrings.iter().position(|p| s == *p) {
-                        index
-                    } else {
-                        let len = lstrings.len();
-                        lstrings.push(s);
-                        len
-                    };
-                    Field::Text { outer: lkey, inner }
-                }
-                super::core::Field::Boolean(b) => Field::Boolean(*b),
-                super::core::Field::BigInt(v) => {
-                    let index = self.i64s.len();
-                    self.i64s.push(*v);
-                    Field::BigInt { index }
-                }
-                super::core::Field::VarChar(string) => {
-                    let s = Latin1String::encode(string).into_owned();
-                    let lkey = s.req_buf_len();
-                    let lstrings = self.strings.entry(lkey).or_default();
-                    let inner = if let Some(index) = lstrings.iter().position(|p| s == *p) {
-                        index
-                    } else {
-                        let len = lstrings.len();
-                        lstrings.push(s);
-                        len
-                    };
-                    Field::VarChar { outer: lkey, inner }
-                }
-            });
+            self.fields.push(field.map(&mut mapper));
         }
     }
 
+    fn write_header<IO: io::Write>(
+        start: &mut u32,
+        len: &TableSize,
+        out: &mut IO,
+    ) -> io::Result<()> {
+        let table_def_header_addr = *start;
+        let table_data_header_addr = *start + u32::try_from(len.def).unwrap();
+
+        FDBTableHeader {
+            table_def_header_addr,
+            table_data_header_addr,
+        }
+        .write_le(out)?;
+
+        *start = table_data_header_addr + u32::try_from(len.data).unwrap();
+        Ok(())
+    }
+
+    fn write<IO: io::Write>(
+        &self,
+        table_name: &Latin1Str,
+        start: u32,
+        out: &mut IO,
+    ) -> io::Result<u32> {
+        // Serialize table definition
+        let column_count = self.columns.len().try_into().unwrap();
+        let column_header_list_addr = start + size_of::<FDBTableDefHeader>() as u32;
+        let table_name_addr =
+            column_header_list_addr + size_of::<FDBColumnHeader>() as u32 * column_count;
+
+        FDBTableDefHeader {
+            column_count,
+            table_name_addr,
+            column_header_list_addr,
+        }
+        .write_le(out)?;
+
+        let mut column_name_addr = table_name_addr + (table_name.req_buf_len() as u32 * 4);
+        for column in &self.columns {
+            FDBColumnHeader {
+                column_data_type: column.data_type.into(),
+                column_name_addr,
+            }
+            .write_le(out)?;
+            column_name_addr += column.name.req_buf_len() as u32 * 4;
+        }
+
+        table_name.write_le(out)?;
+        for column in &self.columns {
+            column.name.write_le(out)?;
+        }
+
+        // Serialize table data
+        let bucket_base_offset = column_name_addr + size_of::<FDBTableDataHeader>() as u32;
+        let bucket_count = self.buckets.len().try_into().unwrap();
+
+        FDBTableDataHeader {
+            buckets: ArrayHeader {
+                count: bucket_count,
+                base_offset: bucket_base_offset,
+            },
+        }
+        .write_le(out)?;
+
+        let row_header_list_base =
+            bucket_base_offset + bucket_count * size_of::<FDBBucketHeader>() as u32;
+
+        let map_row_entry =
+            &|index| row_header_list_base + (index * size_of::<FDBRowHeaderListEntry>()) as u32;
+
+        for bucket in &self.buckets {
+            let row_header_list_head_addr = bucket
+                .first_row_last
+                .map(|(first, _)| first)
+                .map(map_row_entry)
+                .unwrap_or(0xffffffff);
+
+            FDBBucketHeader {
+                row_header_list_head_addr,
+            }
+            .write_le(out)?;
+        }
+
+        let row_count: u32 = self.rows.len().try_into().unwrap();
+        let row_header_base =
+            row_header_list_base + row_count * size_of::<FDBRowHeaderListEntry>() as u32;
+
+        for (index, row) in self.rows.iter().enumerate() {
+            let row_header_addr = row_header_base + (index * size_of::<FDBRowHeader>()) as u32;
+            let row_header_list_next_addr = row.next_row.map(map_row_entry).unwrap_or(0xffffffff);
+            FDBRowHeaderListEntry {
+                row_header_addr,
+                row_header_list_next_addr,
+            }
+            .write_le(out)?;
+        }
+
+        let field_base_offset = row_header_base + row_count * size_of::<FDBRowHeader>() as u32;
+
+        for row in &self.rows {
+            let fields = ArrayHeader {
+                base_offset: field_base_offset
+                    + (row.first_field_index * size_of::<FDBFieldData>()) as u32,
+                count: row.count,
+            };
+            FDBRowHeader { fields }.write_le(out)?;
+        }
+
+        let i64s_base_offset =
+            field_base_offset + (self.fields.len() * size_of::<FDBFieldData>()) as u32;
+        let strings_base_offset = i64s_base_offset + (self.i64s.len() * size_of::<u64>()) as u32;
+
+        let mut string_len_base = strings_base_offset;
+        let mut string_len_offsets = BTreeMap::new();
+        for (&key, value) in &self.strings {
+            let string_len = key * 4;
+            string_len_offsets.insert(key, string_len_base);
+            string_len_base += (string_len * value.len()) as u32;
+        }
+
+        const TRUE_LE32: [u8; 4] = [1, 0, 0, 0];
+        const FALSE_LE32: [u8; 4] = [0, 0, 0, 0];
+
+        for field in &self.fields {
+            let (data_type, value) = match field {
+                Field::Nothing => (0, [0; 4]),
+                Field::Integer(i) => (1, i.to_le_bytes()),
+                Field::Float(f) => (3, f.to_le_bytes()),
+                Field::Text(TextRef { outer, inner }) => (4, {
+                    let v = string_len_offsets.get(&outer).unwrap() + (inner * outer * 4) as u32;
+                    v.to_le_bytes()
+                }),
+                Field::Boolean(b) => (5, if *b { TRUE_LE32 } else { FALSE_LE32 }),
+                Field::BigInt(i64_ref) => (6, {
+                    let v = i64s_base_offset + (i64_ref.index * size_of::<u64>()) as u32;
+                    v.to_le_bytes()
+                }),
+                Field::VarChar(text_ref) => (8, {
+                    let v = string_len_offsets.get(&text_ref.outer).unwrap()
+                        + (text_ref.inner * text_ref.outer * 4) as u32;
+                    v.to_le_bytes()
+                }),
+            };
+            FDBFieldData { data_type, value }.write_le(out)?;
+        }
+
+        // Write out all i64s
+        for &num in &self.i64s {
+            out.write_all(&num.to_le_bytes())?;
+        }
+
+        // Write out all strings
+        for value in self.strings.values() {
+            for string in value {
+                string.write_le(out)?;
+            }
+        }
+
+        // Increment final offset
+        Ok(string_len_base)
+    }
+
     fn compute_def_size(&self, name: &Latin1Str) -> usize {
-        std::mem::size_of::<FDBTableDefHeader>()
+        size_of::<FDBTableDefHeader>()
             + name.req_buf_len() * 4
-            + std::mem::size_of::<FDBColumnHeader>() * self.columns.len()
+            + size_of::<FDBColumnHeader>() * self.columns.len()
             + self
                 .columns
                 .iter()
@@ -415,13 +413,13 @@ impl Table {
 
     fn compute_data_size(&self) -> usize {
         let string_size: usize = self.strings.iter().map(|(k, v)| k * v.len()).sum(); // Strings
-        std::mem::size_of::<FDBTableDataHeader>()
-            + std::mem::size_of::<FDBBucketHeader>() * self.buckets.len()
-            + std::mem::size_of::<FDBRowHeaderListEntry>() * self.rows.len()
-            + std::mem::size_of::<FDBRowHeader>() * self.rows.len()
-            + std::mem::size_of::<FDBFieldData>() * self.fields.len()
+        size_of::<FDBTableDataHeader>()
+            + size_of::<FDBBucketHeader>() * self.buckets.len()
+            + size_of::<FDBRowHeaderListEntry>() * self.rows.len()
+            + size_of::<FDBRowHeader>() * self.rows.len()
+            + size_of::<FDBFieldData>() * self.fields.len()
             + 4 * string_size
-            + std::mem::size_of::<u64>() * self.i64s.len()
+            + size_of::<u64>() * self.i64s.len()
     }
 
     fn compute_size(&self, name: &Latin1Str) -> TableSize {
@@ -451,33 +449,27 @@ struct Row {
     next_row: Option<usize>,
 }
 
-/// A single field
-enum Field {
-    /// The `NULL` value
-    Nothing,
-    /// A 32 bit signed integer
-    Integer(i32),
-    /// A 32 bit IEEE floating point number
-    Float(f32),
-    /// A piece of Latin-1 encoded text
-    Text {
-        /// The length-key of the string
-        outer: usize,
-        /// The index in the strings array
-        inner: usize,
-    },
-    /// A boolean
-    Boolean(bool),
-    /// An indirect 64 bit integer
-    BigInt {
-        /// The offset of the value
-        index: usize,
-    },
-    /// A (base64 encoded?) null-terminated string
-    VarChar {
-        /// The length-key of the string
-        outer: usize,
-        /// The index in the strings array
-        inner: usize,
-    },
+/// The [`Context`] for this modules [`Field`]
+struct StoreContext;
+
+/// Reference to an arena allocated string
+struct TextRef {
+    /// The length-key of the string
+    outer: usize,
+    /// The index in the strings array
+    inner: usize,
 }
+
+/// Reference to an arena allocated i64
+struct I64Ref {
+    /// The offset of the value
+    index: usize,
+}
+
+impl Context for StoreContext {
+    type String = TextRef;
+    type I64 = I64Ref;
+    type XML = TextRef;
+}
+
+type Field = Value<StoreContext>;
