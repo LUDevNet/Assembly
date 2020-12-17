@@ -6,9 +6,15 @@
 
 use assembly_core::displaydoc::Display;
 use quick_xml::{events::Event, Reader};
-use std::{collections::HashMap, error::Error, io::BufRead, str::FromStr};
+use std::{collections::HashMap, error::Error, fmt, io::BufRead, str::FromStr};
 
 use super::common::{expect_elem, expect_named_elem, XmlError};
+
+#[cfg(feature = "serde-derives")]
+use serde::{
+    de::{self, Unexpected, Visitor},
+    Deserialize, Deserializer,
+};
 
 /// The value types for the database
 ///
@@ -61,6 +67,15 @@ pub enum ValueType {
     DateTime,
 }
 
+impl<'de> Deserialize<'de> for ValueType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(ValueTypeVisitor)
+    }
+}
+
 #[derive(Debug, Display)]
 /// Unknown value type '{0}'
 pub struct UnknownValueType(String);
@@ -102,6 +117,31 @@ impl FromStr for ValueType {
     }
 }
 
+#[cfg(feature = "serde-derives")]
+struct ValueTypeVisitor;
+
+#[cfg(feature = "serde-derives")]
+impl<'de> Visitor<'de> for ValueTypeVisitor {
+    type Value = ValueType;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("T-SQL value type")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<ValueType, E>
+    where
+        E: de::Error,
+    {
+        FromStr::from_str(value)
+            .map_err(|_| E::invalid_value(Unexpected::Other(value), &"T-SQL value type"))
+    }
+}
+
+/// A row of the database
+#[cfg_attr(feature = "serde-derives", derive(Deserialize))]
+#[derive(Debug, Eq, PartialEq)]
+pub struct Row(HashMap<String, String>);
+
 /// Expects an opening `<database>`
 pub fn expect_database<B: BufRead>(
     xml: &mut Reader<B>,
@@ -129,56 +169,60 @@ pub fn expect_rows<B: BufRead>(xml: &mut Reader<B>, buf: &mut Vec<u8>) -> Result
 }
 
 /// The information on a column
+#[cfg_attr(feature = "serde-derives", derive(Deserialize))]
 pub struct Column {
     /// The name of the column
     pub name: String,
     /// The data type of the column
-    pub data_type: ValueType,
+    pub r#type: ValueType,
 }
+
+/*#[derive(Deserialize)]
+/// The Columns struct
+pub struct Columns {
+    /// The columns
+    columns: Vec<Column>
+}*/
 
 /// Expects an empty `<column …/>` tag or a closing `</columns>` tag
 pub fn expect_column_or_end_columns<B: BufRead>(
     xml: &mut Reader<B>,
     buf: &mut Vec<u8>,
 ) -> Result<Option<Column>, XmlError> {
-    loop {
-        match xml.read_event(buf)? {
-            Event::Text(_) => {}
-            Event::Empty(start) => {
-                if start.name() == b"column" {
-                    let mut name = None;
-                    let mut data_type = None;
-                    for attr in start.attributes() {
-                        let attr = attr?;
-                        if attr.key == b"name" {
-                            name = Some(xml.decode(&attr.value).into_owned());
-                        }
-
-                        if attr.key == b"type" {
-                            data_type = Some(
-                                xml.decode(&attr.value)
-                                    .parse()
-                                    .expect("Expected well-known value type"),
-                            );
-                        }
+    match xml.read_event(buf)? {
+        Event::Empty(start) => {
+            if start.name() == b"column" {
+                let mut name = None;
+                let mut data_type = None;
+                for attr in start.attributes() {
+                    let attr = attr?;
+                    if attr.key == b"name" {
+                        name = Some(xml.decode(&attr.value).into_owned());
                     }
-                    buf.clear();
-                    break Ok(Some(Column {
-                        name: name.unwrap(),
-                        data_type: data_type.unwrap(),
-                    }));
-                } else {
-                    todo!();
+
+                    if attr.key == b"type" {
+                        data_type = Some(
+                            xml.decode(&attr.value)
+                                .parse()
+                                .expect("Expected well-known value type"),
+                        );
+                    }
                 }
+                buf.clear();
+                Ok(Some(Column {
+                    name: name.unwrap(),
+                    r#type: data_type.unwrap(),
+                }))
+            } else {
+                todo!();
             }
-            Event::End(v) => {
-                assert_eq!(v.name(), b"columns");
-                return Ok(None);
-            }
-            Event::Eof => return Err(XmlError::EofWhileExpecting("column")),
-            x => panic!("What? {:?}", x),
         }
-        buf.clear();
+        Event::End(v) => {
+            assert_eq!(v.name(), b"columns");
+            Ok(None)
+        }
+        Event::Eof => Err(XmlError::EofWhileExpecting("column")),
+        x => panic!("What? {:?}", x),
     }
 }
 
@@ -186,32 +230,63 @@ pub fn expect_column_or_end_columns<B: BufRead>(
 pub fn expect_row_or_end_rows<B: BufRead>(
     xml: &mut Reader<B>,
     buf: &mut Vec<u8>,
+    load_attrs: bool,
 ) -> Result<Option<HashMap<String, String>>, XmlError> {
-    loop {
-        match xml.read_event(buf)? {
-            Event::Text(_) => {}
-            Event::Empty(start) => {
-                if start.name() == b"row" {
-                    let /*mut*/ map = HashMap::new();
-                    /*for attr in start.attributes() {
+    match xml.read_event(buf)? {
+        Event::Empty(start) => {
+            if start.name() == b"row" {
+                let map = if load_attrs {
+                    let mut m = HashMap::new();
+                    for attr in start.attributes() {
                         let attr = attr?;
                         let key = xml.decode(&attr.key).into_owned();
-                        let value = xml.decode(&attr.value).into_owned();
-                        map.insert(key, value);
-                    }*/
-                    buf.clear();
-                    break Ok(Some(map));
+                        let value = attr.unescape_and_decode_value(xml)?;
+                        m.insert(key, value);
+                    }
+                    m
                 } else {
-                    todo!();
-                }
+                    HashMap::new()
+                };
+                buf.clear();
+                Ok(Some(map))
+            } else {
+                todo!();
             }
-            Event::End(v) => {
-                assert_eq!(v.name(), b"rows");
-                return Ok(None);
-            }
-            Event::Eof => return Err(XmlError::EofWhileExpecting("row")),
-            x => panic!("What? {:?}", x),
         }
-        buf.clear();
+        Event::End(v) => {
+            assert_eq!(v.name(), b"rows");
+            Ok(None)
+        }
+        _ => todo!(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use quick_xml::{de::Deserializer, DeError};
+
+    use super::*;
+    use quick_xml::Error as XmlError;
+    use std::io::BufReader;
+    use std::io::Cursor;
+
+    #[test]
+    fn test_simple_deserialize() {
+        let st = br#"<row foo="bar"/></rows>"#;
+        let c = BufReader::new(Cursor::new(st));
+        let mut d = Deserializer::from_reader(c);
+        let row = Row::deserialize(&mut d).unwrap();
+        let mut cmp = HashMap::new();
+        let key = String::from("foo");
+        let val = String::from("bar");
+        cmp.insert(key, val);
+        assert_eq!(row.0, cmp);
+
+        if let Err(DeError::Xml(XmlError::EndEventMismatch { expected, found })) =
+            Row::deserialize(&mut d)
+        {
+            assert_eq!(&expected, "");
+            assert_eq!(&found, "rows");
+        }
     }
 }

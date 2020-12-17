@@ -194,6 +194,11 @@ impl Table {
         }
     }
 
+    /// Get all columns
+    pub fn columns(&self) -> &[Column] {
+        &self.columns
+    }
+
     /// Add a column to this table
     pub fn push_column<S>(&mut self, name: S, data_type: ValueType)
     where
@@ -431,9 +436,16 @@ impl Table {
 }
 
 /// A single column
-struct Column {
+pub struct Column {
     name: Latin1String,
     data_type: ValueType,
+}
+
+impl Column {
+    /// Get the data type of this column
+    pub fn value_type(&self) -> ValueType {
+        self.data_type
+    }
 }
 
 /// A single bucket

@@ -1,6 +1,6 @@
 [package]
 name = "assembly-data"
-version = "0.2.2-beta.1"
+version = "0.2.2-beta.2"
 authors = ["Xiphoseer"]
 edition = "2018"
 homepage = "https://xiphoseer.github.io"
@@ -10,8 +10,9 @@ license = "MIT"
 readme = "README.md"
 
 [features]
-default = ["sqlite"]
+default = ["sqlite", "serde-derives"]
 sqlite = ["rusqlite"]
+serde-derives = ["serde", "quick-xml/serialize"]
 
 [dependencies]
 hsieh-hash = "0.1"
@@ -34,6 +35,11 @@ features = ["encoding"]
 version = "0.21.0"
 features = ["bundled"]
 optional = true
+
+[dependencies.serde]
+version = "1"
+optional = true
+features = ["derive"]
 
 [dev-dependencies]
 prettytable-rs = "0.8"

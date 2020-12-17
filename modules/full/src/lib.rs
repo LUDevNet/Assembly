@@ -5,6 +5,8 @@
 pub use assembly_core as core;
 #[cfg(feature = "data")]
 pub use assembly_data::fdb;
+#[cfg(feature = "data")]
+pub use assembly_data::xml;
 #[cfg(feature = "maps")]
 pub use assembly_maps::luz;
 #[cfg(feature = "maps")]

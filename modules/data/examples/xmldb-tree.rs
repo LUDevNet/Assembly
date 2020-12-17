@@ -14,7 +14,7 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 /// Prints the names of all tables and their columns
 struct Options {
-    /// The FDB file
+    /// The XML database file
     file: PathBuf,
 }
 
@@ -27,7 +27,7 @@ fn main() -> color_eyre::Result<()> {
     let reader = BufReader::new(src_file);
 
     let mut xml = Reader::from_reader(reader);
-    let xml = &mut xml;
+    let xml = xml.trim_text(true);
 
     let mut buf = Vec::new();
     let buf = &mut buf;
@@ -42,12 +42,12 @@ fn main() -> color_eyre::Result<()> {
         expect_columns(xml, buf)?;
 
         while let Some(col) = expect_column_or_end_columns(xml, buf)? {
-            println!("column '{}' ({:?})", col.name, col.data_type);
+            println!("column '{}' ({:?})", col.name, col.r#type);
         }
 
         expect_rows(xml, buf)?;
 
-        while let Some(_row) = expect_row_or_end_rows(xml, buf)? {
+        while let Some(_row) = expect_row_or_end_rows(xml, buf, false)? {
             //println!("row {:?}", row);
         }
 

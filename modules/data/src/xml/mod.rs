@@ -4,6 +4,8 @@
 //! typed access to these files.
 #![warn(missing_docs)]
 
+pub use quick_xml as quick;
+
 pub mod all_settings;
 pub mod behavior;
 pub mod block_library;
