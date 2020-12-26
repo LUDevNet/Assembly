@@ -14,14 +14,21 @@ use memchr::memchr;
 
 mod c;
 use super::{
-    common::{Context, Latin1Str, Value, ValueType},
-    ro::{Handle, RefHandle},
+    common::{Context, Latin1Str, Value, ValueMapperMut, ValueType},
+    file::{FDBFieldValue, FileContext, IndirectValue},
+    ro::{
+        buffer::{compare_bytes, Buffer},
+        Handle, RefHandle,
+    },
 };
 use c::{
     FDBBucketHeaderC, FDBColumnHeaderC, FDBFieldDataC, FDBHeaderC, FDBRowHeaderC,
     FDBRowHeaderListEntryC, FDBTableDataHeaderC, FDBTableDefHeaderC, FDBTableHeaderC,
 };
-use std::{borrow::Cow, cmp::Ordering, convert::TryFrom};
+use std::{
+    borrow::Cow,
+    convert::{Infallible, TryFrom},
+};
 
 fn get_latin1_str(buf: &[u8], offset: u32) -> &Latin1Str {
     let (_, haystack) = buf.split_at(offset as usize);
@@ -47,7 +54,7 @@ pub struct Database<'a> {
 impl<'a> Database<'a> {
     /// Create a new database reference
     pub fn new(buf: &'a [u8]) -> Self {
-        let inner = Handle::new(buf);
+        let inner = Handle::new_ref(buf);
         Self { inner }
     }
 
@@ -103,31 +110,6 @@ fn map_table_header<'a>(handle: RefHandle<'a, FDBTableHeaderC>) -> Result<Table<
         columns: columns.raw(),
         buckets: buckets.raw(),
     })))
-}
-
-/// Compares two name strings
-///
-/// ## Safety
-///
-/// This panics if name_bytes does not contains a null terminator
-fn compare_bytes(bytes: &[u8], name_bytes: &[u8]) -> Ordering {
-    for i in 0..bytes.len() {
-        match name_bytes[i].cmp(&bytes[i]) {
-            Ordering::Equal => {}
-            Ordering::Less => {
-                // the null terminator is a special case of this one
-                return Ordering::Less;
-            }
-            Ordering::Greater => {
-                return Ordering::Greater;
-            }
-        }
-    }
-    if name_bytes[bytes.len()] == 0 {
-        Ordering::Equal
-    } else {
-        Ordering::Greater
-    }
 }
 
 #[derive(Copy, Clone)]
@@ -274,7 +256,7 @@ impl<'a> Table<'a> {
             .raw
             .columns
             .get(index)
-            .map(map_column_header(self.inner.buffer.as_bytes()))
+            .map(map_column_header(self.inner.mem.as_bytes()))
     }
 
     /// Get the column iterator
@@ -285,7 +267,7 @@ impl<'a> Table<'a> {
             .raw
             .columns
             .iter()
-            .map(map_column_header(self.inner.buffer.as_bytes()))
+            .map(map_column_header(self.inner.mem.as_bytes()))
     }
 
     /// The amount of columns in this table
@@ -301,7 +283,7 @@ impl<'a> Table<'a> {
             .raw
             .buckets
             .get(index)
-            .map(map_bucket_header(self.inner.buffer.as_bytes()))
+            .map(map_bucket_header(self.inner.mem.as_bytes()))
     }
 
     /// Get the bucket iterator
@@ -312,7 +294,7 @@ impl<'a> Table<'a> {
             .raw
             .buckets
             .iter()
-            .map(map_bucket_header(self.inner.buffer.as_bytes()))
+            .map(map_bucket_header(self.inner.mem.as_bytes()))
     }
 
     /// Get the amount of buckets
@@ -411,9 +393,12 @@ pub struct Row<'a> {
 }
 
 fn get_field<'a>(data: &'a FDBFieldDataC, buf: &'a [u8]) -> Field<'a> {
-    // TODO: Remove unwrap
     let data_type = ValueType::try_from(data.data_type.extract()).unwrap();
     let bytes = data.value.0;
+    get_field_raw(data_type, bytes, buf)
+}
+
+fn get_field_raw(data_type: ValueType, bytes: [u8; 4], buf: &[u8]) -> Field {
     match data_type {
         ValueType::Nothing => Field::Nothing,
         ValueType::Integer => Field::Integer(i32::from_le_bytes(bytes)),
@@ -494,3 +479,28 @@ impl<'a> Context for MemContext<'a> {
 
 /// Value of or reference to a field value
 pub type Field<'a> = Value<MemContext<'a>>;
+
+struct MemFromFile<'a>(Buffer<'a>);
+
+impl<'a> ValueMapperMut<FileContext, MemContext<'a>> for MemFromFile<'a> {
+    fn map_string(&mut self, from: &IndirectValue) -> &'a Latin1Str {
+        self.0.string(from.addr).unwrap()
+    }
+
+    fn map_i64(&mut self, from: &IndirectValue) -> i64 {
+        self.0.i64(from.addr).unwrap()
+    }
+
+    fn map_xml(&mut self, from: &IndirectValue) -> &'a Latin1Str {
+        self.0.string(from.addr).unwrap()
+    }
+}
+
+impl<'a> TryFrom<Handle<'a, FDBFieldValue>> for Field<'a> {
+    type Error = Infallible;
+
+    fn try_from(value: Handle<'a, FDBFieldValue>) -> Result<Self, Self::Error> {
+        let mut mem = MemFromFile(value.buf());
+        Ok(value.raw().map(&mut mem))
+    }
+}

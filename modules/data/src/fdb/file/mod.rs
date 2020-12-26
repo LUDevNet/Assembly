@@ -8,9 +8,11 @@
 //! FDB-files can be represented by these values. Most importantly, the
 //! [`FDBColumnHeader::column_data_type`] only has a limited amount of defined values but
 //! covers the whole 32 bits.
+use std::convert::{TryFrom, TryInto};
+
 use bytemuck_derive::{Pod, Zeroable};
 
-use super::common::{Context, Value};
+use super::common::{Context, UnknownValueType, Value, ValueType};
 
 pub mod lists;
 
@@ -213,6 +215,29 @@ pub struct IndirectValue {
 
 /// A database field value repr
 pub type FDBFieldValue = Value<FileContext>;
+
+impl TryFrom<FDBFieldData> for FDBFieldValue {
+    type Error = UnknownValueType;
+
+    fn try_from(value: FDBFieldData) -> Result<Self, Self::Error> {
+        let value_type: ValueType = value.data_type.try_into()?;
+        Ok(match value_type {
+            ValueType::Nothing => FDBFieldValue::Nothing,
+            ValueType::Integer => FDBFieldValue::Integer(i32::from_le_bytes(value.value)),
+            ValueType::Float => FDBFieldValue::Float(f32::from_le_bytes(value.value)),
+            ValueType::Text => FDBFieldValue::Text(IndirectValue {
+                addr: u32::from_le_bytes(value.value),
+            }),
+            ValueType::Boolean => FDBFieldValue::Boolean(value.value != [0; 4]),
+            ValueType::BigInt => FDBFieldValue::BigInt(IndirectValue {
+                addr: u32::from_le_bytes(value.value),
+            }),
+            ValueType::VarChar => FDBFieldValue::VarChar(IndirectValue {
+                addr: u32::from_le_bytes(value.value),
+            }),
+        })
+    }
+}
 
 #[cfg(test)]
 mod tests {

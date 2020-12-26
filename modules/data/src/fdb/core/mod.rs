@@ -53,6 +53,20 @@ impl From<MemField<'_>> for Field {
     }
 }
 
+impl PartialEq<MemField<'_>> for Field {
+    fn eq(&self, other: &MemField<'_>) -> bool {
+        match other {
+            Value::Nothing => matches!(self, Self::Nothing),
+            Value::Integer(x) => matches!(self, Self::Integer(y) if x == y),
+            Value::Float(x) => matches!(self, Self::Float(y) if x == y),
+            Value::Text(x) => matches!(self, Self::Text(y) if x.decode().as_ref() == y),
+            Value::Boolean(x) => matches!(self, Self::Boolean(y) if x == y),
+            Value::BigInt(x) => matches!(self, Self::BigInt(y) if x == y),
+            Value::VarChar(x) => matches!(self, Self::VarChar(y) if x.decode().as_ref() == y),
+        }
+    }
+}
+
 impl fmt::Display for Field {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

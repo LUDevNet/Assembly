@@ -13,13 +13,15 @@ use assembly_core::{
 };
 use bytemuck::from_bytes;
 use std::{
+    cmp::Ordering,
     convert::TryInto,
     fmt,
+    mem::size_of,
     ops::{Deref, Range},
 };
 use thiserror::Error;
 
-#[derive(Error, Debug, Display)]
+#[derive(Error, Debug, Display, Clone, PartialEq, Eq)]
 /// Error for handling a buffer
 pub enum BufferError {
     /// index out of bounds {0:?}
@@ -41,6 +43,139 @@ impl<'a> Deref for Buffer<'a> {
     fn deref(&self) -> &Self::Target {
         self.0
     }
+}
+
+/// Compares two name strings
+///
+/// ## Safety
+///
+/// This panics if name_bytes does not contains a null terminator
+pub(crate) fn compare_bytes(bytes: &[u8], name_bytes: &[u8]) -> Ordering {
+    for i in 0..bytes.len() {
+        match name_bytes[i].cmp(&bytes[i]) {
+            Ordering::Equal => {}
+            Ordering::Less => {
+                // the null terminator is a special case of this one
+                return Ordering::Less;
+            }
+            Ordering::Greater => {
+                return Ordering::Greater;
+            }
+        }
+    }
+    if name_bytes[bytes.len()] == 0 {
+        Ordering::Equal
+    } else {
+        Ordering::Greater
+    }
+}
+
+/// Get a reference to a type at the given address of this buffer
+///
+/// This functions checks whether the offset and alignment is valid
+pub fn get_at<'a, T>(buf: &'a [u8], addr: usize) -> Res<&'a T> {
+    let base = buf.as_ptr();
+    let len = buf.len();
+    let size = std::mem::size_of::<T>();
+    let align = std::mem::align_of::<T>();
+
+    let needed = addr
+        .checked_add(size)
+        .ok_or(BufferError::OutOfBounds(addr..len))?;
+
+    if needed > len {
+        return Err(BufferError::OutOfBounds(addr..needed));
+    }
+
+    let start = unsafe { base.add(addr) };
+    if 0 != start.align_offset(align) {
+        return Err(BufferError::Unaligned(addr));
+    }
+    Ok(unsafe { &*(start as *const T) })
+}
+
+/// Get a reference to a slice at the given address of this buffer
+///
+/// This functions checks whether the offset and alignment is valid
+pub fn get_slice_at<'a, T>(buf: &'a [u8], addr: usize, count: usize) -> Res<&'a [T]> {
+    let base = buf.as_ptr();
+    let len = buf.len();
+    let size = std::mem::size_of::<T>();
+    let align = std::mem::align_of::<T>();
+
+    let slice_bytes = size
+        .checked_mul(count)
+        .ok_or(BufferError::OutOfBounds(addr..len))?;
+
+    let needed = addr
+        .checked_add(slice_bytes)
+        .ok_or(BufferError::OutOfBounds(addr..len))?;
+
+    if needed > len {
+        return Err(BufferError::OutOfBounds(addr..needed));
+    }
+
+    let start = unsafe { base.add(addr) };
+    if 0 != start.align_offset(align) {
+        return Err(BufferError::Unaligned(addr));
+    }
+
+    Ok(unsafe { &*(std::ptr::slice_from_raw_parts(start as *const T, count)) })
+}
+
+/// Get the database header
+#[cfg(target_endian = "little")]
+pub fn header_ref<'a>(buf: &'a [u8]) -> Res<&'a FDBHeader> {
+    get_at(buf, 0)
+}
+
+/// Get the header of the file.
+pub fn header(buf: &[u8], _: ()) -> Res<FDBHeader> {
+    Ok(*header_ref(buf)?)
+}
+
+/// Get the table slice
+pub fn table_headers<'a>(buf: &'a [u8], header: &'a FDBHeader) -> Res<&'a [FDBTableHeader]> {
+    get_slice_at(
+        buf,
+        header.tables.base_offset as usize,
+        header.tables.count as usize,
+    )
+}
+
+/// Get the table definition reference
+pub fn table_definition_ref<'a>(
+    buf: &'a [u8],
+    header: FDBTableHeader,
+) -> Res<&'a FDBTableDefHeader> {
+    get_at(buf, header.table_def_header_addr as usize)
+}
+
+/// Get the table data reference
+pub fn table_data_ref<'a>(buf: &'a [u8], header: FDBTableHeader) -> Res<&'a FDBTableDataHeader> {
+    get_at(buf, header.table_data_header_addr as usize)
+}
+
+/// Get the table definition header
+pub fn table_definition(buf: &[u8], header: FDBTableHeader) -> Res<FDBTableDefHeader> {
+    table_definition_ref(buf, header).map(|x| *x)
+}
+
+/// Get the table data header
+pub fn table_data(buf: &[u8], header: FDBTableHeader) -> Res<FDBTableDataHeader> {
+    table_data_ref(buf, header).map(|x| *x)
+}
+
+/// Compares the name given by `bytes` with the one referenced in `table_header`
+pub fn cmp_table_header_name(buf: &[u8], bytes: &[u8], table_header: FDBTableHeader) -> Ordering {
+    let def_header_addr = table_header.table_def_header_addr;
+    // FIXME: what to do with this unwrap?
+    let def_header = get_at::<FDBTableDefHeader>(buf, def_header_addr as usize).unwrap();
+    let name_addr = def_header.table_name_addr as usize;
+
+    let name_bytes = buf.get(name_addr..).unwrap();
+
+    compare_bytes(bytes, name_bytes)
 }
 
 impl<'a> Buffer<'a> {
@@ -71,73 +206,6 @@ impl<'a> Buffer<'a> {
         assembly_core::buffer::try_cast_slice(self.as_bytes(), offset, len)
     }
 
-    /// Get a reference to a type at the given address of this buffer
-    ///
-    /// This functions checks whether the offset and alignment is valid
-    pub fn get_at<T>(self, addr: usize) -> Res<&'a T> {
-        let base = self.0.as_ptr();
-        let len = self.0.len();
-        let size = std::mem::size_of::<T>();
-        let align = std::mem::align_of::<T>();
-
-        let needed = addr
-            .checked_add(size)
-            .ok_or(BufferError::OutOfBounds(addr..len))?;
-
-        if needed > len {
-            return Err(BufferError::OutOfBounds(addr..needed));
-        }
-
-        let start = unsafe { base.add(addr) };
-        if 0 != start.align_offset(align) {
-            return Err(BufferError::Unaligned(addr));
-        }
-        Err(BufferError::Unaligned(addr))
-    }
-
-    /// Get a reference to a slice at the given address of this buffer
-    ///
-    /// This functions checks whether the offset and alignment is valid
-    pub fn get_slice_at<T>(self, addr: usize, count: usize) -> Res<&'a [T]> {
-        let base = self.0.as_ptr();
-        let len = self.0.len();
-        let size = std::mem::size_of::<T>();
-        let align = std::mem::align_of::<T>();
-
-        let slice_bytes = size
-            .checked_mul(count)
-            .ok_or(BufferError::OutOfBounds(addr..len))?;
-
-        let needed = addr
-            .checked_add(slice_bytes)
-            .ok_or(BufferError::OutOfBounds(addr..len))?;
-
-        if needed > len {
-            return Err(BufferError::OutOfBounds(addr..needed));
-        }
-
-        let start = unsafe { base.add(addr) };
-        if 0 != start.align_offset(align) {
-            return Err(BufferError::Unaligned(addr));
-        }
-
-        Ok(unsafe { &*(std::ptr::slice_from_raw_parts(start as *const T, count)) })
-    }
-
-    /// Get the database header
-    #[cfg(target_endian = "little")]
-    pub fn header_ref(self) -> Res<&'a FDBHeader> {
-        self.get_at(0)
-    }
-
-    /// Get the table slice
-    pub fn table_headers(self, header: &'a FDBHeader) -> Res<&'a [FDBTableHeader]> {
-        self.get_slice_at(
-            header.tables.base_offset as usize,
-            header.tables.count as usize,
-        )
-    }
-
     /// Get a subslice a the given offset of the given length
     pub fn get_len_at(self, start: usize, len: usize) -> Res<&'a [u8]> {
         let end = start + len;
@@ -147,19 +215,30 @@ impl<'a> Buffer<'a> {
     }
 
     /// Get a buffer as a latin1 string
-    // FIXME: why does this not check for the terminating null byte?
     pub fn string(self, addr: u32) -> Res<&'a Latin1Str> {
         let start = addr as usize;
-        let buf = self.0.get(start..).ok_or_else(|| {
+        let mut buf = self.0.get(start..).ok_or_else(|| {
             let end = self.0.len();
             BufferError::OutOfBounds(Range { start, end })
         })?;
+        if let Some(nullpos) = memchr::memchr(0, buf) {
+            buf = buf.split_at(nullpos).0;
+        }
         Ok(Latin1Str::new(buf))
     }
 
-    /// Get the header of the file.
-    pub fn header(self) -> Res<FDBHeader> {
-        Ok(*self.header_ref()?)
+    /// Get i64
+    pub fn i64(self, addr: u32) -> Res<i64> {
+        let start = addr as usize;
+        let end = start + size_of::<u64>();
+        if end > self.0.len() {
+            Err(BufferError::OutOfBounds(Range { start, end }))
+        } else {
+            let (_, base) = self.0.split_at(start);
+            let (bytes, _) = base.split_at(size_of::<u64>());
+            let val = i64::from_le_bytes(bytes.try_into().unwrap());
+            Ok(val)
+        }
     }
 
     /// Get the table definition header at the given addr.

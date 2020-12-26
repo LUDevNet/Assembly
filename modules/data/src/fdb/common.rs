@@ -80,6 +80,16 @@ pub struct Latin1Str {
     inner: [u8],
 }
 
+#[cfg(feature = "serde-derives")]
+impl serde::Serialize for &Latin1Str {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.decode().as_ref())
+    }
+}
+
 impl fmt::Debug for &'_ Latin1Str {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.decode().fmt(f)
@@ -179,6 +189,8 @@ where
 /// This is a generic enum that is the template for all
 /// other `Field` types in this crate.
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde-derives", derive(serde::Serialize))]
+#[cfg_attr(feature = "serde-derives", serde(untagged))]
 pub enum Value<T: Context> {
     /// The NULL value
     Nothing,
@@ -312,6 +324,7 @@ impl<T: Context> From<&Value<T>> for ValueType {
 
 /// Value datatypes used in the database
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde-derives", derive(serde::Serialize))]
 pub enum ValueType {
     /// The NULL value
     Nothing,

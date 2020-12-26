@@ -1,7 +1,10 @@
 //! ## Query the database
 use std::num::ParseIntError;
 
-use super::{common::ValueType, core::Field};
+use super::{
+    common::{Context, Value, ValueType},
+    core::Field,
+};
 use assembly_core::displaydoc::Display;
 use hsieh_hash::digest;
 use thiserror::Error;
@@ -23,7 +26,10 @@ impl PrimaryKeyFilter {
     }
 
     /// Check `other` against the filter
-    pub fn filter(&self, other: &Field) -> bool {
+    pub fn filter<C: Context>(&self, other: &Value<C>) -> bool
+    where
+        Field: PartialEq<Value<C>>,
+    {
         &self.value == other
     }
 }

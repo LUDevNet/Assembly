@@ -56,6 +56,18 @@ fn read_column_header(buf: &[u8; 8]) -> FDBColumnHeader {
     }
 }
 
+impl<'a> FDBColumnHeaderSlice<'a> {
+    /// Get the len of this slice
+    pub const fn len(&self) -> usize {
+        self.0.len() / std::mem::size_of::<FDBColumnHeader>()
+    }
+
+    /// Check whether the slice is empty
+    pub const fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
 impl<'a> Iterator for FDBColumnHeaderSlice<'a> {
     type Item = FDBColumnHeader;
 
@@ -105,6 +117,20 @@ impl<'a> Iterator for FDBBucketHeaderSlice<'a> {
             let header = read_bucket_header(next.try_into().unwrap());
             Some(header)
         } else {
+            None
+        }
+    }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        let base = n * std::mem::size_of::<Self::Item>();
+        let next = base + std::mem::size_of::<Self::Item>();
+        if self.0.len() >= next {
+            let (_skipped, start) = self.0.split_at(base);
+            let (next, rest) = start.split_at(std::mem::size_of::<Self::Item>());
+            self.0 = rest;
+            Some(read_bucket_header(next.try_into().unwrap()))
+        } else {
+            self.0 = self.0.split_at(self.0.len()).1;
             None
         }
     }
