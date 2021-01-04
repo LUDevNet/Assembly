@@ -73,7 +73,7 @@ pub(crate) fn compare_bytes(bytes: &[u8], name_bytes: &[u8]) -> Ordering {
 /// Get a reference to a type at the given address of this buffer
 ///
 /// This functions checks whether the offset and alignment is valid
-pub fn get_at<'a, T>(buf: &'a [u8], addr: usize) -> Res<&'a T> {
+pub fn get_at<T>(buf: &[u8], addr: usize) -> Res<&T> {
     let base = buf.as_ptr();
     let len = buf.len();
     let size = std::mem::size_of::<T>();
@@ -97,7 +97,7 @@ pub fn get_at<'a, T>(buf: &'a [u8], addr: usize) -> Res<&'a T> {
 /// Get a reference to a slice at the given address of this buffer
 ///
 /// This functions checks whether the offset and alignment is valid
-pub fn get_slice_at<'a, T>(buf: &'a [u8], addr: usize, count: usize) -> Res<&'a [T]> {
+pub fn get_slice_at<T>(buf: &[u8], addr: usize, count: usize) -> Res<&[T]> {
     let base = buf.as_ptr();
     let len = buf.len();
     let size = std::mem::size_of::<T>();
@@ -125,7 +125,7 @@ pub fn get_slice_at<'a, T>(buf: &'a [u8], addr: usize, count: usize) -> Res<&'a 
 
 /// Get the database header
 #[cfg(target_endian = "little")]
-pub fn header_ref<'a>(buf: &'a [u8]) -> Res<&'a FDBHeader> {
+pub fn header_ref(buf: &[u8]) -> Res<&FDBHeader> {
     get_at(buf, 0)
 }
 
@@ -144,15 +144,15 @@ pub fn table_headers<'a>(buf: &'a [u8], header: &'a FDBHeader) -> Res<&'a [FDBTa
 }
 
 /// Get the table definition reference
-pub fn table_definition_ref<'a>(
-    buf: &'a [u8],
+pub fn table_definition_ref(
+    buf: &[u8],
     header: FDBTableHeader,
-) -> Res<&'a FDBTableDefHeader> {
+) -> Res<&FDBTableDefHeader> {
     get_at(buf, header.table_def_header_addr as usize)
 }
 
 /// Get the table data reference
-pub fn table_data_ref<'a>(buf: &'a [u8], header: FDBTableHeader) -> Res<&'a FDBTableDataHeader> {
+pub fn table_data_ref(buf: &[u8], header: FDBTableHeader) -> Res<&FDBTableDataHeader> {
     get_at(buf, header.table_data_header_addr as usize)
 }
 

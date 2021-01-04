@@ -9,8 +9,8 @@ fn print_usage(program: &str) {
     println!("Usage: {} FILE", program);
 }
 
-fn print_entries<'b, 'a, T>(
-    entries: &mut PackEntryAccessor<'b, 'a, T>,
+fn print_entries<T>(
+    entries: &mut PackEntryAccessor<'_, '_, T>,
     entry: Option<FileResult<PKEntry>>,
 ) where
     T: BufRead + Seek,

@@ -1,3 +1,4 @@
+use displaydoc::Display;
 use encoding::{all::UTF_16LE, DecoderTrap, Encoding};
 use ms_oforms::properties::types::parser::{parse_position, parse_size};
 
@@ -101,10 +102,15 @@ named!(parse_connection_string<&str, StringMap>,
     )
 );
 
-pub fn get_settings(val: String) -> Result<StringMap, ()> {
+#[derive(Debug, Display)]
+/// Failed to load settings from connection string
+pub struct SettingsError;
+impl std::error::Error for SettingsError {}
+
+pub fn get_settings(val: String) -> Result<StringMap, SettingsError> {
     parse_connection_string(val.as_str())
         .map(|y| y.1)
-        .map_err(|_| ())
+        .map_err(|_| SettingsError)
 }
 
 pub fn parse_dsref_schema_contents(input: &[u8]) -> IResult<&[u8], DSRefSchemaContents> {

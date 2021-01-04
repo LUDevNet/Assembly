@@ -64,10 +64,10 @@ named!(
     )
 );
 
-fn parse_scene_transition_info<'a>(
-    i: &'a [u8],
+fn parse_scene_transition_info(
+    i: &[u8],
     version: FileVersion,
-) -> IResult<&'a [u8], SceneTransitionInfo> {
+) -> IResult<&[u8], SceneTransitionInfo> {
     if version.id() <= 0x21 || version.id() >= 0x27 {
         map(
             count_2(parse_scene_transition_point),

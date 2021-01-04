@@ -27,7 +27,7 @@ fn calculate_crc(path: &[u8]) -> u32 {
         if b == b'/' {
             b = b'\\';
         }
-        if b'A' <= b && b <= b'Z' {
+        if (b'A'..=b'Z').contains(&b) {
             b += b'a' - b'A';
         }
 

@@ -70,7 +70,7 @@ where
 
     /// Get the chunk meta data
     pub fn get_meta_chunk_data(&mut self) -> FileResult<FileMetaChunkData> {
-        let mut meta_chunk_data_bytes = [0 as u8; 20];
+        let mut meta_chunk_data_bytes = [0u8; 20];
         self.inner.read_exact(&mut meta_chunk_data_bytes)?;
         let (_rest, meta_chunk_data) = parser::parse_file_meta_chunk_data(&meta_chunk_data_bytes)
             .finish()

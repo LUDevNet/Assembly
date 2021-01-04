@@ -77,9 +77,9 @@ pub fn expect_end<'a, 'b, 'c, B: BufRead>(
 }
 
 /// Expect some text and return it
-pub fn expect_text<'b, 'c, B: BufRead>(
-    reader: &'b mut XmlReader<B>,
-    buf: &'c mut Vec<u8>,
+pub fn expect_text<B: BufRead>(
+    reader: &mut XmlReader<B>,
+    buf: &mut Vec<u8>,
 ) -> Result<String> {
     if let Ok(XmlEvent::Text(e)) = reader.read_event(buf) {
         let text = e.unescape_and_decode(&reader)?;

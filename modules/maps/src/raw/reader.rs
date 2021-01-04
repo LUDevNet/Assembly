@@ -8,7 +8,7 @@ use std::io::prelude::*;
 
 pub trait TerrainReader: Read {
     fn read_terrain_header(&mut self) -> FileResult<TerrainHeader> {
-        let mut header_bytes = [0 as u8; 15];
+        let mut header_bytes = [0u8; 15];
         self.read_exact(&mut header_bytes)?;
         let (_, header) = parser::parse_terrain_header(&header_bytes)
             .finish()
@@ -22,7 +22,7 @@ pub trait TerrainReader: Read {
     }
 
     fn read_height_map_header(&mut self) -> FileResult<HeightMapHeader> {
-        let mut header_bytes = [0 as u8; 36];
+        let mut header_bytes = [0u8; 36];
         self.read_exact(&mut header_bytes)?;
         let (_, header) = parser::parse_height_map_header(&header_bytes)
             .finish()

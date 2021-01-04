@@ -133,8 +133,8 @@ where
     }
 
     /// Get the column header list
-    fn get_column_header_list<'b>(
-        &'b mut self,
+    fn get_column_header_list(
+        &mut self,
         header: &FDBTableDefHeader,
     ) -> FileResult<FDBColumnHeaderList> {
         parse_list_at(self, header.column_header_list_addr, header.column_count)
