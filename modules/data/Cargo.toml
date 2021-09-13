@@ -1,6 +1,6 @@
 [package]
 name = "assembly-data"
-version = "0.3.0-beta.0"
+version = "0.3.0"
 authors = ["Xiphoseer"]
 edition = "2018"
 homepage = "https://xiphoseer.github.io"
@@ -24,7 +24,7 @@ bytemuck = "1.4"
 bytemuck_derive = "1"
 
 [dependencies.assembly-core]
-version = "0.2.0"
+version = "0.2.1"
 path = "../core"
 
 [dependencies.quick-xml]
@@ -46,3 +46,4 @@ prettytable-rs = "0.8"
 mapr = "0.8"
 structopt = "0.3"
 color-eyre = "0.5"
+serde_json = "1.0.61"

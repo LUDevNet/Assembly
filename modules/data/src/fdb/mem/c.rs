@@ -1,3 +1,4 @@
+#![allow(clippy::upper_case_acronyms)]
 use std::convert::TryFrom;
 
 use crate::fdb::file::{

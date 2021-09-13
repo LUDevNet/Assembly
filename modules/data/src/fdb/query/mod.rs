@@ -35,6 +35,7 @@ impl PrimaryKeyFilter {
 }
 
 #[derive(Error, Debug, Display)]
+#[allow(clippy::upper_case_acronyms)]
 /// Errors when creating filters at runtime
 pub enum PKFilterError {
     /// Unsupported Type {0:?}

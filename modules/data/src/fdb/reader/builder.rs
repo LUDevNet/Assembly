@@ -18,7 +18,7 @@ use std::{
 #[derive(Debug, Display, Error)]
 pub enum BuilderError {
     /// Failed IO
-    IO(#[from] io::Error),
+    Io(#[from] io::Error),
     /// Unknown Value Type
     UnknownValueType(#[from] UnknownValueType),
 }

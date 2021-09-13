@@ -26,9 +26,9 @@ impl From<[f32; 3]> for Vector3f {
     }
 }
 
-impl Into<[f32; 3]> for Vector3f {
-    fn into(self) -> [f32; 3] {
-        [self.x, self.y, self.z]
+impl From<Vector3f> for [f32; 3] {
+    fn from(v: Vector3f) -> [f32; 3] {
+        [v.x, v.y, v.z]
     }
 }
 

@@ -142,7 +142,7 @@ pub type ParsePathErr = (ZoneFile<Vec<u8>>, (usize, ErrorKind));
 impl ZoneFile<Vec<u8>> {
     pub fn parse_paths(self) -> Result<ZoneFile<ZonePaths>, ParsePathErr> {
         if let Some(path_data) = &self.path_data {
-            match parse_zone_paths(&path_data).finish() {
+            match parse_zone_paths(path_data).finish() {
                 Ok((_rest, path_data)) => Ok(self.set_path_data(Some(path_data))),
                 Err(e) => {
                     let len = path_data.offset(e.input);

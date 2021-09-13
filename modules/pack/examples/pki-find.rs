@@ -5,6 +5,7 @@ use std::env;
 use std::num::TryFromIntError;
 
 #[derive(Debug)]
+#[allow(clippy::upper_case_acronyms)]
 enum MainError {
     Load(LoadError),
     TFI(TryFromIntError),

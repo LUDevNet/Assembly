@@ -36,6 +36,7 @@ impl From<NomErr<NomError<&[u8]>>> for LoadError {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 pub trait TryFromLUZ<T>
 where
     T: Read,

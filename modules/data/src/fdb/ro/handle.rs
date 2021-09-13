@@ -157,6 +157,21 @@ where
     }
 }
 
+impl<P: Deref> BaseHandle<P, FDBTableDataHeader>
+where
+    P::Target: AsRef<[u8]>,
+{
+    /// Get the bucket for a particular id / hash
+    pub fn get_bucket_for_hash(self, id: u32) -> BaseResult<P, FDBBucketHeader> {
+        self.map_into::<_,_,BufferError>(|buf, raw| {
+            let bucket_count = raw.buckets.count as usize;
+            let buckets_addr = raw.buckets.base_offset as usize;
+            let slice: &[FDBBucketHeader] = buffer::get_slice_at(buf, buckets_addr, bucket_count)?;
+            Ok(slice[id as usize % bucket_count])
+        })
+    }
+}
+
 /// The basic database handle
 pub type Database<'a> = Handle<'a, ()>;
 
@@ -401,6 +416,7 @@ impl<'a> Handle<'a, FDBBucketHeader> {
 
 #[derive(Debug, Copy, Clone)]
 /// A newtype for a row header reference
+#[allow(clippy::upper_case_acronyms)]
 pub struct FDBRowHeaderRef(u32);
 
 impl<'a> Iterator for Handle<'a, FDBRowHeaderRef> {

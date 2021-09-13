@@ -239,7 +239,7 @@ pub fn expect_row_or_end_rows<B: BufRead>(
                     let mut m = HashMap::new();
                     for attr in start.attributes() {
                         let attr = attr?;
-                        let key = xml.decode(&attr.key).into_owned();
+                        let key = xml.decode(attr.key).into_owned();
                         let value = attr.unescape_and_decode_value(xml)?;
                         m.insert(key, value);
                     }

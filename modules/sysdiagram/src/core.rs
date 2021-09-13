@@ -1,3 +1,4 @@
+#![allow(clippy::upper_case_acronyms)]
 //! # Data definitions for sysdiagrams
 use ms_oforms::properties::types::{Position, Size};
 use std::collections::HashMap;

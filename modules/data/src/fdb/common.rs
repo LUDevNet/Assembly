@@ -81,7 +81,7 @@ pub struct Latin1Str {
 }
 
 #[cfg(feature = "serde-derives")]
-impl serde::Serialize for &Latin1Str {
+impl serde::Serialize for Latin1Str {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,

@@ -164,7 +164,7 @@ impl<'a> Tables<'a> {
 }
 
 #[allow(clippy::needless_lifetimes)] // <- clippy gets this wrong, presumably because of impl trait?
-fn map_column_header<'a>(buf: &'a [u8]) -> impl Fn(&'a FDBColumnHeaderC) -> Column<'a> {
+fn map_column_header<'a>(buf: &'a [u8]) -> impl Fn(&'a FDBColumnHeaderC) -> Column<'a> + Copy + Clone {
     move |header: &FDBColumnHeaderC| {
         let column_header = header.extract();
         let name = get_latin1_str(buf, column_header.column_name_addr);
@@ -230,12 +230,12 @@ impl<'a> Table<'a> {
     }
 
     /// Get the undecoded name of the table
-    pub fn name_raw(&self) -> &Latin1Str {
+    pub fn name_raw(&self) -> &'a Latin1Str {
         self.inner.raw.name
     }
 
     /// Get the name of the table
-    pub fn name(&self) -> Cow<str> {
+    pub fn name(&self) -> Cow<'a, str> {
         self.inner.raw.name.decode()
     }
 
@@ -262,7 +262,7 @@ impl<'a> Table<'a> {
     /// Get the column iterator
     ///
     /// **Note**: This does some computation, call only once if possible
-    pub fn column_iter(&self) -> impl Iterator<Item = Column<'a>> {
+    pub fn column_iter(&self) -> impl Iterator<Item = Column<'a>> + Clone {
         self.inner
             .raw
             .columns
@@ -284,6 +284,14 @@ impl<'a> Table<'a> {
             .buckets
             .get(index)
             .map(map_bucket_header(self.inner.mem.as_bytes()))
+    }
+
+    /// Get the bucket for the given hash
+    ///
+    /// **Note**: This always calls [Table::bucket_at] exactly once
+    pub fn bucket_for_hash(&self, hash: u32) -> Bucket<'a> {
+        let index = hash as usize % self.inner.raw.buckets.len();
+        self.bucket_at(index).unwrap()
     }
 
     /// Get the bucket iterator

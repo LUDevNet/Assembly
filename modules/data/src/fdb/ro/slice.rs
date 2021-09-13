@@ -1,3 +1,4 @@
+#![allow(clippy::upper_case_acronyms)]
 //! # Handling of slice references into the in-memory DB file
 
 use crate::fdb::file::{FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBTableHeader};

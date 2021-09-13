@@ -371,7 +371,7 @@ impl Table {
                 Field::Integer(i) => (1, i.to_le_bytes()),
                 Field::Float(f) => (3, f.to_le_bytes()),
                 Field::Text(TextRef { outer, inner }) => (4, {
-                    let v = string_len_offsets.get(&outer).unwrap() + (inner * outer * 4) as u32;
+                    let v = string_len_offsets.get(outer).unwrap() + (inner * outer * 4) as u32;
                     v.to_le_bytes()
                 }),
                 Field::Boolean(b) => (5, if *b { TRUE_LE32 } else { FALSE_LE32 }),

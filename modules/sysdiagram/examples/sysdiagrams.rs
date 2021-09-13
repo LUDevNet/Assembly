@@ -56,7 +56,7 @@ pub fn main() -> Result<(), anyhow::Error> {
     opts.optflag("h", "help", "print this help menu");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
-        Err(f) => panic!(f.to_string()),
+        Err(f) => panic!("{}", f),
     };
     if matches.opt_present("h") {
         print_usage(&program, opts);

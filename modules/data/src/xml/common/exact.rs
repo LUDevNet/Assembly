@@ -82,7 +82,7 @@ pub fn expect_text<B: BufRead>(
     buf: &mut Vec<u8>,
 ) -> Result<String> {
     if let Ok(XmlEvent::Text(e)) = reader.read_event(buf) {
-        let text = e.unescape_and_decode(&reader)?;
+        let text = e.unescape_and_decode(reader)?;
         Ok(text)
     } else {
         Err(Error::MissingText)

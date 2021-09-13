@@ -22,6 +22,7 @@ use assembly_core::{
 use encoding_rs::WINDOWS_1252;
 
 /// Implementation of [`DatabaseReader::get_row_header_addr_iterator`]
+#[allow(clippy::upper_case_acronyms)]
 pub struct FDBRowHeaderAddrIterator<'a, T: ?Sized> {
     next_addr: u32,
     file: &'a mut T,

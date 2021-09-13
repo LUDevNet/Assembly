@@ -38,8 +38,7 @@ pub fn main() -> color_eyre::Result<()> {
             let name = table.name();
 
             // add a row
-            let mut fv = Vec::with_capacity(1);
-            fv.push(PCell::new(&name));
+            let fv = vec![PCell::new(&name)];
             output.add_row(PRow::new(fv));
 
             count += 1;

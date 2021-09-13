@@ -8,6 +8,7 @@ use crate::fdb::{
     },
 };
 
+#[allow(clippy::upper_case_acronyms)]
 pub trait WriteLE {
     fn write_le<IO: io::Write>(&self, out: &mut IO) -> io::Result<()>;
 }

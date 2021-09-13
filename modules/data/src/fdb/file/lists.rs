@@ -1,3 +1,4 @@
+#![allow(clippy::upper_case_acronyms)]
 //! # Vectors of file structs
 //!
 //! This module contains newtype wrappers around vectors of the `file` module.

@@ -1,3 +1,4 @@
+#![allow(clippy::upper_case_acronyms)]
 //! The structures, as they are serialized
 //!
 //! This module contains the low-level structs that make up the FDB file. These

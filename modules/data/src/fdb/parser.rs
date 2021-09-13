@@ -12,6 +12,7 @@ fn u8_4(i: &[u8]) -> IResult<&[u8], [u8; 4]> {
 }
 
 /// Marker trait that implies that `Self` can be parsed in little-endian mode
+#[allow(clippy::upper_case_acronyms)]
 pub trait ParseLE: Sized + Copy {
     /// Same as `std::mem::size_of::<Self>()`
     const BYTE_COUNT: usize;
@@ -54,6 +55,7 @@ impl ParseLE for (u32, u32, u32) {
 }
 
 /// Trait that implements parsing from a FDB file
+#[allow(clippy::upper_case_acronyms)]
 pub trait ParseFDB: Sized + Copy {
     /// The [`ParseLE`] compatible type that is equivalent to `Self`
     type IO: ParseLE;

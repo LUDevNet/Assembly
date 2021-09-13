@@ -91,6 +91,7 @@ pub fn expect_end<B: BufRead>(
     key: &'static str,
 ) -> Result<()> {
     if let Event::End(end) = xml.read_event(buf)? {
+        #[allow(clippy::branches_sharing_code)]
         if end.name() == key.as_bytes() {
             buf.clear();
             Ok(())
