@@ -1,4 +1,4 @@
 //! The Database parts of `assembly`
 
-pub mod fdb;
-pub mod xml;
+pub use assembly_fdb as fdb;
+pub use assembly_xml as xml;

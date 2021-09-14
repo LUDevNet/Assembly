@@ -1,0 +1,30 @@
+[package]
+name = "assembly-xml"
+version = "0.1.0"
+edition = "2018"
+
+[features]
+default = ["serialize"]
+serialize = ["serde", "quick-xml/serialize"]
+
+[dependencies]
+thiserror = "1.0"
+displaydoc = "0.1.5"
+
+#[dependencies.assembly-core]
+#version = "0.2.1"
+#path = "../core"
+
+[dependencies.quick-xml]
+version = "0.20"
+features = ["encoding"]
+
+[dependencies.serde]
+version = "1"
+optional = true
+features = ["derive"]
+
+[dev-dependencies]
+structopt = "0.3"
+color-eyre = "0.5"
+serde_json = "1.0.61"

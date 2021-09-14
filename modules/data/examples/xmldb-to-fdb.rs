@@ -9,6 +9,7 @@ use assembly_data::{
             expect_column_or_end_columns, expect_columns, expect_database, expect_row_or_end_rows,
             expect_rows, expect_table, ValueType,
         },
+        quick::Reader,
     },
 };
 use color_eyre::eyre::WrapErr;
@@ -19,8 +20,6 @@ use std::{
     path::PathBuf,
     time::Instant,
 };
-
-use quick_xml::Reader;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -132,7 +131,8 @@ fn main() -> color_eyre::Result<()> {
                             pk = Some((*i % 128) as usize);
                         }
                         core::Field::Text(text) => {
-                            pk = Some((hsieh_hash::digest(text.as_bytes()) % 128) as usize);
+                            let lat1 = Latin1String::encode(&text);
+                            pk = Some((lat1.hash() % 128) as usize);
                         }
                         _ => panic!("Can't use {:?} as PK", &dest_value),
                     }
