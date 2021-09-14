@@ -1,0 +1,14 @@
+[package]
+name = "assembly-fdb-raw"
+version = "0.1.0"
+edition = "2018"
+
+[features]
+default = ["zero", "pod"]
+zero = ["zerovec"]
+pod = ["bytemuck", "bytemuck_derive"]
+
+[dependencies]
+bytemuck = { version = "1.4", optional = true }
+bytemuck_derive = { version = "1", optional = true }
+zerovec = { version = "0.3", optional = true }
