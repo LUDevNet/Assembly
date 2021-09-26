@@ -1,5 +1,5 @@
 use assembly_fdb::{common::ValueType, core::Field, mem::Database, store};
-use color_eyre::eyre::{self, WrapErr};
+use color_eyre::eyre::{self, eyre, WrapErr};
 use mapr::Mmap;
 use rusqlite::{types::ValueRef, Connection};
 use std::{fmt::Write, fs::File, io::BufWriter, path::PathBuf, time::Instant};
@@ -109,10 +109,12 @@ fn main() -> eyre::Result<()> {
                         ValueType::Integer => Field::Integer(i as i32),
                         ValueType::Boolean => Field::Boolean(i == 1),
                         ValueType::BigInt => Field::BigInt(i),
-                        _ => panic!(
-                            "Invalid target datatype; cannot store SQLite Integer as FDB {:?}",
-                            target_types[index]
-                        ),
+                        _ => {
+                            return Err(eyre!(
+                                "Invalid target datatype; cannot store SQLite Integer as FDB {:?}",
+                                target_types[index]
+                            ))
+                        }
                     },
                     ValueRef::Real(f) => Field::Float(f as f32),
                     ValueRef::Text(t) => match target_types[index] {
@@ -122,12 +124,16 @@ fn main() -> eyre::Result<()> {
                         ValueType::VarChar => {
                             Field::VarChar(String::from(std::str::from_utf8(t).unwrap()))
                         }
-                        _ => panic!(
-                            "Invalid target datatype; cannot store SQLite Text as FDB {:?}",
-                            target_types[index]
-                        ),
+                        _ => {
+                            return Err(eyre!(
+                                "Invalid target datatype; cannot store SQLite Text as FDB {:?}",
+                                target_types[index]
+                            ))
+                        }
                     },
-                    ValueRef::Blob(_b) => panic!("SQLite Blob datatype cannot be converted"),
+                    ValueRef::Blob(_b) => {
+                        return Err(eyre!("SQLite Blob datatype cannot be converted"))
+                    }
                 });
             }
 
@@ -136,7 +142,7 @@ fn main() -> eyre::Result<()> {
                 Field::Integer(i) => *i as usize,
                 Field::BigInt(i) => *i as usize,
                 Field::Text(t) => (hsieh_hash::digest(t.as_bytes())) as usize,
-                _ => panic!("Cannot use {:?} as primary key", &fields[0]),
+                _ => return Err(eyre!("Cannot use {:?} as primary key", &fields[0])),
             };
 
             dest_table.push_row(pk, &fields);
