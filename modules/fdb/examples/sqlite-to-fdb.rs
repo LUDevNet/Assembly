@@ -1,9 +1,9 @@
-use std::{fs::File, io::BufWriter, path::PathBuf, time::Instant, fmt::Write};
-use assembly_fdb::{mem::Database, store, common::ValueType, core::Field};
-use rusqlite::{types::ValueRef, Connection};
-use mapr::Mmap;
-use structopt::StructOpt;
+use assembly_fdb::{common::ValueType, core::Field, mem::Database, store};
 use color_eyre::eyre::{self, WrapErr};
+use mapr::Mmap;
+use rusqlite::{types::ValueRef, Connection};
+use std::{fmt::Write, fs::File, io::BufWriter, path::PathBuf, time::Instant};
+use structopt::StructOpt;
 
 #[derive(StructOpt)]
 /// Fills a template FDB file (see template-fdb.rs) with rows from a sqlite database
@@ -29,7 +29,7 @@ fn main() -> eyre::Result<()> {
     let mmap = unsafe { Mmap::map(&template_file)? };
     let buffer: &[u8] = &mmap;
     let template_db = Database::new(buffer);
-    
+
     // sqlite input
     let conn = Connection::open_with_flags(&opts.src, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
         .wrap_err_with(|| format!("Failed to open sqlite file '{}'", opts.src.display()))?;
@@ -75,8 +75,7 @@ fn main() -> eyre::Result<()> {
 
         // Write select query and store target datatypes
         for index in 0..column_count {
-            let template_column = template_table
-                .column_at(index).unwrap();
+            let template_column = template_table.column_at(index).unwrap();
 
             let template_column_name = template_column.name();
 
@@ -110,7 +109,10 @@ fn main() -> eyre::Result<()> {
                         ValueType::Integer => Field::Integer(i as i32),
                         ValueType::Boolean => Field::Boolean(i == 1),
                         ValueType::BigInt => Field::BigInt(i),
-                        _ => panic!("Invalid target datatype; cannot store SQLite Integer as FDB {:?}", target_types[index]),
+                        _ => panic!(
+                            "Invalid target datatype; cannot store SQLite Integer as FDB {:?}",
+                            target_types[index]
+                        ),
                     },
                     ValueRef::Real(f) => Field::Float(f as f32),
                     ValueRef::Text(t) => match target_types[index] {
@@ -120,7 +122,10 @@ fn main() -> eyre::Result<()> {
                         ValueType::VarChar => {
                             Field::VarChar(String::from(std::str::from_utf8(t).unwrap()))
                         }
-                        _ => panic!("Invalid target datatype; cannot store SQLite Text as FDB {:?}", target_types[index]),
+                        _ => panic!(
+                            "Invalid target datatype; cannot store SQLite Text as FDB {:?}",
+                            target_types[index]
+                        ),
                     },
                     ValueRef::Blob(_b) => panic!("SQLite Blob datatype cannot be converted"),
                 });

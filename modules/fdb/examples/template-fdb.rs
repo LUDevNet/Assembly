@@ -1,8 +1,8 @@
-use std::{fs::File, io::BufWriter, path::PathBuf, time::Instant};
 use assembly_fdb::{mem::Database, store};
-use mapr::Mmap;
-use structopt::StructOpt;
 use color_eyre::eyre::{self, WrapErr};
+use mapr::Mmap;
+use std::{fs::File, io::BufWriter, path::PathBuf, time::Instant};
+use structopt::StructOpt;
 
 #[derive(StructOpt)]
 /// Creates a FDB file with the same table structure as the input file, but without any rows
