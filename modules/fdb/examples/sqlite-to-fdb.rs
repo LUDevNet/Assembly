@@ -79,10 +79,10 @@ fn main() -> eyre::Result<()> {
 
             let template_column_name = template_column.name();
 
-            write!(select_query, "[{}]", template_column_name).unwrap();
+            write!(select_query, "[{}]", template_column_name)?;
 
             if index < column_count - 1 {
-                write!(select_query, ", ").unwrap();
+                write!(select_query, ", ")?;
             }
 
             target_types.push(template_column.value_type());
@@ -118,12 +118,8 @@ fn main() -> eyre::Result<()> {
                     },
                     ValueRef::Real(f) => Field::Float(f as f32),
                     ValueRef::Text(t) => match target_types[index] {
-                        ValueType::Text => {
-                            Field::Text(String::from(std::str::from_utf8(t).unwrap()))
-                        }
-                        ValueType::VarChar => {
-                            Field::VarChar(String::from(std::str::from_utf8(t).unwrap()))
-                        }
+                        ValueType::Text => Field::Text(String::from(std::str::from_utf8(t)?)),
+                        ValueType::VarChar => Field::VarChar(String::from(std::str::from_utf8(t)?)),
                         _ => {
                             return Err(eyre!(
                                 "Invalid target datatype; cannot store SQLite Text as FDB {:?}",
