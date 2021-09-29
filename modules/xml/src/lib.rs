@@ -22,3 +22,4 @@ pub mod nduiml;
 pub mod obj;
 pub mod triggers;
 pub mod ui_settings;
+pub mod universe_config;

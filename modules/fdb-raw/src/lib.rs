@@ -18,7 +18,7 @@ use ule::{
     TableHeaderULE,
 };
 #[cfg(feature = "zero")]
-use zerovec::ule::AsULE;
+use zerovec::ule::{AsULE, EqULE};
 #[cfg(feature = "zero")]
 pub mod ule;
 
@@ -50,6 +50,8 @@ macro_rules! as_ule {
             $f: $v
             ),*
         });
+
+        unsafe impl EqULE for $ty {}
 
         impl AsULE for $ty {
             type ULE = $ule;
@@ -113,6 +115,12 @@ macro_rules! ule_alias(
 );
 
 ule_alias!(u32 => Offset OffsetULE);
+
+impl Offset {
+    pub fn usize(self) -> usize {
+        self.0 as usize
+    }
+}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "pod", derive(Pod, Zeroable))]
