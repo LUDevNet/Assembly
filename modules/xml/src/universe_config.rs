@@ -1,3 +1,5 @@
+#![cfg(feature = "serialize")]
+
 //! Data returned from `UniverseConfig.svc`
 
 use serde::{Deserialize, Serialize};

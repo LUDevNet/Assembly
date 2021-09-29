@@ -1,0 +1,11 @@
+[package]
+name = "assembly-fdb-zero"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+zerovec = {version = "0.3", features = ["yoke"] }
+yoke = "0.2.3"
+assembly-fdb-raw = { version = "0.1", path = "../fdb-raw" }
