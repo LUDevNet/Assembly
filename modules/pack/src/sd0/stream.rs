@@ -151,11 +151,13 @@ where
         } else if buf_len > self.chunk_remain {
             let max = self.chunk_remain;
             //println!("MAX: {}", max);
-            self.chunk_remain = 0;
-            self.inner.as_mut().read(&mut buf[..max])
+            let len = self.inner.as_mut().read(&mut buf[..max])?;
+            self.chunk_remain -= len;
+            Ok(len)
         } else {
-            self.chunk_remain -= buf_len;
-            self.inner.as_mut().read(buf)
+            let len = self.inner.as_mut().read(buf)?;
+            self.chunk_remain -= len;
+            Ok(len)
         }
         .map_err(map_io_result)?;
         Ok(len)
