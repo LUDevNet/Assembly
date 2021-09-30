@@ -10,6 +10,7 @@ readme = "README.md"
 
 [dependencies]
 assembly-core = { path = "../core", version = "0.2.1" }
+crc = "2.0"
 flate2 = "1.0"
 
 [dev-dependencies]
