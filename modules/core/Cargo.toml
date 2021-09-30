@@ -10,7 +10,7 @@ license = "MIT"
 readme = "README.md"
 
 [dependencies]
-nom = "6.0"
+nom = "7"
 num-traits = "0.2"
 num-derive = "0.2"
 #byteorder = "1"

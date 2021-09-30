@@ -146,6 +146,12 @@ pub struct Color {
     pub blue: f32,
 }
 
+impl From<(f32, f32, f32)> for Color {
+    fn from((red, green, blue): (f32, f32, f32)) -> Self {
+        Self { red, green, blue }
+    }
+}
+
 #[derive(Debug)]
 #[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct Section1 {

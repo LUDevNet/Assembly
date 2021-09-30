@@ -26,6 +26,7 @@ fn main() -> Result<(), MainError> {
     let mut opts = Options::new();
     opts.optflag("h", "help", "print this help menu");
     opts.optflag("p", "pack-files", "print all pack files");
+    opts.optflag("f", "files", "print all files");
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => panic!("{}", f),
@@ -44,6 +45,17 @@ fn main() -> Result<(), MainError> {
     if matches.opt_present("p") {
         for pack in file.archives {
             println!("{}", pack.path);
+        }
+        Ok(())
+    } else if matches.opt_present("f") {
+        for (key, file_ref) in file.files {
+            let pack_index = file_ref.pack_file as usize;
+            match file.archives.get(pack_index) {
+                Some(pack_ref) => {
+                    println!("{:>10} {:08x} {}", key, file_ref.category, pack_ref.path);
+                }
+                None => println!("Pack ID {} out of bounds", pack_index),
+            }
         }
         Ok(())
     } else {

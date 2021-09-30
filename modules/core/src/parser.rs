@@ -41,7 +41,7 @@ where
 /// Parse a Quaternion
 pub fn parse_quat<'a, E>(input: &'a [u8]) -> Res<'a, Quaternion, E>
 where
-    E: ParseError<&'a [u8]>,
+    E: ParseError<&'a [u8]> + 'a,
 {
     map(tuple((le_f32, le_f32, le_f32, le_f32)), |(x, y, z, w)| {
         Quaternion::new(x, y, z, w)

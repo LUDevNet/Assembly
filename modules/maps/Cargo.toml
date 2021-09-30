@@ -1,6 +1,6 @@
 [package]
 name = "assembly-maps"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Xiphoseer"]
 edition = "2018"
 homepage = "https://xiphoseer.github.io"

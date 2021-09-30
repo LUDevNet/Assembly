@@ -2,12 +2,12 @@
 
 use super::file::*;
 use assembly_core::nom::{
-    combinator::map, number::complete::le_u32, sequence::tuple, take, IResult,
+    bytes::complete::take, combinator::map, number::complete::le_u32, sequence::tuple, IResult,
 };
 use std::convert::TryInto;
 
 fn u8_4(i: &[u8]) -> IResult<&[u8], [u8; 4]> {
-    let (i, slice) = take!(i, 4)?;
+    let (i, slice) = take(4usize)(i)?;
     Ok((i, slice.try_into().unwrap()))
 }
 

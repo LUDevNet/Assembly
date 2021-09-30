@@ -45,7 +45,7 @@ fn main() -> Result<(), MainError> {
                 let pack_index = usize::try_from(file_ref.pack_file)?;
                 match pki.archives.get(pack_index) {
                     Some(pack_ref) => {
-                        println!("{:x} {}", file_ref.category, pack_ref.path);
+                        println!("{:08x} {}", file_ref.category, pack_ref.path);
                     }
                     None => println!("Pack ID {} out of bounds", pack_index),
                 }
