@@ -131,7 +131,7 @@ fn main() -> color_eyre::Result<()> {
                             pk = Some((*i % 128) as usize);
                         }
                         core::Field::Text(text) => {
-                            let lat1 = Latin1String::encode(&text);
+                            let lat1 = Latin1String::encode(text);
                             pk = Some((lat1.hash() % 128) as usize);
                         }
                         _ => panic!("Can't use {:?} as PK", &dest_value),

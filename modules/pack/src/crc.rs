@@ -1,3 +1,5 @@
+//! # CRC digest of resource paths
+
 use crc::{Crc, CRC_32_MPEG_2};
 
 fn normalize_char(b: u8) -> u8 {
