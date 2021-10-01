@@ -1,13 +1,15 @@
 //! # Low level reader for PK files
 
-use super::file::{PKEntry, PKHeader};
+use super::file::{PKEntry, PKTrailer};
 use super::parser;
 
-use crate::sd0::stream::{SegmentedError, SegmentedStream};
+use crate::sd0;
+use crate::sd0::read::SegmentedDecoder;
 use assembly_core::{
     nom::Finish,
     reader::{FileResult, ParseAt},
 };
+use thiserror::Error;
 
 use std::convert::TryFrom;
 use std::error::Error;
@@ -36,11 +38,6 @@ pub struct PackStreamReader<'b, 'a, T> {
     file: &'b mut PackFile<'a, T>,
 }
 
-#[derive(Debug)]
-pub enum StreamError {
-    Segmented(SegmentedError),
-}
-
 impl<'a, T> PackFile<'a, T>
 where
     T: Seek + BufRead,
@@ -62,7 +59,7 @@ where
     }
 
     /// Load the header from the end of the file
-    pub fn get_header(&mut self) -> FileResult<PKHeader> {
+    pub fn get_header(&mut self) -> FileResult<PKTrailer> {
         let mut header_bytes: [u8; 8] = [0; 8];
         let addr = self.inner.seek(SeekFrom::End(-8))?;
         self.inner.read_exact(&mut header_bytes)?;
@@ -133,12 +130,11 @@ where
     pub fn get_file_data<'c, 'b: 'c>(
         &'b mut self,
         entry: PKEntry,
-    ) -> Result<Box<dyn Read + 'c>, StreamError> {
+    ) -> Result<Box<dyn Read + 'c>, sd0::read::Error> {
         let is_compr = (entry.is_compressed & 0xff) > 0;
         let file_stream = self.get_file_stream(entry);
         Ok(if is_compr {
-            let compr_stream =
-                SegmentedStream::try_from(file_stream).map_err(StreamError::Segmented)?;
+            let compr_stream = SegmentedDecoder::try_from(file_stream)?;
             Box::new(compr_stream)
         } else {
             Box::new(file_stream)
@@ -205,9 +201,12 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
+/// Failed to seek
 pub enum SeekError {
+    /// Cannot seek to a negative value
     Negative(i64),
+    /// Cannot seek past the end of the file
     OutOfBounds(u64, u64),
 }
 
@@ -219,8 +218,6 @@ impl Display for SeekError {
         }
     }
 }
-
-impl Error for SeekError {}
 
 impl<'b, 'a, T> PackStreamReader<'b, 'a, T>
 where

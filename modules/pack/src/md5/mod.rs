@@ -17,6 +17,7 @@ pub mod padded;
 pub struct MD5Sum(pub [u8; 16]);
 
 impl MD5Sum {
+    /// Read an MD5 sum from bytes
     pub fn from_hex_bytes(bytes: &[u8]) -> Result<Self, Error> {
         if bytes.len() != 32 {
             return Err(Error::InvalidLength(bytes.len()));
@@ -29,6 +30,7 @@ impl MD5Sum {
             let v = match b {
                 b'0'..=b'9' => b - b'0',
                 b'a'..=b'f' => b - b'a' + 10,
+                b'A'..=b'F' => b - b'A' + 10,
                 _ => return Err(Error::InvalidByte { index: bi as u8, b }),
             };
             arr[bi >> 1] += v << k;
@@ -55,9 +57,17 @@ impl fmt::Display for MD5Sum {
 }
 
 #[derive(Debug)]
+/// Failure to parse an MD5 hash
 pub enum Error {
+    /// Not 32 hex bytes
     InvalidLength(usize),
-    InvalidByte { index: u8, b: u8 },
+    /// Byte is not in `0-9a-fA-F`
+    InvalidByte {
+        /// Index of the failing byte
+        index: u8,
+        /// value of the failing byte
+        b: u8,
+    },
 }
 
 impl std::error::Error for Error {}

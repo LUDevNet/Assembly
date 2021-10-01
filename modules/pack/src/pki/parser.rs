@@ -1,3 +1,4 @@
+//! # Parsers for parts of the file
 use crate::common::{parser::parse_crc_node, CRCTreeNode};
 
 use super::core::*;
@@ -44,6 +45,7 @@ fn parse_pack_file_ref(input: &[u8]) -> IResult<&[u8], PackFileRef> {
 
 const LE_THREE: [u8; 4] = u32::to_le_bytes(3);
 
+/// Parse a complete PKI file from an in-memory buffer
 pub fn parse_pki_file(input: &[u8]) -> IResult<&[u8], PackIndexFile> {
     let (input, _version) = tag(LE_THREE)(input)?;
     let (input, archives) = length_count(le_u32, parse_pack_file_ref)(input)?;

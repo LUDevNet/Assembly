@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::md5::MD5Sum;
 
+/// Serialize with 4 trailing NULL bytes if not human readable
 pub fn serialize<S>(hash: &MD5Sum, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
@@ -18,6 +19,7 @@ where
     }
 }
 
+/// Deserialize with 4 trailing NULL bytes if not human readable
 pub fn deserialize<'de, D>(deserializer: D) -> Result<MD5Sum, D::Error>
 where
     D: serde::Deserializer<'de>,

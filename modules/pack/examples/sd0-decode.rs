@@ -5,7 +5,7 @@ use std::{
 };
 
 use argh::FromArgs;
-use assembly_pack::sd0::stream::SegmentedStream;
+use assembly_pack::sd0::read::SegmentedDecoder;
 use color_eyre::eyre::Context;
 
 #[derive(Debug, FromArgs)]
@@ -24,7 +24,7 @@ fn main() -> color_eyre::Result<()> {
 
     let file = File::open(&args.input)?;
     let mut buf = BufReader::new(file);
-    let mut stream = SegmentedStream::new(&mut buf)?;
+    let mut stream = SegmentedDecoder::new(&mut buf)?;
 
     let out = File::create(args.output)?;
     let mut writer = BufWriter::new(out);

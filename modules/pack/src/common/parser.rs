@@ -8,6 +8,7 @@ use assembly_core::nom::{
 
 use super::CRCTreeNode;
 
+/// Parse a CRC node
 pub fn parse_crc_node<'r, D, P, E>(
     mut parser: P,
 ) -> impl FnMut(&'r [u8]) -> IResult<&'r [u8], CRCTreeNode<D>, E>

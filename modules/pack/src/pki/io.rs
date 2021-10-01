@@ -1,3 +1,5 @@
+//! # Logic to read a PKI file from a byte stream
+
 use std::convert::TryFrom;
 use std::fmt;
 use std::fs::File;
@@ -10,11 +12,17 @@ use super::parser;
 use assembly_core::nom::{self, error::ErrorKind, Err as NomErr};
 
 #[derive(Debug, Error)]
+/// Failed to load a PKI file
 pub enum LoadError {
+    /// Failed to open the file
     FileOpen(#[source] IoError),
+    /// Failed to read from the file
     Read(#[source] IoError),
+    /// EOF while parsing
     Incomplete,
+    /// File did not match parser
     ParseError(ErrorKind),
+    /// Valid file but invalid data
     ParseFailure(ErrorKind),
 }
 

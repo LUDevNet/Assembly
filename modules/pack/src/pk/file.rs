@@ -5,8 +5,10 @@ use crate::{common::CRCTreeNode, md5::MD5Sum};
 
 /// The header of a pack file#
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-pub struct PKHeader {
+pub struct PKTrailer {
+    /// The base addr of the file list
     pub file_list_base_addr: u32,
+    /// ???
     pub value_1: u32,
 }
 
@@ -45,7 +47,7 @@ mod tests {
 
     #[test]
     fn test() {
-        let h: PKHeader = bincode::deserialize(&[1, 0, 0, 0, 2, 0, 0, 0]).unwrap();
+        let h: PKTrailer = bincode::deserialize(&[1, 0, 0, 0, 2, 0, 0, 0]).unwrap();
         assert_eq!(h.file_list_base_addr, 1);
         assert_eq!(h.value_1, 2);
     }

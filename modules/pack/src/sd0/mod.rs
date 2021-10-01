@@ -4,4 +4,4 @@
 //! served from the server to the client, and to
 //! use less space in the pack archives.
 
-pub mod stream;
+pub mod read;
