@@ -74,9 +74,7 @@ fn main() -> eyre::Result<()> {
         let mut select_query = String::from("select ");
 
         // Write select query and store target datatypes
-        for index in 0..column_count {
-            let template_column = template_table.column_at(index).unwrap();
-
+        for (index, template_column) in template_table.column_iter().enumerate() {
             let template_column_name = template_column.name();
 
             write!(select_query, "[{}]", template_column_name)?;
