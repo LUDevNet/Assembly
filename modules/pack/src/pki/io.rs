@@ -1,19 +1,33 @@
 use std::convert::TryFrom;
+use std::fmt;
 use std::fs::File;
 use std::io::{BufReader, Error as IoError, Read};
+use thiserror::Error;
 
 use super::core::PackIndexFile;
 use super::parser;
 
 use assembly_core::nom::{self, error::ErrorKind, Err as NomErr};
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum LoadError {
-    FileOpen(IoError),
-    Read(IoError),
+    FileOpen(#[source] IoError),
+    Read(#[source] IoError),
     Incomplete,
     ParseError(ErrorKind),
     ParseFailure(ErrorKind),
+}
+
+impl fmt::Display for LoadError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LoadError::FileOpen(_) => write!(f, "Failed to open file"),
+            LoadError::Read(_) => write!(f, "Failed to read file"),
+            LoadError::Incomplete => write!(f, "Unexpected EOF"),
+            LoadError::ParseError(e) => write!(f, "File not recognized: {:?}", e),
+            LoadError::ParseFailure(e) => write!(f, "File corrupt: {:?}", e),
+        }
+    }
 }
 
 type LoadResult<T> = Result<T, LoadError>;

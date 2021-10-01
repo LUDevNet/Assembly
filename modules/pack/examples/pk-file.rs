@@ -1,14 +1,11 @@
+use argh::FromArgs;
 use assembly_core::reader::FileResult;
 use assembly_pack::pk::file::PKEntry;
 use assembly_pack::pk::reader::{PackEntryAccessor, PackFile};
 use std::cmp::Ordering;
-use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Seek};
-
-fn print_usage(program: &str) {
-    println!("Usage: {} FILE", program);
-}
+use std::path::PathBuf;
 
 fn print_entry<'b, 'a, T>(
     entries: &'b mut PackEntryAccessor<'b, 'a, T>,
@@ -42,25 +39,30 @@ fn print_entry<'b, 'a, T>(
     }
 }
 
-fn main() -> Result<(), anyhow::Error> {
-    let args: Vec<String> = env::args().collect();
-    let program = args[0].clone();
+#[derive(FromArgs)]
+/// Print a single entry from a PK file
+struct Args {
+    /// an ndpk file
+    #[argh(positional)]
+    path: PathBuf,
 
-    if args.len() <= 2 {
-        print_usage(&program);
-        Ok(())
-    } else {
-        let filename = args[1].clone();
-        let crc = str::parse::<u32>(&args[2]).unwrap();
-        let file = File::open(filename)?;
-        let mut reader = BufReader::new(file);
-        let mut pack = PackFile::open(&mut reader);
+    /// the CRC of a resource path
+    #[argh(positional)]
+    crc: u32,
+}
 
-        let header = pack.get_header()?;
+fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
+    let args: Args = argh::from_env();
 
-        let mut entries = pack.get_entry_accessor(header.file_list_base_addr)?;
-        let root = entries.get_root_entry();
-        print_entry(&mut entries, root, crc);
-        Ok(())
-    }
+    let file = File::open(args.path)?;
+    let mut reader = BufReader::new(file);
+    let mut pack = PackFile::open(&mut reader);
+
+    let header = pack.get_header()?;
+
+    let mut entries = pack.get_entry_accessor(header.file_list_base_addr)?;
+    let root = entries.get_root_entry();
+    print_entry(&mut entries, root, args.crc);
+    Ok(())
 }

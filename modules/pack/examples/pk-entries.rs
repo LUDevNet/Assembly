@@ -67,7 +67,8 @@ struct Args {
     pretty: bool,
 }
 
-fn main() -> Result<(), anyhow::Error> {
+fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
     let args: Args = argh::from_env();
 
     let file = File::open(&args.file)?;
