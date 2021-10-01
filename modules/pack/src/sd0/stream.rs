@@ -2,10 +2,11 @@
 //!
 //!
 use assembly_core::borrow::Oom;
-use libflate::deflate::Decoder as ZlibDecoder;
+use flate2::bufread::ZlibDecoder;
+//use libflate::deflate::Decoder as ZlibDecoder;
 use std::convert::{From, TryFrom};
 use std::error::Error;
-use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::fmt::{self, Display, Formatter, Result as FmtResult};
 use std::io::{BufReader, Error as IoError, ErrorKind, Read, Result as IoResult};
 use std::num::TryFromIntError;
 
@@ -93,6 +94,50 @@ where
     }
 }
 
+#[derive(Debug)]
+struct FailedToRead {
+    inner: IoError,
+    kind: FailedToReadKind,
+}
+
+impl fmt::Display for FailedToRead {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "Failed to read SDO chunk ({:?})", self.kind)
+    }
+}
+
+impl std::error::Error for FailedToRead {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(&self.inner)
+    }
+}
+
+#[derive(Debug)]
+enum FailedToReadKind {
+    Root,
+    FileRead,
+}
+
+fn map_io_result(inner: IoError) -> FailedToRead {
+    FailedToRead {
+        inner,
+        kind: FailedToReadKind::Root,
+    }
+}
+
+fn map_file_read_result(inner: IoError) -> FailedToRead {
+    FailedToRead {
+        inner,
+        kind: FailedToReadKind::FileRead,
+    }
+}
+
+impl From<FailedToRead> for IoError {
+    fn from(error: FailedToRead) -> Self {
+        IoError::new(ErrorKind::Other, error)
+    }
+}
+
 impl<'a, T> Read for SegmentedChunkStream<'a, T>
 where
     T: Read,
@@ -101,26 +146,21 @@ where
         let buf_len = buf.len();
         //println!("BUF: {}", buf_len);
         //println!("REM: {}", self.chunk_remain);
-        match if self.chunk_remain == 0 {
+        let len = if self.chunk_remain == 0 {
             Ok(0)
         } else if buf_len > self.chunk_remain {
             let max = self.chunk_remain;
             //println!("MAX: {}", max);
-            self.chunk_remain = 0;
-            self.inner.as_mut().read(&mut buf[..max])
+            let len = self.inner.as_mut().read(&mut buf[..max])?;
+            self.chunk_remain -= len;
+            Ok(len)
         } else {
-            self.chunk_remain -= buf_len;
-            self.inner.as_mut().read(buf)
-        } {
-            Ok(n) => {
-                //println!("RES: {}", n);
-                Ok(n)
-            }
-            Err(e) => {
-                //println!("ERR: {:?}", e);
-                Err(e)
-            }
+            let len = self.inner.as_mut().read(buf)?;
+            self.chunk_remain -= len;
+            Ok(len)
         }
+        .map_err(map_io_result)?;
+        Ok(len)
     }
 }
 
@@ -163,7 +203,7 @@ where
         match std::mem::replace(&mut self.decoder, None) {
             Some(decoder) => match decoder.into_inner().into_inner().next_chunk() {
                 Ok(Some(mut decoder)) => {
-                    let next_read_len = decoder.read(buf)?;
+                    let next_read_len = decoder.read(buf).map_err(map_io_result)?;
                     // Store the new decoder
                     self.decoder = Some(decoder);
                     // Returned `next_read_len` bytes from the next chunk
@@ -187,8 +227,8 @@ where
     fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
         match &mut self.decoder {
             Some(decoder) => {
-                let read_len = decoder.read(buf)?;
-                // Successfully ead read_len of buf.len() bytes
+                let read_len = decoder.read(buf).map_err(map_file_read_result)?;
+                // Successfully read read_len of buf.len() bytes
                 if read_len == 0 {
                     // The decode stream is complete, decoder.total_out() bytes were read
                     self.next_or_done(buf)

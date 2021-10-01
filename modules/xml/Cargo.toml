@@ -2,6 +2,10 @@
 name = "assembly-xml"
 version = "0.1.0"
 edition = "2018"
+license = "MPL-2.0"
+description = "XML formats used in the game LEGO® Universe"
+repository = "https://github.com/xiphoseer/assembly_rs/tree/main/modules/xml"
+readme = "README.md"
 
 [features]
 default = ["serialize"]
@@ -10,10 +14,6 @@ serialize = ["serde", "quick-xml/serialize"]
 [dependencies]
 thiserror = "1.0"
 displaydoc = "0.1.5"
-
-#[dependencies.assembly-core]
-#version = "0.2.1"
-#path = "../core"
 
 [dependencies.quick-xml]
 version = "0.20"

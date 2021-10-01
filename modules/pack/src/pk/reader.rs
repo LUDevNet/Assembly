@@ -75,11 +75,12 @@ where
     /// Load the header from the end of the file
     pub fn get_entry(&mut self, addr: u32) -> FileResult<PKEntry> {
         let mut entry_bytes: [u8; 100] = [0; 100];
-        let addr = self.inner.seek(SeekFrom::Start(u64::from(addr)))?;
+        let _addr = self.inner.seek(SeekFrom::Start(u64::from(addr)))?;
         self.inner.read_exact(&mut entry_bytes)?;
-        let (_rest, entry) = parser::parse_pk_entry(&entry_bytes)
-            .finish()
-            .at(addr, &entry_bytes)?;
+        let entry = bincode::deserialize(&entry_bytes).unwrap();
+        /*let (_rest, entry) = parser::parse_pk_entry(&entry_bytes)
+        .finish()
+        .at(addr, &entry_bytes)?;*/
         Ok(entry)
     }
 
@@ -113,7 +114,7 @@ where
     /// Get a boxed reader for the file stream
     pub fn get_file_stream<'b>(&'b mut self, entry: PKEntry) -> PackStreamReader<'b, 'a, T> {
         let base_addr = entry.file_data_addr;
-        let size = if entry.is_compressed[0] == 0 {
+        let size = if (entry.is_compressed & 0xff) == 0 {
             entry.orig_file_size
         } else {
             entry.compr_file_size
@@ -133,7 +134,7 @@ where
         &'b mut self,
         entry: PKEntry,
     ) -> Result<Box<dyn Read + 'c>, StreamError> {
-        let is_compr = entry.is_compressed[0] > 0;
+        let is_compr = (entry.is_compressed & 0xff) > 0;
         let file_stream = self.get_file_stream(entry);
         Ok(if is_compr {
             let compr_stream =
@@ -155,9 +156,9 @@ where
     }
 
     /// Get the specified entry if inside of count
-    pub fn get_entry(&mut self, index: u32) -> Option<FileResult<PKEntry>> {
-        if index <= self.count {
-            Some(self.file.get_entry(self.base_addr + index * 100))
+    pub fn get_entry(&mut self, index: i32) -> Option<FileResult<PKEntry>> {
+        if index >= 0 {
+            Some(self.file.get_entry(self.base_addr + (index as u32) * 100))
         } else {
             None
         }
@@ -165,7 +166,7 @@ where
 
     /// Get the root entrys if not empty
     pub fn get_root_entry(&mut self) -> Option<FileResult<PKEntry>> {
-        self.get_entry(self.count / 2)
+        self.get_entry((self.count / 2) as i32)
     }
 }
 

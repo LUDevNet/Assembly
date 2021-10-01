@@ -1,8 +1,10 @@
 use super::core::*;
 use assembly_core::nom::{
-    call, cond, do_parse, fold_many_m_n, length_count, map_opt, map_res, named, named_args,
+    combinator::{cond, map_opt, map_res},
+    multi::{fold_many_m_n, length_count},
     number::complete::{le_f32, le_u32, le_u8},
-    pair, switch, value, IResult,
+    sequence::tuple,
+    IResult,
 };
 use assembly_core::parser::{
     parse_object_id, parse_object_template, parse_quat, parse_quat_wxyz, parse_u32_wstring,
@@ -12,367 +14,457 @@ use num_traits::FromPrimitive;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-named!(pub parse_zone_paths_version<ZonePathsVersion>,
-    map_opt!(le_u32, ZonePathsVersion::from_u32)
-);
+pub fn parse_zone_paths_version(input: &[u8]) -> IResult<&[u8], ZonePathsVersion> {
+    map_opt(le_u32, ZonePathsVersion::from_u32)(input)
+}
 
-named!(pub parse_path_version<PathVersion>,
-    map_opt!(le_u32, PathVersion::from_u32)
-);
+pub fn parse_path_version(input: &[u8]) -> IResult<&[u8], PathVersion> {
+    map_opt(le_u32, PathVersion::from_u32)(input)
+}
 
-named!(pub parse_path_type<PathType>,
-    map_opt!(le_u32, PathType::from_u32)
-);
+pub fn parse_path_type(input: &[u8]) -> IResult<&[u8], PathType> {
+    map_opt(le_u32, PathType::from_u32)(input)
+}
 
-named!(pub parse_path_composition<PathComposition>,
-    map_opt!(le_u32, PathComposition::from_u32)
-);
+pub fn parse_path_composition(input: &[u8]) -> IResult<&[u8], PathComposition> {
+    map_opt(le_u32, PathComposition::from_u32)(input)
+}
 
-named!(pub parse_path_data_movement<PathDataMovement>,
-    value!(PathDataMovement{})
-);
+pub fn parse_path_data_movement(input: &[u8]) -> IResult<&[u8], PathDataMovement> {
+    Ok((input, PathDataMovement {}))
+}
 
-named_args!(pub parse_path_data_moving_platform(version: PathVersion)<PathDataMovingPlatform>,
-    do_parse!(
-        a: cond!(version.min(18), call!(le_u8)) >>
-        b: cond!(version.min(13) && !version.min(18), call!(parse_u8_wstring)) >>
-        (PathDataMovingPlatform{
-            something: a,
-            platform_travel_sound: b,
-        })
-    )
-);
+pub fn parse_path_data_moving_platform(
+    version: PathVersion,
+) -> fn(&[u8]) -> IResult<&[u8], PathDataMovingPlatform> {
+    fn pre_v13(i: &[u8]) -> IResult<&[u8], PathDataMovingPlatform> {
+        Ok((i, PathDataMovingPlatform::PreV13))
+    }
+    fn v13_to_17(i: &[u8]) -> IResult<&[u8], PathDataMovingPlatform> {
+        let (i, platform_travel_sound) = parse_u8_wstring(i)?;
+        Ok((
+            i,
+            PathDataMovingPlatform::V13ToV17 {
+                platform_travel_sound,
+            },
+        ))
+    }
+    fn post_v18(i: &[u8]) -> IResult<&[u8], PathDataMovingPlatform> {
+        let (i, something) = le_u8(i)?;
+        Ok((i, PathDataMovingPlatform::PostV18 { something }))
+    }
+    match version.id() {
+        0..=12 => pre_v13,
+        13..=17 => v13_to_17,
+        _ => post_v18,
+    }
+}
 
-named!(pub parse_property_rental_time_unit<PropertyRentalTimeUnit>,
-    map_opt!(le_u32, PropertyRentalTimeUnit::from_u32)
-);
+pub fn parse_property_rental_time_unit(input: &[u8]) -> IResult<&[u8], PropertyRentalTimeUnit> {
+    map_opt(le_u32, PropertyRentalTimeUnit::from_u32)(input)
+}
 
-named!(pub parse_property_achievement_required<PropertyAchievementRequired>,
-    map_opt!(le_u32, PropertyAchievementRequired::from_u32)
-);
+pub fn parse_property_achievement_required(
+    input: &[u8],
+) -> IResult<&[u8], PropertyAchievementRequired> {
+    map_opt(le_u32, PropertyAchievementRequired::from_u32)(input)
+}
 
-named!(pub parse_path_data_property<PathDataProperty>,
-    do_parse!(
-        value_1: le_u32 >>
-        price: le_u32 >>
-        rental_time: le_u32 >>
-        associated_map: parse_world_id >>
-        value_2: le_u32 >>
-        display_name: parse_u8_wstring >>
-        display_description: parse_u32_wstring >>
-        value_3: le_u32 >>
-        clone_limit: le_u32 >>
-        reputation_multiplier: le_f32 >>
-        rental_time_unit: parse_property_rental_time_unit >>
-        achievement_required: parse_property_achievement_required >>
-        player_zone_coordinate: parse_vec3f >>
-        max_build_height: le_f32 >>
-        (PathDataProperty {
+pub fn parse_path_data_property(input: &[u8]) -> IResult<&[u8], PathDataProperty> {
+    let (input, value_1) = le_u32(input)?;
+    let (input, price) = le_u32(input)?;
+    let (input, rental_time) = le_u32(input)?;
+    let (input, associated_map) = parse_world_id(input)?;
+    let (input, value_2) = le_u32(input)?;
+    let (input, display_name) = parse_u8_wstring(input)?;
+    let (input, display_description) = parse_u32_wstring(input)?;
+    let (input, value_3) = le_u32(input)?;
+    let (input, clone_limit) = le_u32(input)?;
+    let (input, reputation_multiplier) = le_f32(input)?;
+    let (input, rental_time_unit) = parse_property_rental_time_unit(input)?;
+    let (input, achievement_required) = parse_property_achievement_required(input)?;
+    let (input, player_zone_coordinate) = parse_vec3f(input)?;
+    let (input, max_build_height) = le_f32(input)?;
+    Ok((
+        input,
+        PathDataProperty {
             value_1,
-            price, rental_time, associated_map,
+            price,
+            rental_time,
+            associated_map,
             value_2,
-            display_name, display_description,
+            display_name,
+            display_description,
             value_3,
-            clone_limit, reputation_multiplier,
-            rental_time_unit, achievement_required,
-            player_zone_coordinate, max_build_height,
-        })
-    )
-);
+            clone_limit,
+            reputation_multiplier,
+            rental_time_unit,
+            achievement_required,
+            player_zone_coordinate,
+            max_build_height,
+        },
+    ))
+}
 
-named_args!(pub parse_path_data_camera(version: PathVersion)<PathDataCamera>,
-    do_parse!(
-        next_path: parse_u8_wstring >>
-        value_1: cond!(version.min(14), le_u8) >>
-        (PathDataCamera{next_path, value_1})
-    )
-);
+pub fn parse_path_data_camera<'a>(
+    version: PathVersion,
+) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], PathDataCamera> {
+    let mut v1_parser = cond(version.min(14), le_u8);
+    move |i: &'a [u8]| {
+        let (i, next_path) = parse_u8_wstring(i)?;
+        let (i, value_1) = v1_parser(i)?;
+        Ok((i, PathDataCamera { next_path, value_1 }))
+    }
+}
 
-named!(pub parse_path_data_spawner<PathDataSpawner>,
-    do_parse!(
-        spawned_lot: parse_object_template >>
-        respawn_time: le_u32 >>
-        max_to_spawn: le_u32 >>
-        min_to_spawn: le_u32 >>
-        spawner_obj_id: parse_object_id >>
-        activate_network_on_load: parse_u8_bool >>
-        (PathDataSpawner{
+pub fn parse_path_data_spawner(input: &[u8]) -> IResult<&[u8], PathDataSpawner> {
+    let (input, spawned_lot) = parse_object_template(input)?;
+    let (input, respawn_time) = le_u32(input)?;
+    let (input, max_to_spawn) = le_u32(input)?;
+    let (input, min_to_spawn) = le_u32(input)?;
+    let (input, spawner_obj_id) = parse_object_id(input)?;
+    let (input, activate_network_on_load) = parse_u8_bool(input)?;
+    Ok((
+        input,
+        PathDataSpawner {
             spawned_lot,
             respawn_time,
             max_to_spawn,
             min_to_spawn,
             spawner_obj_id,
             activate_network_on_load,
-        })
-    )
-);
+        },
+    ))
+}
 
-named!(pub parse_path_data_showcase<PathDataShowcase>,
-    value!(PathDataShowcase{})
-);
+pub fn parse_path_data_showcase(input: &[u8]) -> IResult<&[u8], PathDataShowcase> {
+    Ok((input, PathDataShowcase {}))
+}
 
-named!(pub parse_path_data_race<PathDataRace>,
-    value!(PathDataRace{})
-);
+pub fn parse_path_data_race(input: &[u8]) -> IResult<&[u8], PathDataRace> {
+    Ok((input, PathDataRace {}))
+}
 
-named!(pub parse_path_data_rail<PathDataRail>,
-    value!(PathDataRail{})
-);
+pub fn parse_path_data_rail(input: &[u8]) -> IResult<&[u8], PathDataRail> {
+    Ok((input, PathDataRail {}))
+}
 
-named!(pub parse_path_waypoint_data_movement<PathWaypointDataMovement>,
-    do_parse!(
-        config: parse_waypoint_config >>
-        (PathWaypointDataMovement{config})
-    )
-);
+pub fn parse_path_waypoint_data_movement(input: &[u8]) -> IResult<&[u8], PathWaypointDataMovement> {
+    let (input, config) = parse_waypoint_config(input)?;
+    Ok((input, PathWaypointDataMovement { config }))
+}
 
-named!(pub parse_path_waypoint_data_moving_platform_sounds<PathWaypointDataMovingPlatformSounds>,
-    do_parse!(
-        depart_sound: parse_u8_wstring >>
-        arrive_sound: parse_u8_wstring >>
-        (PathWaypointDataMovingPlatformSounds{ depart_sound, arrive_sound })
-    )
-);
+pub fn parse_path_waypoint_data_moving_platform_sounds(
+    input: &[u8],
+) -> IResult<&[u8], PathWaypointDataMovingPlatformSounds> {
+    let (input, depart_sound) = parse_u8_wstring(input)?;
+    let (input, arrive_sound) = parse_u8_wstring(input)?;
+    Ok((
+        input,
+        PathWaypointDataMovingPlatformSounds {
+            depart_sound,
+            arrive_sound,
+        },
+    ))
+}
 
-named_args!(pub parse_path_waypoint_data_moving_platform(version: PathVersion)<PathWaypointDataMovingPlatform>,
-    do_parse!(
-        rotation: parse_quat >>
-        lock_player: parse_u8_bool >>
-        speed: le_f32 >>
-        wait: le_f32 >>
-        sounds: cond!(version.min(13), call!(parse_path_waypoint_data_moving_platform_sounds)) >>
-        (PathWaypointDataMovingPlatform {
-            rotation, lock_player, speed, wait, sounds
-        })
-    )
-);
+pub fn parse_path_waypoint_data_moving_platform<'a>(
+    version: PathVersion,
+) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], PathWaypointDataMovingPlatform> {
+    let mut sounds_parser = cond(
+        version.min(13),
+        parse_path_waypoint_data_moving_platform_sounds,
+    );
+    move |input: &'a [u8]| {
+        let (input, rotation) = parse_quat(input)?;
+        let (input, lock_player) = parse_u8_bool(input)?;
+        let (input, speed) = le_f32(input)?;
+        let (input, wait) = le_f32(input)?;
+        let (input, sounds) = sounds_parser(input)?;
+        Ok((
+            input,
+            PathWaypointDataMovingPlatform {
+                rotation,
+                lock_player,
+                speed,
+                wait,
+                sounds,
+            },
+        ))
+    }
+}
 
-named!(pub parse_path_waypoint_data_property<PathWaypointDataProperty>,
-    value!(PathWaypointDataProperty{})
-);
+pub fn parse_path_waypoint_data_property(input: &[u8]) -> IResult<&[u8], PathWaypointDataProperty> {
+    Ok((input, PathWaypointDataProperty {}))
+}
 
-named!(pub parse_path_waypoint_data_camera<PathWaypointDataCamera>,
-    do_parse!(
-        rotation: parse_quat >>
-        time: le_f32 >>
-        value_5: le_f32 >>
-        tension: le_f32 >>
-        continuity: le_f32 >>
-        bias: le_f32 >>
-        (PathWaypointDataCamera {
-            rotation, time, value_5,
-            tension, continuity, bias,
-        })
-    )
-);
+pub fn parse_path_waypoint_data_camera(input: &[u8]) -> IResult<&[u8], PathWaypointDataCamera> {
+    let (input, rotation) = parse_quat(input)?;
+    let (input, time) = le_f32(input)?;
+    let (input, value_5) = le_f32(input)?;
+    let (input, tension) = le_f32(input)?;
+    let (input, continuity) = le_f32(input)?;
+    let (input, bias) = le_f32(input)?;
+    Ok((
+        input,
+        PathWaypointDataCamera {
+            rotation,
+            time,
+            value_5,
+            tension,
+            continuity,
+            bias,
+        },
+    ))
+}
 
-named!(pub parse_path_waypoint_data_spawner<PathWaypointDataSpawner>,
-    do_parse!(
-        rotation: parse_quat >>
-        config: parse_waypoint_config >>
-        (PathWaypointDataSpawner{ rotation, config })
-    )
-);
+pub fn parse_path_waypoint_data_spawner(input: &[u8]) -> IResult<&[u8], PathWaypointDataSpawner> {
+    let (input, rotation) = parse_quat(input)?;
+    let (input, config) = parse_waypoint_config(input)?;
+    Ok((input, PathWaypointDataSpawner { rotation, config }))
+}
 
-named!(pub parse_path_waypoint_data_showcase<PathWaypointDataShowcase>,
-    value!(PathWaypointDataShowcase{})
-);
+pub fn parse_path_waypoint_data_showcase(input: &[u8]) -> IResult<&[u8], PathWaypointDataShowcase> {
+    Ok((input, PathWaypointDataShowcase {}))
+}
 
-named!(pub parse_path_waypoint_data_race<PathWaypointDataRace>,
-    do_parse!(
-        rotation: parse_quat >>
-        value_1: le_u8 >>
-        value_2: le_u8 >>
-        value_3: le_f32 >>
-        value_4: le_f32 >>
-        value_5: le_f32 >>
-        (PathWaypointDataRace{ rotation, value_1, value_2, value_3, value_4, value_5 })
-    )
-);
+pub fn parse_path_waypoint_data_race(input: &[u8]) -> IResult<&[u8], PathWaypointDataRace> {
+    let (input, rotation) = parse_quat(input)?;
+    let (input, value_1) = le_u8(input)?;
+    let (input, value_2) = le_u8(input)?;
+    let (input, value_3) = le_f32(input)?;
+    let (input, value_4) = le_f32(input)?;
+    let (input, value_5) = le_f32(input)?;
+    Ok((
+        input,
+        PathWaypointDataRace {
+            rotation,
+            value_1,
+            value_2,
+            value_3,
+            value_4,
+            value_5,
+        },
+    ))
+}
 
-named!(
-    parse_path_waypoint_variant_movement<PathWaypointVariantMovement>,
-    do_parse!(
-        position: parse_vec3f
-            >> data: parse_path_waypoint_data_movement
-            >> (PathWaypointVariantMovement { position, data })
-    )
-);
+fn parse_path_waypoint_variant_movement(
+    input: &[u8],
+) -> IResult<&[u8], PathWaypointVariantMovement> {
+    let (input, position) = parse_vec3f(input)?;
+    let (input, data) = parse_path_waypoint_data_movement(input)?;
+    Ok((input, PathWaypointVariantMovement { position, data }))
+}
 
-named_args!(parse_path_variant_movement(header: PathHeader)<PathVariantMovement>,
-    do_parse!(
-        path_data: parse_path_data_movement >>
-        waypoints: length_count!(le_u32, parse_path_waypoint_variant_movement) >>
-        (PathVariantMovement {
-            header, path_data, waypoints,
-        })
-    )
-);
+fn parse_path_variant_movement(
+    input: &[u8],
+    header: PathHeader,
+) -> IResult<&[u8], PathVariantMovement> {
+    let (input, path_data) = parse_path_data_movement(input)?;
+    let (input, waypoints) = length_count(le_u32, parse_path_waypoint_variant_movement)(input)?;
+    Ok((
+        input,
+        PathVariantMovement {
+            header,
+            path_data,
+            waypoints,
+        },
+    ))
+}
 
-named_args!(parse_path_waypoint_variant_moving_platform(version: PathVersion)<PathWaypointVariantMovingPlatform>,
-    do_parse!(
-        position: parse_vec3f >>
-        data: call!(parse_path_waypoint_data_moving_platform, version) >>
-        (PathWaypointVariantMovingPlatform{position, data})
-    )
-);
+fn parse_path_waypoint_variant_moving_platform<'a>(
+    version: PathVersion,
+) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], PathWaypointVariantMovingPlatform> {
+    let mut inner = parse_path_waypoint_data_moving_platform(version);
+    move |i: &'a [u8]| {
+        let (i, position) = parse_vec3f(i)?;
+        let (i, data) = inner(i)?;
+        Ok((i, PathWaypointVariantMovingPlatform { position, data }))
+    }
+}
 
-named_args!(parse_path_variant_moving_platform(header: PathHeader)<PathVariantMovingPlatform>,
-    do_parse!(
-        path_data: call!(parse_path_data_moving_platform, header.version) >>
-        waypoints: length_count!(le_u32, call!(parse_path_waypoint_variant_moving_platform, header.version)) >>
-        (PathVariantMovingPlatform {
-            header, path_data, waypoints,
-        })
-    )
-);
+fn parse_path_variant_moving_platform(
+    input: &[u8],
+    header: PathHeader,
+) -> IResult<&[u8], PathVariantMovingPlatform> {
+    let (input, path_data) = parse_path_data_moving_platform(header.version)(input)?;
+    let (input, waypoints) = length_count(
+        le_u32,
+        parse_path_waypoint_variant_moving_platform(header.version),
+    )(input)?;
+    Ok((
+        input,
+        PathVariantMovingPlatform {
+            header,
+            path_data,
+            waypoints,
+        },
+    ))
+}
 
-named!(
-    parse_path_waypoint_variant_property<PathWaypointVariantProperty>,
-    do_parse!(
-        position: parse_vec3f
-            >> data: parse_path_waypoint_data_property
-            >> (PathWaypointVariantProperty { position, data })
-    )
-);
+fn parse_path_waypoint_variant_property(
+    input: &[u8],
+) -> IResult<&[u8], PathWaypointVariantProperty> {
+    let (input, position) = parse_vec3f(input)?;
+    let (input, data) = parse_path_waypoint_data_property(input)?;
+    Ok((input, PathWaypointVariantProperty { position, data }))
+}
 
-named_args!(parse_path_variant_property(header: PathHeader)<PathVariantProperty>,
-    do_parse!(
-        path_data: parse_path_data_property >>
-        waypoints: length_count!(le_u32, parse_path_waypoint_variant_property) >>
-        (PathVariantProperty {
-            header, path_data, waypoints,
-        })
-    )
-);
+fn parse_path_variant_property(
+    input: &[u8],
+    header: PathHeader,
+) -> IResult<&[u8], PathVariantProperty> {
+    let (input, path_data) = parse_path_data_property(input)?;
+    let (input, waypoints) = length_count(le_u32, parse_path_waypoint_variant_property)(input)?;
+    Ok((
+        input,
+        PathVariantProperty {
+            header,
+            path_data,
+            waypoints,
+        },
+    ))
+}
 
-named!(
-    parse_path_waypoint_variant_camera<PathWaypointVariantCamera>,
-    do_parse!(
-        position: parse_vec3f
-            >> data: parse_path_waypoint_data_camera
-            >> (PathWaypointVariantCamera { position, data })
-    )
-);
+fn parse_path_waypoint_variant_camera(input: &[u8]) -> IResult<&[u8], PathWaypointVariantCamera> {
+    let (input, position) = parse_vec3f(input)?;
+    let (input, data) = parse_path_waypoint_data_camera(input)?;
+    Ok((input, PathWaypointVariantCamera { position, data }))
+}
 
-named_args!(parse_path_variant_camera(header: PathHeader)<PathVariantCamera>,
-    do_parse!(
-        path_data: call!(parse_path_data_camera, header.version) >>
-        waypoints: length_count!(le_u32, parse_path_waypoint_variant_camera) >>
-        (PathVariantCamera {
-            header, path_data, waypoints,
-        })
-    )
-);
+fn parse_path_variant_camera(
+    input: &[u8],
+    header: PathHeader,
+) -> IResult<&[u8], PathVariantCamera> {
+    let (input, path_data) = parse_path_data_camera(header.version)(input)?;
+    let (input, waypoints) = length_count(le_u32, parse_path_waypoint_variant_camera)(input)?;
+    Ok((
+        input,
+        PathVariantCamera {
+            header,
+            path_data,
+            waypoints,
+        },
+    ))
+}
 
-named!(
-    parse_path_waypoint_variant_spawner<PathWaypointVariantSpawner>,
-    do_parse!(
-        position: parse_vec3f
-            >> data: parse_path_waypoint_data_spawner
-            >> (PathWaypointVariantSpawner { position, data })
-    )
-);
+fn parse_path_waypoint_variant_spawner(input: &[u8]) -> IResult<&[u8], PathWaypointVariantSpawner> {
+    let (input, position) = parse_vec3f(input)?;
+    let (input, data) = parse_path_waypoint_data_spawner(input)?;
+    Ok((input, PathWaypointVariantSpawner { position, data }))
+}
 
-named_args!(parse_path_variant_spawner(header: PathHeader)<PathVariantSpawner>,
-    do_parse!(
-        path_data: parse_path_data_spawner >>
-        waypoints: length_count!(le_u32, parse_path_waypoint_variant_spawner) >>
-        (PathVariantSpawner {
-            header, path_data, waypoints,
-        })
-    )
-);
+fn parse_path_variant_spawner(
+    input: &[u8],
+    header: PathHeader,
+) -> IResult<&[u8], PathVariantSpawner> {
+    let (input, path_data) = parse_path_data_spawner(input)?;
+    let (input, waypoints) = length_count(le_u32, parse_path_waypoint_variant_spawner)(input)?;
+    Ok((
+        input,
+        PathVariantSpawner {
+            header,
+            path_data,
+            waypoints,
+        },
+    ))
+}
 
-named!(
-    parse_path_waypoint_variant_showcase<PathWaypointVariantShowcase>,
-    do_parse!(
-        position: parse_vec3f
-            >> data: parse_path_waypoint_data_showcase
-            >> (PathWaypointVariantShowcase { position, data })
-    )
-);
+fn parse_path_waypoint_variant_showcase(
+    input: &[u8],
+) -> IResult<&[u8], PathWaypointVariantShowcase> {
+    let (input, position) = parse_vec3f(input)?;
+    let (input, data) = parse_path_waypoint_data_showcase(input)?;
+    Ok((input, PathWaypointVariantShowcase { position, data }))
+}
 
-named_args!(parse_path_variant_showcase(header: PathHeader)<PathVariantShowcase>,
-    do_parse!(
-        path_data: parse_path_data_showcase >>
-        waypoints: length_count!(le_u32, parse_path_waypoint_variant_showcase) >>
-        (PathVariantShowcase {
-            header, path_data, waypoints,
-        })
-    )
-);
+fn parse_path_variant_showcase(
+    input: &[u8],
+    header: PathHeader,
+) -> IResult<&[u8], PathVariantShowcase> {
+    let (input, path_data) = parse_path_data_showcase(input)?;
+    let (input, waypoints) = length_count(le_u32, parse_path_waypoint_variant_showcase)(input)?;
+    Ok((
+        input,
+        PathVariantShowcase {
+            header,
+            path_data,
+            waypoints,
+        },
+    ))
+}
 
-named!(
-    parse_path_waypoint_variant_race<PathWaypointVariantRace>,
-    do_parse!(
-        position: parse_vec3f
-            >> data: parse_path_waypoint_data_race
-            >> (PathWaypointVariantRace { position, data })
-    )
-);
+fn parse_path_waypoint_variant_race(input: &[u8]) -> IResult<&[u8], PathWaypointVariantRace> {
+    let (input, position) = parse_vec3f(input)?;
+    let (input, data) = parse_path_waypoint_data_race(input)?;
+    Ok((input, PathWaypointVariantRace { position, data }))
+}
 
-named_args!(parse_path_variant_race(header: PathHeader)<PathVariantRace>,
-    do_parse!(
-        path_data: parse_path_data_race >>
-        waypoints: length_count!(le_u32, parse_path_waypoint_variant_race) >>
-        (PathVariantRace {
-            header, path_data, waypoints,
-        })
-    )
-);
+fn parse_path_variant_race(input: &[u8], header: PathHeader) -> IResult<&[u8], PathVariantRace> {
+    let (input, path_data) = parse_path_data_race(input)?;
+    let (input, waypoints) = length_count(le_u32, parse_path_waypoint_variant_race)(input)?;
+    Ok((
+        input,
+        PathVariantRace {
+            header,
+            path_data,
+            waypoints,
+        },
+    ))
+}
 
-named!(
-    parse_path_waypoint_variant_rail<PathWaypointVariantRail>,
-    do_parse!(
-        position: parse_vec3f
-            >> rotation: parse_quat_wxyz
-            >> config: parse_waypoint_config
-            >> (PathWaypointVariantRail {
-                position,
-                data: PathWaypointDataRail {
-                    rotation,
-                    speed: None,
-                    config
-                }
-            })
-    )
-);
+fn parse_path_waypoint_variant_rail(input: &[u8]) -> IResult<&[u8], PathWaypointVariantRail> {
+    let (input, position) = parse_vec3f(input)?;
+    let (input, rotation) = parse_quat_wxyz(input)?;
+    let (input, config) = parse_waypoint_config(input)?;
+    Ok((
+        input,
+        PathWaypointVariantRail {
+            position,
+            data: PathWaypointDataRail {
+                rotation,
+                speed: None,
+                config,
+            },
+        },
+    ))
+}
 
-named!(
-    parse_path_waypoint_variant_rail_17<PathWaypointVariantRail>,
-    do_parse!(
-        position: parse_vec3f
-            >> rotation: parse_quat_wxyz
-            >> speed: le_f32
-            >> config: parse_waypoint_config
-            >> (PathWaypointVariantRail {
-                position,
-                data: PathWaypointDataRail {
-                    rotation,
-                    speed: Some(speed),
-                    config
-                }
-            })
-    )
-);
+fn parse_path_waypoint_variant_rail_17(input: &[u8]) -> IResult<&[u8], PathWaypointVariantRail> {
+    let (input, position) = parse_vec3f(input)?;
+    let (input, rotation) = parse_quat_wxyz(input)?;
+    let (input, speed) = le_f32(input)?;
+    let (input, config) = parse_waypoint_config(input)?;
+    Ok((
+        input,
+        PathWaypointVariantRail {
+            position,
+            data: PathWaypointDataRail {
+                rotation,
+                speed: Some(speed),
+                config,
+            },
+        },
+    ))
+}
 
-fn parse_path_variant_rail(i: &[u8], header: PathHeader) -> IResult<&[u8], PathVariantRail> {
+fn parse_path_variant_rail(input: &[u8], header: PathHeader) -> IResult<&[u8], PathVariantRail> {
     let version = header.version;
-    do_parse!(
-        i,
-        path_data: parse_path_data_rail
-            >> waypoints:
-                switch!(value!(version.min(17)),
-                    true => length_count!(le_u32, parse_path_waypoint_variant_rail_17) |
-                    false => length_count!(le_u32, parse_path_waypoint_variant_rail)
-                )
-            >> (PathVariantRail {
-                header,
-                path_data,
-                waypoints,
-            })
-    )
+    let waypoint_parser = if version.min(17) {
+        parse_path_waypoint_variant_rail_17
+    } else {
+        parse_path_waypoint_variant_rail
+    };
+    let (input, path_data) = parse_path_data_rail(input)?;
+    let (input, waypoints) = length_count(le_u32, waypoint_parser)(input)?;
+    Ok((
+        input,
+        PathVariantRail {
+            header,
+            path_data,
+            waypoints,
+        },
+    ))
 }
 
 fn parse_path_data(inp: &[u8], path_type: PathType, header: PathHeader) -> IResult<&[u8], Path> {
@@ -412,22 +504,24 @@ fn parse_path_data(inp: &[u8], path_type: PathType, header: PathHeader) -> IResu
     }
 }
 
-named!(pub parse_path<Path>,
-    do_parse!(
-        version: parse_path_version >>
-        path_name: parse_u8_wstring >>
-        path_type: parse_path_type >>
-        value_1: le_u32 >>
-        path_composition: parse_path_composition >>
-        header: value!(PathHeader{version, path_name, value_1, path_composition}) >>
-        path: call!(parse_path_data, path_type, header) >>
-        (path)
-    )
-);
+pub fn parse_path(input: &[u8]) -> IResult<&[u8], Path> {
+    let (input, version) = parse_path_version(input)?;
+    let (input, path_name) = parse_u8_wstring(input)?;
+    let (input, path_type) = parse_path_type(input)?;
+    let (input, value_1) = le_u32(input)?;
+    let (input, path_composition) = parse_path_composition(input)?;
+    let header = PathHeader {
+        version,
+        path_name,
+        value_1,
+        path_composition,
+    };
+    parse_path_data(input, path_type, header)
+}
 
-named!(pub parse_waypoint_config_entry<(String, String)>,
-    pair!(parse_u8_wstring, parse_u8_wstring)
-);
+pub fn parse_waypoint_config_entry(input: &[u8]) -> IResult<&[u8], (String, String)> {
+    tuple((parse_u8_wstring, parse_u8_wstring))(input)
+}
 
 fn extend_config_map(
     mut map: HashMap<String, String>,
@@ -437,18 +531,19 @@ fn extend_config_map(
     map
 }
 
-named!(pub parse_waypoint_config<WaypointConfig>,
-    do_parse!(
-        count: map_res!(le_u32, usize::try_from) >>
-        map: fold_many_m_n!(count, count, parse_waypoint_config_entry, HashMap::new(), extend_config_map) >>
-        (map)
-    )
-);
+pub fn parse_waypoint_config(input: &[u8]) -> IResult<&[u8], WaypointConfig> {
+    let (input, count) = map_res(le_u32, usize::try_from)(input)?;
+    fold_many_m_n(
+        count,
+        count,
+        parse_waypoint_config_entry,
+        HashMap::new,
+        extend_config_map,
+    )(input)
+}
 
-named!(pub parse_zone_paths<ZonePaths>,
-    do_parse!(
-        version: parse_zone_paths_version >>
-        paths: length_count!(le_u32, parse_path) >>
-        (ZonePaths{version,paths})
-    )
-);
+pub fn parse_zone_paths(input: &[u8]) -> IResult<&[u8], ZonePaths> {
+    let (input, version) = parse_zone_paths_version(input)?;
+    let (input, paths) = length_count(le_u32, parse_path)(input)?;
+    Ok((input, ZonePaths { version, paths }))
+}

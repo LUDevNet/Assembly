@@ -1,64 +1,72 @@
 //! # Parsing functions
 
-use super::file::*;
-use assembly_core::nom::{
-    do_parse, length_count, named, number::complete::le_u32, tag, take, IResult,
-};
 use std::convert::TryInto;
 
-named!(pub parse_pk_magic<&[u8]>,
-    tag!("ndpk")
-);
+use crate::{common::CRCTreeNode, md5::MD5Sum};
 
-named!(pub parse_pk_header<PKHeader>,
-    do_parse!(
-        file_list_base_addr: le_u32 >>
-        value_1: le_u32 >>
-        (PKHeader{file_list_base_addr, value_1})
-    )
-);
+use super::file::*;
+use assembly_core::nom::{
+    bytes::complete::{tag, take},
+    combinator::{map, map_res},
+    multi::length_count,
+    number::complete::{le_i32, le_u32},
+    sequence::tuple,
+    IResult,
+};
 
-fn ascii_from_bytes(b: [u8; 32]) -> String {
-    String::from_utf8_lossy(&b).to_string()
+pub fn parse_pk_magic(input: &[u8]) -> IResult<&[u8], ()> {
+    let (rest, _) = tag("ndpk")(input)?;
+    Ok((rest, ()))
 }
 
-fn parse_hash(i: &[u8]) -> IResult<&[u8], String> {
-    let (i, byte_slice) = take!(i, 32)?;
-    // This cannot fail
-    let bytes: [u8; 32] = byte_slice.try_into().unwrap();
-    let hash = ascii_from_bytes(bytes);
-    Ok((i, hash))
+pub fn parse_pk_header(input: &[u8]) -> IResult<&[u8], PKHeader> {
+    map(tuple((le_u32, le_u32)), |(a, b)| PKHeader {
+        file_list_base_addr: a,
+        value_1: b,
+    })(input)
 }
 
-fn parse_compressed(i: &[u8]) -> IResult<&[u8], [u8; 4]> {
-    let (i, byte_slice) = take!(i, 4)?;
+fn parse_hash(i: &[u8]) -> IResult<&[u8], MD5Sum> {
+    map_res(take(32usize), MD5Sum::from_hex_bytes)(i)
+}
+
+fn parse_compressed(i: &[u8]) -> IResult<&[u8], u32> {
+    let (i, byte_slice) = take(4usize)(i)?;
     // This cannot fail
     let bytes: [u8; 4] = byte_slice.try_into().unwrap();
-    Ok((i, bytes))
+    Ok((i, u32::from_le_bytes(bytes)))
 }
 
-named!(pub parse_pk_entry<PKEntry>,
-    do_parse!(
-        crc: le_u32 >>
-        left: le_u32 >>
-        right: le_u32 >>
-        orig_file_size: le_u32 >>
-        orig_file_hash: parse_hash >>
-        take!(4) >>
-        compr_file_size: le_u32 >>
-        compr_file_hash: parse_hash >>
-        take!(4) >>
-        file_data_addr: le_u32 >>
-        is_compressed: parse_compressed >>
-        (PKEntry{
-            crc, left, right,
-            orig_file_size, orig_file_hash,
-            compr_file_size, compr_file_hash,
-            file_data_addr, is_compressed,
-        })
-    )
-);
+pub fn parse_pk_entry(input: &[u8]) -> IResult<&[u8], PKEntry> {
+    let (input, crc) = le_u32(input)?;
+    let (input, left) = le_i32(input)?;
+    let (input, right) = le_i32(input)?;
+    let (input, orig_file_size) = le_u32(input)?;
+    let (input, orig_file_hash) = parse_hash(input)?;
+    let (input, _ofh_padding) = take(4usize)(input)?;
+    let (input, compr_file_size) = le_u32(input)?;
+    let (input, compr_file_hash) = parse_hash(input)?;
+    let (input, _cfh_padding) = take(4usize)(input)?;
+    let (input, file_data_addr) = le_u32(input)?;
+    let (input, is_compressed) = parse_compressed(input)?;
+    Ok((
+        input,
+        CRCTreeNode {
+            crc,
+            left,
+            right,
+            data: PKEntryData {
+                orig_file_size,
+                orig_file_hash,
+                compr_file_size,
+                compr_file_hash,
+                file_data_addr,
+                is_compressed,
+            },
+        },
+    ))
+}
 
-named!(pub parse_pk_entry_list<Vec<PKEntry>>,
-    length_count!(le_u32, parse_pk_entry)
-);
+pub fn parse_pk_entry_list(input: &[u8]) -> IResult<&[u8], Vec<PKEntry>> {
+    length_count(le_u32, parse_pk_entry)(input)
+}

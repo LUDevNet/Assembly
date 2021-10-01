@@ -19,6 +19,10 @@ impl PathVersion {
     pub fn min(self, val: u32) -> bool {
         self.0 >= val
     }
+
+    pub fn id(&self) -> u32 {
+        self.0
+    }
 }
 
 /// Type of this path
@@ -55,11 +59,16 @@ pub struct PathDataMovement {}
 /// General data for a moving platform path
 #[derive(Debug)]
 #[cfg_attr(feature = "serde-derives", derive(Serialize))]
-pub struct PathDataMovingPlatform {
-    /// Unknown field
-    pub something: Option<u8>,
-    /// Travel sound?
-    pub platform_travel_sound: Option<String>,
+pub enum PathDataMovingPlatform {
+    PreV13,
+    V13ToV17 {
+        /// Travel sound?
+        platform_travel_sound: String,
+    },
+    PostV18 {
+        /// Unknown field
+        something: u8,
+    },
 }
 
 /// Time units for rental time
