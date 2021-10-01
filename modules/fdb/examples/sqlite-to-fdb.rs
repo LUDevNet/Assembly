@@ -47,7 +47,7 @@ fn main() -> eyre::Result<()> {
         let unique_key_count = conn.query_row::<u32, _, _>(
             &format!(
                 "select count(distinct [{}]) as unique_count from {}",
-                template_table.column_at(0).unwrap().name(),
+                template_table.column_at(0).ok_or_else(|| eyre!(format!("FDB template contains no columns for table {}", template_table.name())))?.name(),
                 template_table.name()
             ),
             rusqlite::NO_PARAMS,
