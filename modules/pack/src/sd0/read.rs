@@ -1,4 +1,4 @@
-//! # This module contains [std::io::Read] adapters for sd0 reading and writing
+//! # [std::io::Read] adapters for `*.sd0` reading
 use flate2::{read::ZlibDecoder, Decompress, FlushDecompress};
 use thiserror::Error;
 
@@ -91,6 +91,23 @@ impl<T> DecoderKind<T> {
 }
 
 /// # A `sd0` streamed file
+///
+/// ```
+/// use assembly_pack::sd0::read::SegmentedDecoder;
+/// use std::io::{Cursor, Read};
+///
+/// const BYTES: [u8; 30] = [
+///     0x73, 0x64, 0x30, 0x01, 0xff, 0x15, 0x00, 0x00,
+///     0x00, 0x78, 0xda, 0xf3, 0x48, 0xcd, 0xc9, 0xc9,
+///     0x57, 0x08, 0xcf, 0x2f, 0xca, 0x49, 0x51, 0xe4,
+///     0x02, 0x00, 0x20, 0x91, 0x04, 0x48,
+/// ];
+///
+/// let mut decoder = SegmentedDecoder::new(Cursor::new(&BYTES)).unwrap();
+/// let mut output = String::new();
+/// decoder.read_to_string(&mut output).unwrap();
+/// assert_eq!(output, "Hello World!\n");
+/// ```
 pub struct SegmentedDecoder<T> {
     inner: DecoderKind<T>,
 }

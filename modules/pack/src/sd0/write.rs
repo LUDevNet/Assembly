@@ -1,4 +1,4 @@
-//! # This module contains [std::io::Write] adapters for sd0 reading and writing
+//! # [std::io::Write] adapters for `*.sd0` writing
 
 use std::{
     fmt,
