@@ -1,16 +1,18 @@
 //! # Parsers for parts of the file
-use crate::common::{parser::parse_crc_node, CRCTreeNode};
+use crate::common::{
+    parser::{parse_crc_node, parse_u32_string},
+    CRCTreeNode,
+};
 
 use super::core::*;
 
-use assembly_core::nom::{
+use nom::{
     bytes::complete::tag,
     combinator::map_res,
     multi::{fold_many_m_n, length_count},
     number::complete::le_u32,
     IResult,
 };
-use assembly_core::parser::parse_u32_string;
 
 use std::collections::BTreeMap;
 use std::convert::TryFrom;

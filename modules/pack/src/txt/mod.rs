@@ -5,16 +5,11 @@ mod lines;
 use std::collections::BTreeMap;
 use std::{fmt, io};
 
-use assembly_core::nom;
+use futures_util::{TryStream, TryStreamExt};
 use nom_supreme::final_parser::Location;
 use thiserror::Error;
 
-//use crate::common::futures::Lines;
-use futures_util::{TryStream, TryStreamExt};
-
-use self::lines::version_line;
-
-use self::lines::file_line;
+use self::lines::{file_line, version_line};
 pub use self::lines::{FileLine, VersionLine};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

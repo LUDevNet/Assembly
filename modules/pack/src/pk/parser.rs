@@ -5,7 +5,7 @@ use std::convert::TryInto;
 use crate::{common::parser::parse_crc_node, md5::MD5Sum};
 
 use super::file::*;
-use assembly_core::nom::{
+use nom::{
     bytes::complete::{tag, take},
     combinator::{map, map_res},
     multi::length_count,
@@ -21,7 +21,7 @@ pub fn parse_pk_magic(input: &[u8]) -> IResult<&[u8], ()> {
 }
 
 /// Parse the trailer
-pub fn parse_pk_header(input: &[u8]) -> IResult<&[u8], PKTrailer> {
+pub fn parse_pk_trailer(input: &[u8]) -> IResult<&[u8], PKTrailer> {
     map(tuple((le_u32, le_u32)), |(a, b)| PKTrailer {
         file_list_base_addr: a,
         value_1: b,

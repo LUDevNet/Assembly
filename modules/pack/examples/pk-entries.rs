@@ -1,15 +1,14 @@
 use argh::FromArgs;
-use assembly_core::reader::FileResult;
 use assembly_pack::pk::file::PKEntry;
 use assembly_pack::pk::reader::{PackEntryAccessor, PackFile};
 use std::fs::File;
-use std::io::{BufRead, BufReader, Seek};
+use std::io::{self, BufRead, BufReader, Seek};
 use std::path::PathBuf;
 
 fn print_entries<T>(
     args: &Args,
     entries: &mut PackEntryAccessor<'_, '_, T>,
-    entry: Option<FileResult<PKEntry>>,
+    entry: Option<io::Result<PKEntry>>,
 ) where
     T: BufRead + Seek,
 {

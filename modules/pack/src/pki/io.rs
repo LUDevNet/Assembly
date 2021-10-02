@@ -4,12 +4,13 @@ use std::convert::TryFrom;
 use std::fmt;
 use std::fs::File;
 use std::io::{BufReader, Error as IoError, Read};
+use std::path::Path;
 use thiserror::Error;
 
 use super::core::PackIndexFile;
 use super::parser;
 
-use assembly_core::nom::{self, error::ErrorKind, Err as NomErr};
+use nom::{self, error::ErrorKind, Err as NomErr};
 
 #[derive(Debug, Error)]
 /// Failed to load a PKI file
@@ -52,12 +53,20 @@ impl From<NomErr<nom::error::Error<&[u8]>>> for LoadError {
     }
 }
 
+impl TryFrom<&Path> for PackIndexFile {
+    type Error = LoadError;
+
+    fn try_from(filename: &Path) -> LoadResult<PackIndexFile> {
+        let file = File::open(filename).map_err(LoadError::FileOpen)?;
+        PackIndexFile::try_from(file)
+    }
+}
+
 impl TryFrom<&str> for PackIndexFile {
     type Error = LoadError;
 
     fn try_from(filename: &str) -> LoadResult<PackIndexFile> {
-        let file = File::open(filename).map_err(LoadError::FileOpen)?;
-        PackIndexFile::try_from(file)
+        PackIndexFile::try_from(Path::new(filename))
     }
 }
 

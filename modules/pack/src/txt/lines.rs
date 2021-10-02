@@ -3,7 +3,6 @@ use std::{
     str::FromStr,
 };
 
-use assembly_core::nom;
 use nom::{
     bytes::complete::{take_while, take_while_m_n},
     character::complete::char,

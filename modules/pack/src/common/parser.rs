@@ -1,7 +1,11 @@
 //! # Nom parsers
 
-use assembly_core::nom::{
-    error::ParseError,
+use std::string::FromUtf8Error;
+
+use nom::{
+    combinator::{map, map_res},
+    error::{FromExternalError, ParseError},
+    multi::length_data,
     number::complete::{le_i32, le_u32},
     IResult, Parser,
 };
@@ -31,4 +35,12 @@ where
             },
         ))
     }
+}
+
+/// Parse a string after an u32 length specifier
+pub fn parse_u32_string<'a, E>(input: &'a [u8]) -> IResult<&'a [u8], String, E>
+where
+    E: ParseError<&'a [u8]> + FromExternalError<&'a [u8], FromUtf8Error>,
+{
+    map_res(map(length_data(le_u32), Vec::from), String::from_utf8)(input)
 }

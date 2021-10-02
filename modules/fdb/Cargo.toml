@@ -18,7 +18,7 @@ bytemuck = "1.4"
 bytemuck_derive = "1"
 
 [dependencies.assembly-core]
-version = "0.2.1"
+version = "0.3.0"
 path = "../core"
 
 [dependencies.rusqlite]
