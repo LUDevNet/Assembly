@@ -51,6 +51,8 @@ pub fn decode<B: AsRef<[u8]>>(data: B, output: &mut Vec<u8>) -> read::Result<()>
 
 #[cfg(test)]
 mod tests {
+    use crate::sd0::encode;
+
     use super::{decode, Compression};
     use std::io;
 
@@ -70,9 +72,18 @@ mod tests {
     }
 
     #[test]
-    fn test_empty() {
+    fn test_decode_empty() {
         let empty = super::MAGIC;
         let mut output = Vec::new();
         decode(empty, &mut output).unwrap();
+        assert_eq!(output.len(), 0);
+    }
+
+    #[test]
+    fn test_encode_empty() {
+        let empty = &[];
+        let mut output = Vec::new();
+        encode(empty, &mut output, Compression::best()).unwrap();
+        assert_eq!(output, super::MAGIC);
     }
 }
