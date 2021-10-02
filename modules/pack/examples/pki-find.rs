@@ -1,57 +1,43 @@
+use argh::FromArgs;
 use assembly_pack::pki::core::PackIndexFile;
-use assembly_pack::pki::io::LoadError;
+use color_eyre::eyre::eyre;
 use std::convert::TryFrom;
-use std::env;
-use std::num::TryFromIntError;
+use std::fs::File;
+use std::path::PathBuf;
 
-#[derive(Debug)]
-#[allow(clippy::upper_case_acronyms)]
-enum MainError {
-    Load(LoadError),
-    TFI(TryFromIntError),
+#[derive(FromArgs)]
+/// print the entry for a specific CRC in the PKI
+struct Args {
+    /// the PKI file
+    #[argh(positional)]
+    pki_file: PathBuf,
+
+    /// the (decimal) CRC value
+    #[argh(positional)]
+    crc: u32,
 }
 
-impl From<LoadError> for MainError {
-    fn from(e: LoadError) -> Self {
-        MainError::Load(e)
-    }
-}
+fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
+    let args: Args = argh::from_env();
 
-impl From<TryFromIntError> for MainError {
-    fn from(e: TryFromIntError) -> Self {
-        MainError::TFI(e)
-    }
-}
+    let filename = args.pki_file;
+    let crc = args.crc;
 
-fn print_usage(program: &str) {
-    println!("Usage: {} PATH CRC", program);
-}
+    let file = File::open(&filename)?;
+    let pki = PackIndexFile::try_from(file)?;
 
-fn main() -> Result<(), MainError> {
-    let args: Vec<String> = env::args().collect();
-    let program = args[0].clone();
-
-    if args.len() <= 2 {
-        print_usage(&program);
-        Ok(())
-    } else {
-        let filename = args[1].clone();
-        let crc = str::parse::<u32>(&args[2]).unwrap();
-
-        let pki = PackIndexFile::try_from(filename.as_ref())?;
-
-        match pki.files.get(&crc) {
-            Some(file_ref) => {
-                let pack_index = usize::try_from(file_ref.pack_file)?;
-                match pki.archives.get(pack_index) {
-                    Some(pack_ref) => {
-                        println!("{:08x} {}", file_ref.category, pack_ref.path);
-                    }
-                    None => println!("Pack ID {} out of bounds", pack_index),
+    match pki.files.get(&crc) {
+        Some(file_ref) => {
+            let pack_index = usize::try_from(file_ref.pack_file)?;
+            match pki.archives.get(pack_index) {
+                Some(pack_ref) => {
+                    println!("{:08x} {}", file_ref.category, pack_ref.path);
+                    Ok(())
                 }
+                None => Err(eyre!("Pack ID {} out of bounds", pack_index)),
             }
-            None => println!("File not found"),
         }
-        Ok(())
+        None => Err(eyre!("File not found")),
     }
 }
