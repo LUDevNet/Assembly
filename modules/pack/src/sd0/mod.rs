@@ -51,7 +51,7 @@ pub fn decode<B: AsRef<[u8]>>(data: B, output: &mut Vec<u8>) -> read::Result<()>
 
 #[cfg(test)]
 mod tests {
-    use super::Compression;
+    use super::{decode, Compression};
     use std::io;
 
     fn roundtrip(data: &[u8]) -> io::Result<Vec<u8>> {
@@ -67,5 +67,12 @@ mod tests {
         let short = lipsum::lipsum(100);
         let test = roundtrip(short.as_bytes()).unwrap();
         assert_eq!(&test, short.as_bytes());
+    }
+
+    #[test]
+    fn test_empty() {
+        let empty = super::MAGIC;
+        let mut output = Vec::new();
+        decode(empty, &mut output).unwrap();
     }
 }

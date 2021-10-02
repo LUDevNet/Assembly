@@ -13,8 +13,6 @@ pub enum Error {
     MagicMismatch([u8; 5]),
     /// An IO Error occured
     IO(#[from] io::Error),
-    /// Initial Chunk Missing
-    InitialChunkMissing,
     /// called io::Read::read again after an error
     DecoderInvalid,
 }
@@ -27,7 +25,6 @@ impl Display for Error {
         match self {
             Error::MagicMismatch(arr) => write!(f, "Magic is wrong: {:?}", arr),
             Error::IO(_) => write!(f, "I/O error"),
-            Error::InitialChunkMissing => write!(f, "Found only a header"),
             Error::DecoderInvalid => write!(f, "Called io::Read again after an error"),
         }
     }
@@ -64,8 +61,8 @@ impl From<Error> for io::Error {
 
 enum DecoderKind<T> {
     Ok(ZlibDecoder<Take<T>>),
+    Initial(T),
     Invalid,
-    EoF(T),
 }
 
 impl<T> DecoderKind<T> {
@@ -77,7 +74,7 @@ impl<T> DecoderKind<T> {
         match self {
             Self::Ok(z) => Ok(z.get_mut().get_mut()),
             Self::Invalid => Err(Error::DecoderInvalid),
-            Self::EoF(t) => Ok(t),
+            Self::Initial(t) => Ok(t),
         }
     }
 
@@ -85,7 +82,7 @@ impl<T> DecoderKind<T> {
         match self {
             Self::Ok(z) => Ok(z.into_inner().into_inner()),
             Self::Invalid => Err(Error::DecoderInvalid),
-            Self::EoF(t) => Ok(t),
+            Self::Initial(t) => Ok(t),
         }
     }
 }
@@ -131,10 +128,8 @@ impl<T: Read> SegmentedDecoder<T> {
     /// Create a new reader
     pub fn new(mut inner: T) -> Result<Self> {
         check_magic(&mut inner)?;
-        let limit = read_size(&mut inner)?.ok_or(Error::InitialChunkMissing)?;
-        let z = ZlibDecoder::new(inner.take(limit.into()));
         Ok(Self {
-            inner: DecoderKind::Ok(z),
+            inner: DecoderKind::Initial(inner),
         })
     }
 }
@@ -147,17 +142,17 @@ impl<T: Read> Read for SegmentedDecoder<T> {
         if let DecoderKind::Ok(z) = &mut self.inner {
             let len = z.read(buf)?;
             if len == 0 {
-                let mut inner = self.inner.take().try_into_inner()?;
-                if let Some(limit) = read_size(&mut inner)? {
-                    let take = inner.take(limit.into());
-                    self.inner = DecoderKind::Ok(ZlibDecoder::new(take));
-                    self.read(buf)
-                } else {
-                    self.inner = DecoderKind::EoF(inner);
-                    Ok(len)
-                }
+                let inner = self.inner.take().try_into_inner()?;
+                self.inner = DecoderKind::Initial(inner);
+            }
+            Ok(len)
+        } else if let DecoderKind::Initial(mut inner) = self.inner.take() {
+            if let Some(limit) = read_size(&mut inner)? {
+                let take = inner.take(limit.into());
+                self.inner = DecoderKind::Ok(ZlibDecoder::new(take));
+                self.read(buf)
             } else {
-                Ok(len)
+                Ok(0) // EOF
             }
         } else {
             Err(Error::DecoderInvalid.into())
@@ -228,7 +223,7 @@ impl<T: Read> SegmentedDecoderRaw<T> {
                 data: Decompress::new(true),
             })
         } else {
-            Err(Error::InitialChunkMissing)
+            todo!()
         }
     }
 }
