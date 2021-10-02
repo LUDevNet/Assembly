@@ -4,6 +4,7 @@ use std::{fmt, io::Write, str::FromStr};
 
 use serde::{ser::SerializeTuple, Deserialize, Serialize};
 
+pub mod io;
 pub mod padded;
 
 /// # MD5 hashsum of a file

@@ -71,3 +71,11 @@ $ pki-find -f primary.pki
 # List all PK archives
 $ pki-find -p primary.pki
 ```
+
+### `md5-sum`
+
+Calculate the md5sum of a file
+
+```shell
+md5-sum file
+```
