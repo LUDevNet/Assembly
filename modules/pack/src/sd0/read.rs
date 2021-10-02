@@ -1,12 +1,10 @@
-//! # This module contains Read adapters for sd0 reading and writing
-use assembly_core::borrow::Oom;
-use flate2::bufread::ZlibDecoder;
+//! # This module contains [std::io::Read] adapters for sd0 reading and writing
+use flate2::{read::ZlibDecoder, Decompress, FlushDecompress};
 use thiserror::Error;
 
-use std::convert::{From, TryFrom};
+use std::convert::From;
 use std::fmt::{self, Display, Formatter};
-use std::io::{self, BufReader, ErrorKind, Read};
-use std::num::TryFromIntError;
+use std::io::{self, BufRead, BufReader, ErrorKind, Read, Take};
 
 /// # Error type for segmented streams
 #[derive(Debug, Error)]
@@ -14,9 +12,11 @@ pub enum Error {
     /// The magic bytes are wrong
     MagicMismatch([u8; 5]),
     /// An IO Error occured
-    Read(#[source] io::Error),
-    /// Integer parse failed
-    TryFromInt(#[from] TryFromIntError),
+    IO(#[from] io::Error),
+    /// Initial Chunk Missing
+    InitialChunkMissing,
+    /// called io::Read::read again after an error
+    DecoderInvalid,
 }
 
 /// Result with segmented error
@@ -26,207 +26,217 @@ impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             Error::MagicMismatch(arr) => write!(f, "Magic is wrong: {:?}", arr),
-            Error::Read(_) => write!(f, "I/O error"),
-            Error::TryFromInt(_) => write!(f, "Failed to parse integer"),
+            Error::IO(_) => write!(f, "I/O error"),
+            Error::InitialChunkMissing => write!(f, "Found only a header"),
+            Error::DecoderInvalid => write!(f, "Called io::Read again after an error"),
         }
     }
 }
 
-/// # `Read`-Stream wrapper for sd0
-///
-/// This structure wraps an inner stream, which it treats as an sd0 stream.
-/// Initially, the stream does not contain anything, when you call `next_chunk`
-/// on an empty stream, the struct can be read again.
-pub struct ChunkDecoder<'a, T> {
-    inner: Oom<'a, T>,
-    chunk_remain: usize,
+fn check_magic<T: Read>(inner: &mut T) -> Result<()> {
+    let mut magic: [u8; 5] = [0; 5];
+    inner.read_exact(&mut magic)?;
+    if &magic == super::MAGIC {
+        Ok(())
+    } else {
+        Err(Error::MagicMismatch(magic))
+    }
 }
 
-/// `impl BufRead` for a single chunk
-pub type ChunkStreamReader<'a, T> = BufReader<ChunkDecoder<'a, T>>;
-/// ZLib Decoder for a single chunk
-pub type DecoderType<'a, T> = ZlibDecoder<ChunkStreamReader<'a, T>>;
-type DecoderOptionType<'a, T> = Option<DecoderType<'a, T>>;
-type DecoderOptionResult<'a, T> = Result<DecoderOptionType<'a, T>>;
+fn read_size<T: Read>(inner: &mut T) -> io::Result<Option<u32>> {
+    let mut chunk_size_bytes = [0u8; 4];
+    let len = inner.read(&mut chunk_size_bytes)?;
+    if len < 4 {
+        if len == 0 {
+            return Ok(None);
+        }
+        inner.read_exact(&mut chunk_size_bytes[len..])?;
+    }
+    let len = u32::from_le_bytes(chunk_size_bytes);
+    Ok(Some(len))
+}
 
-impl<'a, T> ChunkDecoder<'a, T>
-where
-    T: Read,
-{
-    /// Create a new empty chunk stream reader from some reference or object
-    pub fn new<'b, I: Into<Oom<'b, T>>>(some: I) -> ChunkDecoder<'b, T> {
-        ChunkDecoder {
-            inner: some.into(),
-            chunk_remain: 0,
+impl From<Error> for io::Error {
+    fn from(e: Error) -> Self {
+        io::Error::new(ErrorKind::Other, e)
+    }
+}
+
+enum DecoderKind<T> {
+    Ok(ZlibDecoder<Take<T>>),
+    Invalid,
+    EoF(T),
+}
+
+impl<T> DecoderKind<T> {
+    fn take(&mut self) -> Self {
+        std::mem::replace(self, DecoderKind::Invalid)
+    }
+
+    fn try_get_mut(&mut self) -> Result<&mut T> {
+        match self {
+            Self::Ok(z) => Ok(z.get_mut().get_mut()),
+            Self::Invalid => Err(Error::DecoderInvalid),
+            Self::EoF(t) => Ok(t),
         }
     }
 
-    /// Create a new empty chunk stream reader from some reference or object,
-    /// initialized to the first chunk
-    pub fn init<'b, I: Into<Oom<'b, T>>>(some: I) -> DecoderOptionResult<'b, T> {
-        ChunkDecoder::new(some).next_chunk()
-    }
-
-    /// Load the next chunk
-    pub fn next_chunk(mut self) -> DecoderOptionResult<'a, T> {
-        let mut chunk_size_bytes: [u8; 4] = [0; 4];
-        match self.inner.as_mut().read_exact(&mut chunk_size_bytes) {
-            Ok(()) => {
-                let size = u32::from_le_bytes(chunk_size_bytes);
-                //println!("CHNK: {}", size);
-                self.chunk_remain = usize::try_from(size)?;
-                let buf_read = BufReader::new(self);
-                Ok(Some(ZlibDecoder::new(buf_read)))
-            }
-            Err(_) => Ok(None),
+    fn try_into_inner(self) -> Result<T> {
+        match self {
+            Self::Ok(z) => Ok(z.into_inner().into_inner()),
+            Self::Invalid => Err(Error::DecoderInvalid),
+            Self::EoF(t) => Ok(t),
         }
-    }
-}
-
-#[derive(Debug)]
-struct FailedToRead {
-    inner: io::Error,
-    kind: FailedToReadKind,
-}
-
-impl fmt::Display for FailedToRead {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "Failed to read SDO chunk ({:?})", self.kind)
-    }
-}
-
-impl std::error::Error for FailedToRead {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(&self.inner)
-    }
-}
-
-#[derive(Debug)]
-enum FailedToReadKind {
-    Root,
-    FileRead,
-}
-
-fn map_io_result(inner: io::Error) -> FailedToRead {
-    FailedToRead {
-        inner,
-        kind: FailedToReadKind::Root,
-    }
-}
-
-fn map_file_read_result(inner: io::Error) -> FailedToRead {
-    FailedToRead {
-        inner,
-        kind: FailedToReadKind::FileRead,
-    }
-}
-
-impl From<FailedToRead> for io::Error {
-    fn from(error: FailedToRead) -> Self {
-        io::Error::new(ErrorKind::Other, error)
-    }
-}
-
-impl<'a, T> Read for ChunkDecoder<'a, T>
-where
-    T: Read,
-{
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let buf_len = buf.len();
-        //println!("BUF: {}", buf_len);
-        //println!("REM: {}", self.chunk_remain);
-        let len = if self.chunk_remain == 0 {
-            Ok(0)
-        } else if buf_len > self.chunk_remain {
-            let max = self.chunk_remain;
-            //println!("MAX: {}", max);
-            let len = self.inner.as_mut().read(&mut buf[..max])?;
-            self.chunk_remain -= len;
-            Ok(len)
-        } else {
-            let len = self.inner.as_mut().read(buf)?;
-            self.chunk_remain -= len;
-            Ok(len)
-        }
-        .map_err(map_io_result)?;
-        Ok(len)
     }
 }
 
 /// # A `sd0` streamed file
-pub struct SegmentedDecoder<'a, T> {
-    /// The currently active decoder
-    decoder: Option<DecoderType<'a, T>>,
+pub struct SegmentedDecoder<T> {
+    inner: DecoderKind<T>,
 }
 
-impl<'a, T> SegmentedDecoder<'a, T>
-where
-    T: Read,
-{
-    fn check_magic(inner: &mut T) -> Result<()> {
-        let mut magic: [u8; 5] = [0; 5];
-        inner.read_exact(&mut magic).map_err(Error::Read)?;
-        if magic == [b's', b'd', b'0', 0x01, 0xff] {
-            Ok(())
-        } else {
-            Err(Error::MagicMismatch(magic))
-        }
+impl<T> SegmentedDecoder<T> {
+    /// Get the inner reader
+    ///
+    /// This panics when the value is invalid, which only happens when
+    /// a read failed.
+    pub fn into_inner(self) -> T {
+        self.inner.try_into_inner().expect("decoder invalid")
     }
 
-    /// Create a new stream from a reference to a `Read` object
-    pub fn new(inner: &'a mut T) -> Result<Self> {
-        SegmentedDecoder::check_magic(inner)?;
-        let cs = ChunkDecoder::init(inner)?;
-        Ok(SegmentedDecoder { decoder: cs })
+    /// Get a mutable reference to the inner stream
+    pub fn get_mut(&mut self) -> &mut T {
+        self.inner.try_get_mut().expect("decoder invalid")
+    }
+}
+
+impl<T: Read> SegmentedDecoder<T> {
+    /// Create a new reader
+    pub fn new(mut inner: T) -> Result<Self> {
+        check_magic(&mut inner)?;
+        let limit = read_size(&mut inner)?.ok_or(Error::InitialChunkMissing)?;
+        let z = ZlibDecoder::new(inner.take(limit.into()));
+        Ok(Self {
+            inner: DecoderKind::Ok(z),
+        })
+    }
+}
+
+impl<T: Read> Read for SegmentedDecoder<T> {
+    /// Read from the (decompressed) stream
+    ///
+    /// This may leave the
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        if let DecoderKind::Ok(z) = &mut self.inner {
+            let len = z.read(buf)?;
+            if len == 0 {
+                let mut inner = self.inner.take().try_into_inner()?;
+                if let Some(limit) = read_size(&mut inner)? {
+                    let take = inner.take(limit.into());
+                    self.inner = DecoderKind::Ok(ZlibDecoder::new(take));
+                    self.read(buf)
+                } else {
+                    self.inner = DecoderKind::EoF(inner);
+                    Ok(len)
+                }
+            } else {
+                Ok(len)
+            }
+        } else {
+            Err(Error::DecoderInvalid.into())
+        }
+    }
+}
+
+/// # A `sd0` streamed file
+struct SegmentedDecoderRaw<T> {
+    obj: BufReader<Take<T>>,
+    data: Decompress,
+}
+
+impl<T: Read> SegmentedDecoderRaw<T> {
+    fn read_zlib(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let mut d_out = 0;
+        let mut c_out = self.data.total_out();
+        let mut c_in = self.data.total_in();
+        loop {
+            let input = self.obj.fill_buf()?;
+            let mut d_in = 0;
+            let flush = if input.is_empty() {
+                FlushDecompress::Finish
+            } else {
+                FlushDecompress::None
+            };
+            let status = self
+                .data
+                .decompress(input, &mut buf[d_out as usize..], flush)?;
+            update(&mut c_out, &mut d_out, self.data.total_out());
+            update(&mut c_in, &mut d_in, self.data.total_in());
+
+            self.obj.consume(d_in as usize);
+
+            match status {
+                flate2::Status::Ok => {
+                    if d_out as usize == buf.len() {
+                        break;
+                    }
+                }
+                flate2::Status::BufError => break,
+                flate2::Status::StreamEnd => break,
+            }
+        }
+        Ok(d_out as usize)
+    }
+
+    /// Create a new stream from a `Read` object, with buffer capacity
+    #[allow(dead_code)]
+    pub fn with_capacity(capacity: usize, inner: T) -> Result<Self> {
+        Self::with_buf_reader(inner, |inner| BufReader::with_capacity(capacity, inner))
     }
 
     /// Create a new stream from a `Read` object
-    pub fn try_from(mut inner: T) -> Result<Self> {
-        SegmentedDecoder::check_magic(&mut inner)?;
-        let cs = ChunkDecoder::init(inner)?;
-        Ok(SegmentedDecoder { decoder: cs })
+    #[allow(dead_code)]
+    pub fn new(inner: T) -> Result<Self> {
+        Self::with_buf_reader(inner, BufReader::new)
     }
 
-    /// Internal function to swap out the decoder
-    fn next_or_done(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        match std::mem::replace(&mut self.decoder, None) {
-            Some(decoder) => match decoder.into_inner().into_inner().next_chunk() {
-                Ok(Some(mut decoder)) => {
-                    let next_read_len = decoder.read(buf).map_err(map_io_result)?;
-                    // Store the new decoder
-                    self.decoder = Some(decoder);
-                    // Returned `next_read_len` bytes from the next chunk
-                    Ok(next_read_len)
-                }
-                // There is no upcoming chunk
-                Ok(None) => Ok(0),
-                // Some error occured
-                Err(e) => Err(io::Error::new(ErrorKind::Other, e)),
-            },
-            // This should never ever happen, as we have recently read from the decode
-            None => panic!("The sd0 zlib decoder is gone!"),
+    fn with_buf_reader<F>(mut inner: T, make_buf_reader: F) -> Result<Self>
+    where
+        F: FnOnce(Take<T>) -> BufReader<Take<T>>,
+    {
+        check_magic(&mut inner)?;
+        if let Some(size) = read_size(&mut inner)? {
+            Ok(Self {
+                obj: make_buf_reader(inner.take(size.into())),
+                data: Decompress::new(true),
+            })
+        } else {
+            Err(Error::InitialChunkMissing)
         }
     }
 }
 
-impl<'a, T> Read for SegmentedDecoder<'a, T>
+#[inline]
+fn update(cnt: &mut u64, diff: &mut u64, new: u64) {
+    *diff += new - *cnt;
+    *cnt = new;
+}
+
+impl<T> Read for SegmentedDecoderRaw<T>
 where
     T: Read,
 {
+    #[allow(clippy::many_single_char_names)]
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        match &mut self.decoder {
-            Some(decoder) => {
-                let read_len = decoder.read(buf).map_err(map_file_read_result)?;
-                // Successfully read read_len of buf.len() bytes
-                if read_len == 0 {
-                    // The decode stream is complete, decoder.total_out() bytes were read
-                    self.next_or_done(buf)
-                } else {
-                    // We have read some bytes, though there may be more
-                    Ok(read_len)
-                }
+        let size = self.read_zlib(buf)?;
+        if size < buf.len() {
+            // Skip to the next chunk if present, otherwise just keep the last valid state
+            if let Some(limit) = read_size(self.obj.get_mut().get_mut())? {
+                self.obj.get_mut().set_limit(limit.into());
+                self.data.reset(true);
+                return self.read(&mut buf[size..]);
             }
-            None => Ok(0),
         }
+        Ok(size)
     }
 }

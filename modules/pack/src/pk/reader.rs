@@ -134,7 +134,7 @@ where
         let is_compr = (entry.is_compressed & 0xff) > 0;
         let file_stream = self.get_file_stream(entry);
         Ok(if is_compr {
-            let compr_stream = SegmentedDecoder::try_from(file_stream)?;
+            let compr_stream = SegmentedDecoder::new(file_stream)?;
             Box::new(compr_stream)
         } else {
             Box::new(file_stream)
