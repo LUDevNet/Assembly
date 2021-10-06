@@ -1,6 +1,6 @@
 [package]
 name = "assembly-xml"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2018"
 license = "MPL-2.0"
 description = "XML formats used in the game LEGO® Universe"
@@ -25,6 +25,8 @@ optional = true
 features = ["derive"]
 
 [dev-dependencies]
+argh = "0.1.4"
 structopt = "0.3"
 color-eyre = "0.5"
 serde_json = "1.0.61"
+serde_path_to_error = "0.1"
