@@ -21,7 +21,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --all
+          args: --all --no-deps
 
       - name: Add static files 🏷️
         run: cp .gh-pages/* target/doc
