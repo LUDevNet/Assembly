@@ -152,9 +152,9 @@ impl Latin1Str {
         WINDOWS_1252.decode(self.as_bytes()).0
     }
 
-    /// Hash the string using `SuperFashHash` / [`hsieh_hash`]
+    /// Hash the string using [`sfhash`]
     pub fn hash(&self) -> u32 {
-        hsieh_hash::digest(self.as_bytes())
+        sfhash::digest(self.as_bytes())
     }
 }
 

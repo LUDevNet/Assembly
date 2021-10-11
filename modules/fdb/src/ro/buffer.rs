@@ -7,11 +7,9 @@ use crate::{
         FDBTableHeader,
     },
 };
-use assembly_core::{
-    buffer::{CastError, MinimallyAligned},
-    displaydoc::Display,
-};
+use assembly_core::buffer::{CastError, MinimallyAligned};
 use bytemuck::from_bytes;
+use displaydoc::Display;
 use std::{
     cmp::Ordering,
     convert::TryInto,

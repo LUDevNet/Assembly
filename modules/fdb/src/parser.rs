@@ -1,7 +1,7 @@
 //! # Parse structures from a byte buffer
 
 use super::file::*;
-use assembly_core::nom::{
+use nom::{
     bytes::complete::take, combinator::map, number::complete::le_u32, sequence::tuple, IResult,
 };
 use std::convert::TryInto;

@@ -15,7 +15,7 @@ use crate::{
         FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
     },
 };
-use assembly_core::displaydoc::Display;
+use displaydoc::Display;
 use std::{
     borrow::Cow, convert::TryFrom, error::Error, fmt, ops::Deref, result::Result as StdResult,
 };

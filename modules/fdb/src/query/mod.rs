@@ -5,8 +5,7 @@ use super::{
     common::{Context, Value, ValueType},
     core::Field,
 };
-use assembly_core::displaydoc::Display;
-use hsieh_hash::digest;
+use displaydoc::Display;
 use thiserror::Error;
 
 /// A struct that can act as a PK filter
@@ -46,7 +45,7 @@ pub enum PKFilterError {
 
 /// Create a text PK filter
 pub fn text_pk_filter(key: String) -> Result<PrimaryKeyFilter, PKFilterError> {
-    let hash_value = digest(key.as_bytes());
+    let hash_value = sfhash::digest(key.as_bytes());
     let value = Field::Text(key);
     Ok(PrimaryKeyFilter { hash_value, value })
 }

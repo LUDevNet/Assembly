@@ -2,6 +2,7 @@
 name = "assembly-fdb"
 version = "0.1.0"
 edition = "2018"
+license = "MIT or Apache-2.0"
 
 [features]
 default = ["sqlite", "serde-derives"]
@@ -9,13 +10,15 @@ sqlite = ["rusqlite"]
 serde-derives = ["serde"]
 
 [dependencies]
-hsieh-hash = "0.1"
-thiserror = "1.0"
-memchr = "2.3"
-encoding_rs = "0.8"
-derive-new = "0.5"
 bytemuck = "1.4"
 bytemuck_derive = "1"
+derive-new = "0.5"
+displaydoc = "0.2"
+encoding_rs = "0.8"
+memchr = "2.3"
+nom = "7"
+sfhash = "0.1"
+thiserror = "1.0"
 
 [dependencies.assembly-core]
 version = "0.3.0"

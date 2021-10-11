@@ -1,5 +1,5 @@
 //! # Extension for constructing Rustic values
-use assembly_core::displaydoc::Display;
+use displaydoc::Display;
 use thiserror::Error;
 
 use super::{DatabaseBufReader, DatabaseReader};

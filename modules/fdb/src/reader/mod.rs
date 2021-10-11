@@ -15,11 +15,9 @@ use super::{
     parser::{ParseFDB, ParseLE},
 };
 
-use assembly_core::{
-    nom::{Finish, IResult},
-    reader::{FileError, FileResult},
-};
+use assembly_core::reader::{FileError, FileResult};
 use encoding_rs::WINDOWS_1252;
+use nom::{Finish, IResult};
 
 /// Implementation of [`DatabaseReader::get_row_header_addr_iterator`]
 #[allow(clippy::upper_case_acronyms)]

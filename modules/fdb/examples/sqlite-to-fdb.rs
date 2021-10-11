@@ -106,6 +106,7 @@ fn main() -> eyre::Result<()> {
             let mut fields: Vec<Field> = Vec::with_capacity(column_count);
 
             // Iterate over fields
+            #[allow(clippy::needless_range_loop)]
             for index in 0..column_count {
                 fields.push(match sqlite_row.get_raw(index) {
                     ValueRef::Null => Field::Nothing,
@@ -141,7 +142,7 @@ fn main() -> eyre::Result<()> {
             let pk = match &fields[0] {
                 Field::Integer(i) => *i as usize,
                 Field::BigInt(i) => *i as usize,
-                Field::Text(t) => (hsieh_hash::digest(t.as_bytes())) as usize,
+                Field::Text(t) => (sfhash::digest(t.as_bytes())) as usize,
                 _ => return Err(eyre!("Cannot use {:?} as primary key", &fields[0])),
             };
 
