@@ -13,6 +13,7 @@ pub struct Array<Addr, Len> {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+/// The header at the start of the file
 pub struct Header<Addr, Len> {
     /// The list of tables in the database
     ///
@@ -22,6 +23,7 @@ pub struct Header<Addr, Len> {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+/// One entry in the tables list
 pub struct Table<Addr> {
     /// The offset of this table definition header.
     pub def_header: Addr,
@@ -31,6 +33,7 @@ pub struct Table<Addr> {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+/// The definition of a table
 pub struct TableDef<Addr, Len> {
     /// The number of columns in this table.
     pub column_count: Len,
@@ -42,6 +45,7 @@ pub struct TableDef<Addr, Len> {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+/// One entry in a columns list
 pub struct Column<Addr, Ty> {
     /// The numeric identifier of the data type.
     pub data_type: Ty,
@@ -51,6 +55,7 @@ pub struct Column<Addr, Ty> {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+/// The content of a table
 pub struct TableData<Addr, Len> {
     /// The buckets.
     pub buckets: Array<Addr, Len>,
@@ -58,6 +63,7 @@ pub struct TableData<Addr, Len> {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+/// One entry of the bucket list
 pub struct BucketHeader<Addr> {
     /// Offset of the first element of the linked list or 0xffffffff.
     pub head: Addr,
@@ -65,6 +71,7 @@ pub struct BucketHeader<Addr> {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+/// One element of the linked list of rows
 pub struct RowHeaderCons<Addr> {
     /// The offset of the row header.
     pub first: Addr,
@@ -74,6 +81,7 @@ pub struct RowHeaderCons<Addr> {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+/// The data for a single row
 pub struct RowHeader<Addr, Len> {
     /// The fields in this row
     pub fields: Array<Addr, Len>,
@@ -81,6 +89,7 @@ pub struct RowHeader<Addr, Len> {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+/// One entry in the fields list
 pub struct FieldData<Ty, Val> {
     /// The data type.
     pub data_type: Ty,

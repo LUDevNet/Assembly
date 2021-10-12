@@ -1,4 +1,8 @@
-use crate::{error::ModuloMismatch, generic, FDBFieldValue};
+//! # Implementations for the [`zerovec`] crate
+//!
+//! [`zerovec`]: https://docs.rs/zerovec
+
+use crate::{error::ModuloMismatch, generic, Offset};
 use zerovec::ule::{AsULE, EqULE, PlainOldULE, ULE};
 
 macro_rules! as_ule {
@@ -19,7 +23,7 @@ macro_rules! as_ule {
     };
 }
 
-impl AsULE for FDBFieldValue {
+impl AsULE for super::FieldValue {
     type ULE = FieldValueULE;
 
     fn as_unaligned(&self) -> Self::ULE {
@@ -41,42 +45,31 @@ as_ule!(crate::aligned::RowHeaderCons = RowHeaderConsULE);
 as_ule!(crate::aligned::RowHeader = RowHeaderULE);
 as_ule!(crate::aligned::FieldData = FieldDataULE);
 
-macro_rules! ule_alias(
-    ($ty:ty => $name:ident $ule:ident) => {
-        #[cfg(feature = "pod")]
-        use bytemuck_derive::{Pod, Zeroable};
+impl AsULE for Offset {
+    type ULE = OffsetULE;
 
-        #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-        #[cfg_attr(feature = "pod", derive(Pod, Zeroable))]
-        #[repr(C)]
-        pub struct $name(pub $ty);
-
-        impl AsULE for $name {
-            type ULE = $ule;
-
-            fn as_unaligned(&self) -> Self::ULE {
-                self.0.as_unaligned().into()
-            }
-
-            fn from_unaligned(unaligned: &Self::ULE) -> Self {
-                Self(<$ty>::from_unaligned(unaligned.into()))
-            }
-        }
+    fn as_unaligned(&self) -> Self::ULE {
+        self.0.as_unaligned().into()
     }
-);
 
-ule_alias!(u32 => Offset OffsetULE);
+    fn from_unaligned(unaligned: &Self::ULE) -> Self {
+        let p: &PlainOldULE<4> = unaligned.into();
+        Self(u32::from_unaligned(p))
+    }
+}
 
 impl Offset {
+    /// Get the value as an usize
     pub fn usize(self) -> usize {
         self.0 as usize
     }
 }
 
 macro_rules! ule_alias(
-    ($name:ident<$size:literal>) => {
+    ($($doc:literal)? $name:ident<$size:literal>) => {
         #[repr(C)]
         #[derive(Copy, Clone, Debug)]
+        $(#[doc = $doc])?
         pub struct $name(pub(super) [u8; $size]);
 
         impl From<PlainOldULE<$size>> for $name {
@@ -93,8 +86,8 @@ macro_rules! ule_alias(
     };
 );
 
-ule_alias!(OffsetULE<4>);
-ule_alias!(ULE32<4>);
+ule_alias!("OffsetULE" OffsetULE<4>);
+ule_alias!("ULE32" ULE32<4>);
 
 impl From<u32> for OffsetULE {
     fn from(v: u32) -> Self {
@@ -155,14 +148,23 @@ ule_impl!(
     RowHeaderConsULE FieldDataULE FieldValueULE
 );
 
+/// The header at the beginning of the file
 pub type HeaderULE = generic::Header<OffsetULE, ULE32>;
+/// One entry in the table array
 pub type TableHeaderULE = generic::Table<OffsetULE>;
+/// The definition of a table
 pub type TableDefHeaderULE = generic::TableDef<OffsetULE, ULE32>;
+/// One entry in the column array
 pub type ColumnHeaderULE = generic::Column<OffsetULE, ULE32>;
+/// The content of a table
 pub type TableDataHeaderULE = generic::TableData<OffsetULE, ULE32>;
+/// One entry in the buckets array
 pub type BucketHeaderULE = generic::BucketHeader<OffsetULE>;
+/// One entry in the linked-list of rows
 pub type RowHeaderConsULE = generic::RowHeaderCons<OffsetULE>;
+/// The data for a single row
 pub type RowHeaderULE = generic::RowHeader<OffsetULE, ULE32>;
+/// One entry in the list of fields
 pub type FieldDataULE = generic::FieldData<ULE32, FieldValueULE>;
 
 /// An FDB field value usable for unaligned reads

@@ -1,3 +1,5 @@
+//! ## Error types
+
 use core::fmt;
 
 #[derive(Debug)]

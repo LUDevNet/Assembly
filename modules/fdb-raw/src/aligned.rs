@@ -1,13 +1,24 @@
+//! # "Normal" aligned versions of the FDB structures
+
 use crate::generic;
 
+/// The header at the start of the file
 pub type Header = generic::Header<u32, u32>;
+/// The entry in the table array
 pub type TableHeader = generic::Table<u32>;
+/// The definition of the data
 pub type TableDefHeader = generic::TableDef<u32, u32>;
+/// The data of a column
 pub type ColumnHeader = generic::Column<u32, u32>;
+/// The content of a table
 pub type TableDataHeader = generic::TableData<u32, u32>;
+/// The entry in the bucket list
 pub type BucketHeader = generic::BucketHeader<u32>;
+/// One element in the linked-list of rows
 pub type RowHeaderCons = generic::RowHeaderCons<u32>;
+/// The data for a row
 pub type RowHeader = generic::RowHeader<u32, u32>;
+/// One entry in the list of fields
 pub type FieldData = generic::FieldData<u32, [u8; 4]>;
 
 impl Header {

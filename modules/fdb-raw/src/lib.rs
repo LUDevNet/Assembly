@@ -1,4 +1,4 @@
-#![allow(clippy::upper_case_acronyms)]
+#![warn(missing_docs)]
 //! The structures, as they are serialized
 //!
 //! This module contains the low-level structs that make up the FDB file. These
@@ -11,11 +11,11 @@
 //! covers the whole 32 bits.
 
 pub mod aligned;
+#[cfg(feature = "bcast")]
+pub mod bcast;
 pub mod error;
 pub mod generic;
 mod map;
-#[cfg(feature = "bcast")]
-pub mod unaligned;
 #[cfg(feature = "zero")]
 pub mod zero;
 
@@ -25,7 +25,14 @@ use bytemuck_derive::{Pod, Zeroable};
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "pod", derive(Pod, Zeroable))]
 #[repr(C)]
-pub struct FDBFieldValue(pub [u8; 4]);
+/// The value of a single field
+pub struct FieldValue(pub [u8; 4]);
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "pod", derive(Pod, Zeroable))]
+#[repr(C)]
+/// A 32-bit offset into a file
+pub struct Offset(pub u32);
 
 #[cfg(test)]
 mod tests {
