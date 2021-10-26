@@ -22,13 +22,18 @@ use super::{
     },
 };
 use c::{
-    FDBBucketHeaderC, FDBColumnHeaderC, FDBFieldDataC, FDBHeaderC, FDBRowHeaderC,
-    FDBRowHeaderListEntryC, FDBTableDataHeaderC, FDBTableDefHeaderC, FDBTableHeaderC,
+    FDBBucketHeaderC, FDBColumnHeaderC, FDBFieldDataC, FDBHeaderC, FDBRowHeaderListEntryC,
+    FDBTableDataHeaderC, FDBTableDefHeaderC, FDBTableHeaderC,
 };
 use std::{
     borrow::Cow,
     convert::{Infallible, TryFrom},
 };
+
+pub mod iter;
+
+use iter::{BucketIter, TableRowIter};
+pub use iter::{FieldIter, RowHeaderIter, TableIter}; // < FIXME> remove with next major update
 
 fn get_latin1_str(buf: &[u8], offset: u32) -> &Latin1Str {
     let (_, haystack) = buf.split_at(offset as usize);
@@ -135,10 +140,8 @@ impl<'a> Tables<'a> {
     }
 
     /// Get an interator over all tables
-    pub fn iter(&self) -> impl Iterator<Item = Result<Table<'a>, CastError>> {
-        TableIter {
-            inner: self.inner.map_val(<[FDBTableHeaderC]>::iter),
-        }
+    pub fn iter(&self) -> TableIter<'a> {
+        TableIter::new(&self.inner)
     }
 
     /// Get a table by its name
@@ -177,15 +180,15 @@ fn map_column_header<'a>(
     }
 }
 
-fn get_row_header_list_entry(buf: &[u8], addr: u32) -> Option<&FDBRowHeaderListEntryC> {
+fn get_row_header_list_entry(buf: Buffer, addr: u32) -> Option<&FDBRowHeaderListEntryC> {
     if addr == u32::MAX {
         None
     } else {
-        Some(buffer::cast::<FDBRowHeaderListEntryC>(buf, addr))
+        Some(buf.cast::<FDBRowHeaderListEntryC>(addr))
     }
 }
 
-#[allow(clippy::needless_lifetimes)] // <- clippy gets this wrong
+/*#[allow(clippy::needless_lifetimes)] // <- clippy gets this wrong
 fn map_bucket_header<'a>(buf: &'a [u8]) -> impl Fn(&'a FDBBucketHeaderC) -> Bucket<'a> {
     move |header: &FDBBucketHeaderC| {
         let bucket_header = header.extract();
@@ -193,25 +196,7 @@ fn map_bucket_header<'a>(buf: &'a [u8]) -> impl Fn(&'a FDBBucketHeaderC) -> Buck
         let first = get_row_header_list_entry(buf, addr);
         Bucket { buf, first }
     }
-}
-
-#[derive(Clone)]
-/// An iterator over tables
-pub struct TableIter<'a> {
-    inner: Handle<'a, std::slice::Iter<'a, FDBTableHeaderC>>,
-}
-
-impl<'a> Iterator for TableIter<'a> {
-    type Item = Result<Table<'a>, CastError>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner
-            .raw_mut()
-            .next()
-            .map(|raw| self.inner.wrap(raw))
-            .map(map_table_header)
-    }
-}
+}*/
 
 #[derive(Copy, Clone)]
 struct InnerTable<'a> {
@@ -282,10 +267,15 @@ impl<'a> Table<'a> {
     /// **Note**: This does some computation, call only once per bucket if possible
     pub fn bucket_at(&self, index: usize) -> Option<Bucket<'a>> {
         self.inner
-            .raw
-            .buckets
+            .map_val(|raw| raw.buckets)
             .get(index)
-            .map(map_bucket_header(self.inner.mem.as_bytes()))
+            .map(|e| {
+                e.map_extract()
+                    .map_val(|r| r.row_header_list_head_addr)
+                    .map(get_row_header_list_entry)
+                    .transpose()
+            })
+            .map(Bucket::new)
     }
 
     /// Get the bucket for the given hash
@@ -299,12 +289,8 @@ impl<'a> Table<'a> {
     /// Get the bucket iterator
     ///
     /// **Note**: This does some computation, call only once if possible
-    pub fn bucket_iter(&self) -> impl Iterator<Item = Bucket<'a>> {
-        self.inner
-            .raw
-            .buckets
-            .iter()
-            .map(map_bucket_header(self.inner.mem.as_bytes()))
+    pub fn bucket_iter(&self) -> BucketIter<'a> {
+        BucketIter::new(&self.inner.map_val(|r| r.buckets))
     }
 
     /// Get the amount of buckets
@@ -313,8 +299,8 @@ impl<'a> Table<'a> {
     }
 
     /// Get an iterator over all rows
-    pub fn row_iter(&self) -> impl Iterator<Item = Row<'a>> {
-        self.bucket_iter().map(|b| b.row_iter()).flatten()
+    pub fn row_iter(&self) -> TableRowIter<'a> {
+        TableRowIter::new(self.bucket_iter())
     }
 }
 
@@ -342,127 +328,81 @@ impl<'a> Column<'a> {
 }
 
 /// Reference to a single bucket
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Bucket<'a> {
-    buf: &'a [u8],
-    first: Option<&'a FDBRowHeaderListEntryC>,
+    inner: Option<RefHandle<'a, FDBRowHeaderListEntryC>>,
 }
 
 impl<'a> Bucket<'a> {
     /// Returns an iterator over all rows in this bucket
     pub fn row_iter(&self) -> RowHeaderIter<'a> {
-        RowHeaderIter {
-            buf: self.buf,
-            next: self.first,
-        }
+        RowHeaderIter::new(self.inner)
     }
 
     /// Check whether the bucket is empty
     pub fn is_empty(&self) -> bool {
-        self.first.is_none()
+        self.inner.is_none()
     }
-}
 
-/// Struct that implements [`Bucket::row_iter`].
-pub struct RowHeaderIter<'a> {
-    buf: &'a [u8],
-    next: Option<&'a FDBRowHeaderListEntryC>,
-}
-
-impl<'a> Iterator for RowHeaderIter<'a> {
-    type Item = Row<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(next) = self.next {
-            let entry = next.extract();
-            self.next = get_row_header_list_entry(self.buf, entry.row_header_list_next_addr);
-            let row_header =
-                buffer::cast::<FDBRowHeaderC>(self.buf, entry.row_header_addr).extract();
-
-            let fields = buffer::cast_slice::<FDBFieldDataC>(
-                self.buf,
-                row_header.fields.base_offset,
-                row_header.fields.count,
-            );
-
-            Some(Row {
-                buf: self.buf,
-                fields,
-            })
-        } else {
-            None
-        }
+    fn new(inner: Option<RefHandle<'a, FDBRowHeaderListEntryC>>) -> Self {
+        Self { inner }
     }
 }
 
 #[derive(Copy, Clone)]
 /// Reference to a single row
 pub struct Row<'a> {
-    buf: &'a [u8],
-    fields: &'a [FDBFieldDataC],
+    inner: RefHandle<'a, [FDBFieldDataC]>,
 }
 
-fn get_field<'a>(data: &'a FDBFieldDataC, buf: &'a [u8]) -> Field<'a> {
+fn get_field<'a>(buf: Buffer<'a>, data: &'a FDBFieldDataC) -> Field<'a> {
     let data_type = ValueType::try_from(data.data_type.extract()).unwrap();
     let bytes = data.value.0;
-    get_field_raw(data_type, bytes, buf)
+    get_field_raw(buf, data_type, bytes)
 }
 
-fn get_field_raw(data_type: ValueType, bytes: [u8; 4], buf: &[u8]) -> Field {
+fn get_field_raw(buf: Buffer, data_type: ValueType, bytes: [u8; 4]) -> Field {
     match data_type {
         ValueType::Nothing => Field::Nothing,
         ValueType::Integer => Field::Integer(i32::from_le_bytes(bytes)),
         ValueType::Float => Field::Float(f32::from_le_bytes(bytes)),
         ValueType::Text => {
             let addr = u32::from_le_bytes(bytes);
-            let text = get_latin1_str(buf, addr);
+            let text = get_latin1_str(buf.as_bytes(), addr);
             Field::Text(text)
         }
         ValueType::Boolean => Field::Boolean(bytes != [0, 0, 0, 0]),
         ValueType::BigInt => {
             let addr = u32::from_le_bytes(bytes);
-            let val = buffer::cast::<LEI64>(buf, addr).extract();
+            let val = buf.cast::<LEI64>(addr).extract();
             Field::BigInt(val)
         }
         ValueType::VarChar => {
             let addr = u32::from_le_bytes(bytes);
-            let text = get_latin1_str(buf, addr);
+            let text = get_latin1_str(buf.as_bytes(), addr);
             Field::VarChar(text)
         }
     }
 }
 
-/// An iterator over fields in a row
-pub struct FieldIter<'a> {
-    buf: &'a [u8],
-    iter: std::slice::Iter<'a, FDBFieldDataC>,
-}
-
-impl<'a> Iterator for FieldIter<'a> {
-    type Item = Field<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|data| get_field(data, self.buf))
-    }
-}
-
 impl<'a> Row<'a> {
+    fn new(inner: RefHandle<'a, [FDBFieldDataC]>) -> Self {
+        Self { inner }
+    }
+
     /// Get the field at the index
     pub fn field_at(&self, index: usize) -> Option<Field<'a>> {
-        self.fields.get(index).map(|data| get_field(data, self.buf))
+        self.inner.get(index).map(|f| f.map(get_field).into_raw())
     }
 
     /// Get the iterator over all fields
     pub fn field_iter(&self) -> FieldIter<'a> {
-        FieldIter {
-            iter: self.fields.iter(),
-            buf: self.buf,
-        }
+        FieldIter::new(self.inner)
     }
 
     /// Get the count of fields
     pub fn field_count(&self) -> usize {
-        self.fields.len()
+        self.inner.raw().len()
     }
 }
 

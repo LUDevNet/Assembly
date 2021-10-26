@@ -216,13 +216,13 @@ impl<'a> IntoIterator for &Handle<'a, FDBTableHeaderSlice<'a>> {
     }
 }
 
-impl<'a> Iterator for Handle<'a, FDBTableHeaderSlice<'a>> {
+/*impl<'a> Iterator for Handle<'a, FDBTableHeaderSlice<'a>> {
     type Item = Handle<'a, FDBTableHeader>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.raw.next().map(|raw| Handle { mem: self.mem, raw })
     }
-}
+}*/
 
 impl<'a> DoubleEndedIterator for Handle<'a, FDBTableHeaderSlice<'a>> {
     fn next_back(&mut self) -> Option<Self::Item> {
@@ -293,13 +293,13 @@ impl<'a> IntoIterator for &Handle<'a, FDBColumnHeaderSlice<'a>> {
     }
 }
 
-impl<'a> Iterator for Handle<'a, FDBColumnHeaderSlice<'a>> {
+/*impl<'a> Iterator for Handle<'a, FDBColumnHeaderSlice<'a>> {
     type Item = Handle<'a, FDBColumnHeader>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.raw.next().map(|raw| Handle { mem: self.mem, raw })
     }
-}
+}*/
 
 #[cfg(feature = "serde-derives")]
 impl<'a> serde::Serialize for Handle<'a, FDBColumnHeaderSlice<'a>> {
@@ -377,7 +377,7 @@ impl<'a> IntoIterator for &Handle<'a, FDBBucketHeaderSlice<'a>> {
     }
 }
 
-impl<'a> Iterator for Handle<'a, FDBBucketHeaderSlice<'a>> {
+/*impl<'a> Iterator for Handle<'a, FDBBucketHeaderSlice<'a>> {
     type Item = Handle<'a, FDBBucketHeader>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -387,7 +387,7 @@ impl<'a> Iterator for Handle<'a, FDBBucketHeaderSlice<'a>> {
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
         self.raw.nth(n).map(|raw| Handle { mem: self.mem, raw })
     }
-}
+}*/
 
 impl<'a> DoubleEndedIterator for Handle<'a, FDBBucketHeaderSlice<'a>> {
     fn next_back(&mut self) -> Option<Self::Item> {
@@ -490,13 +490,13 @@ impl<'a> IntoIterator for &Handle<'a, FDBFieldDataSlice<'a>> {
     }
 }
 
-impl<'a> Iterator for Handle<'a, FDBFieldDataSlice<'a>> {
+/*impl<'a> Iterator for Handle<'a, FDBFieldDataSlice<'a>> {
     type Item = Handle<'a, FDBFieldData>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.raw.next().map(|raw| Handle { mem: self.mem, raw })
     }
-}
+}*/
 
 impl<'a> DoubleEndedIterator for Handle<'a, FDBFieldDataSlice<'a>> {
     fn next_back(&mut self) -> Option<Self::Item> {

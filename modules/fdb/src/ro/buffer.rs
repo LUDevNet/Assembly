@@ -201,6 +201,16 @@ impl<'a> Buffer<'a> {
         assembly_core::buffer::try_cast_slice(self.as_bytes(), offset, len)
     }
 
+    /// Cast to T
+    pub fn cast<T: MinimallyAligned>(self, offset: u32) -> &'a T {
+        assembly_core::buffer::cast(self.as_bytes(), offset)
+    }
+
+    /// Cast to slice of T
+    pub fn cast_slice<T: MinimallyAligned>(self, offset: u32, len: u32) -> &'a [T] {
+        assembly_core::buffer::cast_slice(self.as_bytes(), offset, len)
+    }
+
     /// Get a subslice a the given offset of the given length
     pub fn get_len_at(self, start: usize, len: usize) -> Res<&'a [u8]> {
         let end = start + len;

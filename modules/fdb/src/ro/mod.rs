@@ -177,6 +177,18 @@ impl<'a, T> Handle<'a, T> {
     }
 }
 
+impl<'a, T> Iterator for Handle<'a, T>
+where
+    T: Iterator,
+{
+    type Item = Handle<'a, T::Item>;
+
+    /// Returns a copy of the contained buffer
+    fn next(&mut self) -> Option<Self::Item> {
+        self.raw.next().map(|raw| Handle { mem: self.mem, raw })
+    }
+}
+
 impl<'a, T> RefHandle<'a, [T]> {
     /// Get the reference at `index`
     pub fn get(self, index: usize) -> Option<RefHandle<'a, T>> {
@@ -193,3 +205,9 @@ impl<'a, T: Repr> RefHandle<'a, T> {
         self.wrap(self.raw.extract())
     }
 }
+
+/// A handle that contains a slice
+pub type SliceHandle<'a, T> = RefHandle<'a, [T]>;
+
+/// A handle that contains a slice iterator
+pub type SliceIterHandle<'a, T> = Handle<'a, std::slice::Iter<'a, T>>;
