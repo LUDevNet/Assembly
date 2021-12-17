@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 pub mod parser;
 
 /// Node in a CRC tree
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CRCTreeNode<D> {
     /// The [CRC][`crate::crc`] value of this file
     pub crc: u32,

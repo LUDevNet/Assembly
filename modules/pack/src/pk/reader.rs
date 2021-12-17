@@ -81,10 +81,11 @@ pub struct PackStreamReader<'b, 'a, T> {
 }
 
 trait Readable {
-    type Buf: Default + AsMut<[u8]> + AsRef<[u8]>;
+    type Buf: AsMut<[u8]> + AsRef<[u8]>;
     type Output: Sized;
     const NAME: &'static str;
 
+    fn make() -> Self::Buf;
     fn parse(input: &[u8]) -> IResult<&[u8], Self::Output>;
 }
 
@@ -96,6 +97,10 @@ macro_rules! readable_impl {
             type Buf = [u8; $size];
             type Output = $out;
             const NAME: &'static str = std::stringify!($ty);
+
+            fn make() -> Self::Buf {
+                [0; $size]
+            }
 
             fn parse(input: &[u8]) -> IResult<&[u8], Self::Output> {
                 parser::$parser(input)
@@ -109,11 +114,10 @@ macro_rules! readable_impl {
 
 readable_impl!(MagicBytes; parse_pk_magic([u8;4]) -> ());
 readable_impl!(PKTrailer; parse_pk_trailer([u8;8]));
-readable_impl!(PKEntry; parse_pk_entry([u8;8]));
+readable_impl!(PKEntry; parse_pk_entry([u8;100]));
 
 fn read_value<V: Readable, R: Read + Seek>(reader: &mut R, addr: u64) -> io::Result<V::Output> {
-    let mut bytes: V::Buf = Default::default();
-    reader.seek(SeekFrom::Start(0))?;
+    let mut bytes: V::Buf = V::make();
     reader.read_exact(bytes.as_mut())?;
     let (_, value) = V::parse(bytes.as_ref()).finish().map_err(ParseError::map(
         V::NAME,
@@ -233,6 +237,11 @@ where
     /// Get the root entrys if not empty
     pub fn get_root_entry(&mut self) -> Option<io::Result<PKEntry>> {
         self.get_entry((self.count / 2) as i32)
+    }
+
+    /// Return the number of entries
+    pub fn get_count(&self) -> u32 {
+        self.count
     }
 }
 

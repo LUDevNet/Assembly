@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{common::CRCTreeNode, md5::MD5Sum};
 
 /// The header of a pack file#
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PKTrailer {
     /// The base addr of the file list
     pub file_list_base_addr: u32,
@@ -16,7 +16,7 @@ pub struct PKTrailer {
 pub type PKEntry = CRCTreeNode<PKEntryData>;
 
 /// Payload of the [`PKEntry`]
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PKEntryData {
     /// Size of the decompressed file
     pub orig_file_size: u32,
