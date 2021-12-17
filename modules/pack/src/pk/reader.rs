@@ -201,18 +201,35 @@ where
     }
 
     /// Get some object with a read trait representing the data
-    pub fn get_file_data<'c, 'b: 'c>(
+    pub fn get_file_data<'b>(
         &'b mut self,
         entry: PKEntry,
-    ) -> std::result::Result<Box<dyn Read + 'c>, sd0::read::Error> {
+    ) -> std::result::Result<PackDataStream<'b, 'a, T>, sd0::read::Error> {
         let is_compr = (entry.is_compressed & 0xff) > 0;
         let file_stream = self.get_file_stream(entry);
         Ok(if is_compr {
             let compr_stream = SegmentedDecoder::new(file_stream)?;
-            Box::new(compr_stream)
+            PackDataStream::Compressed(compr_stream)
         } else {
-            Box::new(file_stream)
+            PackDataStream::Plain(file_stream)
         })
+    }
+}
+
+/// A stream that is either compressed or plain
+pub enum PackDataStream<'b, 'a, T> {
+    /// The stream is *not* sd0 compressed
+    Plain(PackStreamReader<'b, 'a, T>),
+    /// The stream *is* sd0 compressed
+    Compressed(SegmentedDecoder<PackStreamReader<'b, 'a, T>>),
+}
+
+impl<'b, 'a, T: Seek + BufRead> std::io::Read for PackDataStream<'b, 'a, T> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        match self {
+            Self::Plain(inner) => inner.read(buf),
+            Self::Compressed(inner) => inner.read(buf),
+        }
     }
 }
 

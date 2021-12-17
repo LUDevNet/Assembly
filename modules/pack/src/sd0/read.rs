@@ -144,8 +144,11 @@ impl<T: Read> Read for SegmentedDecoder<T> {
             if len == 0 {
                 let inner = self.inner.take().try_into_inner()?;
                 self.inner = DecoderKind::Initial(inner);
+
+                self.read(buf) // important recursive call!
+            } else {
+                Ok(len)
             }
-            Ok(len)
         } else if let DecoderKind::Initial(mut inner) = self.inner.take() {
             if let Some(limit) = read_size(&mut inner)? {
                 let take = inner.take(limit.into());
