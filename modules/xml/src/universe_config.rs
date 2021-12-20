@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct AccountInfo {
     /// Unknown
     #[serde(rename = "SendPasswordUrl")]
-    send_password_url: String,
+    pub send_password_url: String,
     /// URL to log into an account
     #[serde(rename = "SignInUrl")]
     pub sign_in_url: String,
@@ -57,7 +57,7 @@ pub struct PatcherInfo {
 pub struct CdnInfo {
     /// An ID for the Akamai CDN
     #[serde(rename = "CpCode")]
-    pub cp_code: u32,
+    pub cp_code: i32,
     /// The patcher subdirectory
     #[serde(rename = "PatcherDir")]
     pub patcher_dir: String,
@@ -98,7 +98,7 @@ pub struct Server {
     pub language: String,
     /// Log level
     #[serde(rename = "LogLevel")]
-    pub log_level: u32,
+    pub log_level: i32,
     /// URL of the metrics server
     #[serde(rename = "MetricsDataServiceUrl")]
     pub metrics_data_service_url: String,

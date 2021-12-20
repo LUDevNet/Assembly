@@ -1,6 +1,6 @@
 [package]
 name = "assembly-data"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Xiphoseer"]
 edition = "2018"
 homepage = "https://xiphoseer.de"
@@ -19,7 +19,7 @@ version = "0.1.0"
 path = "../fdb"
 
 [dependencies.assembly-xml]
-version = "0.2.0"
+version = "0.3.0"
 path = "../xml"
 
 [dev-dependencies]
