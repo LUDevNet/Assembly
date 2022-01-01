@@ -60,6 +60,16 @@ pub fn integer_pk_filter(key: String) -> Result<PrimaryKeyFilter, PKFilterError>
     })
 }
 
+/// Create a bigint PK filter
+pub fn bigint_pk_filter(key: String) -> Result<PrimaryKeyFilter, PKFilterError> {
+    let value: i64 = key.parse().map_err(PKFilterError::KeyError)?;
+    let hash_value = (u64::from_ne_bytes(value.to_ne_bytes()) % 0x1_0000_0000) as u32;
+    Ok(PrimaryKeyFilter {
+        hash_value,
+        value: Field::BigInt(value),
+    })
+}
+
 /// Create a PK filter from a string
 pub fn pk_filter<T: Into<String>>(
     key: T,
@@ -68,6 +78,7 @@ pub fn pk_filter<T: Into<String>>(
     match field_type {
         ValueType::Text => text_pk_filter(key.into()),
         ValueType::Integer => integer_pk_filter(key.into()),
+        ValueType::BigInt => bigint_pk_filter(key.into()),
         _ => Err(PKFilterError::UnsupportedType(field_type)),
     }
 }
