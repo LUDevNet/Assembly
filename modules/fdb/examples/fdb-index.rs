@@ -67,11 +67,7 @@ fn main() -> color_eyre::Result<()> {
         .row_iter()
         .filter(|row| {
             if let Some(index_field) = row.field_at(0) {
-                match index_field {
-                    Field::Integer(v) => filter.filter(&core::Field::Integer(v)),
-                    Field::Text(v) => filter.filter(&core::Field::Text(v.decode().into_owned())),
-                    _ => false,
-                }
+                filter.filter(&core::Field::from(index_field))
             } else {
                 false
             }

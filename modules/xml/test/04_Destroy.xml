@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<Behavior version="1.0">
+  <Name>04_Destroy</Name>
+  <CompoundAction>
+    <Action>
+      <Type>OnAttack</Type>
+    </Action>
+    <Action>
+      <Type>PlaySound</Type>
+      <sound>{e67d7a90-c7b9-4911-8b58-fdc2c139e765}</sound>
+    </Action>
+    <Action>
+      <Opacity>0</Opacity>
+      <Type>Smash</Type>
+      <force>4</force>
+    </Action>
+    <Action>
+      <Delay>5</Delay>
+      <Type>Wait</Type>
+    </Action>
+    <Action>
+      <Duration>0.1</Duration>
+      <Type>UnSmash</Type>
+    </Action>
+  </CompoundAction>
+</Behavior>

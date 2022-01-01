@@ -67,6 +67,10 @@ pub enum ValueType {
 
     /// `datetime`
     DateTime,
+    /// `xml`
+    Xml,
+    /// `null`
+    Null,
 }
 
 #[cfg(feature = "serialize")]
@@ -114,6 +118,8 @@ impl FromStr for ValueType {
             "image" => Ok(Self::Image),
 
             "datetime" => Ok(Self::DateTime),
+            "xml" => Ok(Self::Xml),
+            "null" => Ok(Self::Null),
 
             _ => Err(UnknownValueType(s.to_owned())),
         }

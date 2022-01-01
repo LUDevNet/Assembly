@@ -85,6 +85,8 @@ fn main() -> color_eyre::Result<()> {
                 ValueType::Text => common::ValueType::VarChar,
                 ValueType::Image => common::ValueType::VarChar,
                 ValueType::DateTime => common::ValueType::BigInt,
+                ValueType::Xml => common::ValueType::VarChar,
+                ValueType::Null => common::ValueType::Nothing,
             };
             if col_map.is_empty() {
                 // first col
