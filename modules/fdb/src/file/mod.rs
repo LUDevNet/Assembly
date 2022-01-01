@@ -233,7 +233,7 @@ impl TryFrom<FDBFieldData> for FDBFieldValue {
             ValueType::BigInt => FDBFieldValue::BigInt(IndirectValue {
                 addr: u32::from_le_bytes(value.value),
             }),
-            ValueType::VarChar => FDBFieldValue::VarChar(IndirectValue {
+            ValueType::Xml => FDBFieldValue::Xml(IndirectValue {
                 addr: u32::from_le_bytes(value.value),
             }),
         })

@@ -68,25 +68,22 @@ fn main() -> color_eyre::Result<()> {
 
         while let Some(col) = expect_column_or_end_columns(xml, buf)? {
             let data_type = match col.r#type {
-                ValueType::Bit => common::ValueType::Boolean,
-                ValueType::Float => common::ValueType::Float,
-                ValueType::Real => common::ValueType::Float,
-                ValueType::Int => common::ValueType::Integer,
-                ValueType::BigInt => common::ValueType::BigInt,
-                ValueType::SmallInt => common::ValueType::Integer,
-                ValueType::TinyInt => common::ValueType::Integer,
-                ValueType::Binary => common::ValueType::Text,
-                ValueType::VarBinary => common::ValueType::Text,
-                ValueType::Char => common::ValueType::Text,
-                ValueType::VarChar => common::ValueType::Text,
-                ValueType::NChar => common::ValueType::Text,
-                ValueType::NVarChar => common::ValueType::Text,
-                ValueType::NText => common::ValueType::VarChar,
-                ValueType::Text => common::ValueType::VarChar,
-                ValueType::Image => common::ValueType::VarChar,
-                ValueType::DateTime => common::ValueType::BigInt,
-                ValueType::Xml => common::ValueType::VarChar,
                 ValueType::Null => common::ValueType::Nothing,
+                ValueType::Bit => common::ValueType::Boolean,
+                ValueType::Float | ValueType::Real => common::ValueType::Float,
+                ValueType::Int | ValueType::SmallInt | ValueType::TinyInt => {
+                    common::ValueType::Integer
+                }
+                ValueType::BigInt | ValueType::DateTime => common::ValueType::BigInt,
+                ValueType::Binary
+                | ValueType::VarBinary
+                | ValueType::Char
+                | ValueType::VarChar
+                | ValueType::NChar
+                | ValueType::NVarChar => common::ValueType::Text,
+                ValueType::NText | ValueType::Text | ValueType::Image | ValueType::Xml => {
+                    common::ValueType::Xml
+                }
             };
             if col_map.is_empty() {
                 // first col
@@ -121,7 +118,7 @@ fn main() -> color_eyre::Result<()> {
                     common::ValueType::Text => core::Field::Text(src_value),
                     common::ValueType::Boolean => core::Field::Boolean(&src_value != "0"),
                     common::ValueType::BigInt => core::Field::BigInt(src_value.parse().unwrap()),
-                    common::ValueType::VarChar => core::Field::VarChar(src_value),
+                    common::ValueType::Xml => core::Field::Xml(src_value),
                 };
 
                 if col_index == 0 {
@@ -136,7 +133,7 @@ fn main() -> color_eyre::Result<()> {
                             let lat1 = Latin1String::encode(text);
                             pk = Some((lat1.hash() % 128) as usize);
                         }
-                        core::Field::VarChar(var_char) => {
+                        core::Field::Xml(var_char) => {
                             let lat1 = Latin1String::encode(var_char);
                             pk = Some((lat1.hash() % 128) as usize);
                         }

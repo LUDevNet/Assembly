@@ -61,7 +61,7 @@ fn main() -> color_eyre::Result<()> {
                 ValueType::Text => text_column_count += 1,
                 ValueType::Boolean => bool_column_count += 1,
                 ValueType::BigInt => bigint_column_count += 1,
-                ValueType::VarChar => xml_column_count += 1,
+                ValueType::Xml => xml_column_count += 1,
             }
         }
 
@@ -81,7 +81,7 @@ fn main() -> color_eyre::Result<()> {
                         Value::Text(_) => text_field_count += 1,
                         Value::Boolean(_) => bool_field_count += 1,
                         Value::BigInt(_) => bigint_field_count += 1,
-                        Value::VarChar(_) => xml_field_count += 1,
+                        Value::Xml(_) => xml_field_count += 1,
                     }
                 }
             }

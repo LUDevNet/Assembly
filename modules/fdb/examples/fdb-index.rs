@@ -28,7 +28,7 @@ fn field_to_cell(field: mem::Field) -> PCell {
         Field::Text(v) => PCell::new(&format!("{:?}", v)),
         Field::Boolean(v) => PCell::new(if v { "true" } else { "false" }),
         Field::BigInt(v) => PCell::new(&format!("{} (i64)", v)),
-        Field::VarChar(v) => PCell::new(&format!("{:?}", v)),
+        Field::Xml(v) => PCell::new(&format!("{:?}", v)),
     }
 }
 

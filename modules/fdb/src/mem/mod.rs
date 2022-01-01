@@ -377,10 +377,10 @@ fn get_field_raw(buf: Buffer, data_type: ValueType, bytes: [u8; 4]) -> Field {
             let val = buf.cast::<LEI64>(addr).extract();
             Field::BigInt(val)
         }
-        ValueType::VarChar => {
+        ValueType::Xml => {
             let addr = u32::from_le_bytes(bytes);
             let text = get_latin1_str(buf.as_bytes(), addr);
-            Field::VarChar(text)
+            Field::Xml(text)
         }
     }
 }
