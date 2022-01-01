@@ -8,8 +8,8 @@ use crate::{common::CRCTreeNode, md5::MD5Sum};
 pub struct PKTrailer {
     /// The base addr of the file list
     pub file_list_base_addr: u32,
-    /// ???
-    pub value_1: u32,
+    /// Number of compressed files in this archive
+    pub num_compressed: u32,
 }
 
 /// An entry for a single file
@@ -49,6 +49,6 @@ mod tests {
     fn test() {
         let h: PKTrailer = bincode::deserialize(&[1, 0, 0, 0, 2, 0, 0, 0]).unwrap();
         assert_eq!(h.file_list_base_addr, 1);
-        assert_eq!(h.value_1, 2);
+        assert_eq!(h.num_compressed, 2);
     }
 }

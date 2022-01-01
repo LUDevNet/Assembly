@@ -24,7 +24,7 @@ pub fn parse_pk_magic(input: &[u8]) -> IResult<&[u8], ()> {
 pub fn parse_pk_trailer(input: &[u8]) -> IResult<&[u8], PKTrailer> {
     map(tuple((le_u32, le_u32)), |(a, b)| PKTrailer {
         file_list_base_addr: a,
-        value_1: b,
+        num_compressed: b,
     })(input)
 }
 
@@ -91,7 +91,7 @@ mod tests {
                 EMPTY,
                 PKTrailer {
                     file_list_base_addr: 0x1020,
-                    value_1: 0,
+                    num_compressed: 0,
                 }
             ))
         )
