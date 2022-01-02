@@ -1,5 +1,6 @@
 //! # The manifest (`*.txt`) files
 
+pub mod gen;
 mod lines;
 
 use std::collections::BTreeMap;

@@ -10,6 +10,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 pub mod parser;
+pub mod writer;
 
 /// Node in a CRC tree
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
