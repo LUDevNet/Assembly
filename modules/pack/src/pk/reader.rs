@@ -1,8 +1,9 @@
 //! # Low level reader for PK files
 
-use super::file::{PKEntry, PKTrailer};
+use super::file::{PKEntry, PKEntryData, PKTrailer};
 use super::parser;
 
+use crate::common::CRCTreeVisitor;
 use crate::sd0;
 use crate::sd0::read::SegmentedDecoder;
 use nom::{Finish, IResult, Offset};
@@ -165,12 +166,12 @@ where
     }
 
     /// Get an random access wrapper for the entries
-    pub fn get_entry_accessor<'b>(&'b mut self, addr: u32) -> io::Result<PackEntryAccessor<'b, T>> {
+    pub fn get_entry_accessor(mut self, addr: u32) -> io::Result<PackEntryAccessor<T>> {
         let mut count_bytes: [u8; 4] = [0; 4];
         self.inner.seek(SeekFrom::Start(u64::from(addr)))?;
         self.inner.read_exact(&mut count_bytes)?;
         let count = u32::from_le_bytes(count_bytes);
-        Ok(PackEntryAccessor::<'b> {
+        Ok(PackEntryAccessor {
             base_addr: addr + 4,
             count,
             file: self,
@@ -240,21 +241,33 @@ impl<'b, T: Seek + BufRead> std::io::Read for PackDataStream<'b, T> {
 }
 
 /// A low level random access to the entries
-pub struct PackEntryAccessor<'b, T> {
+pub struct PackEntryAccessor<T> {
     base_addr: u32,
     count: u32,
-    file: &'b mut PackFile<T>,
+    file: PackFile<T>,
 }
 
-impl<'b, T> PackEntryAccessor<'b, T>
-where
-    T: Seek + BufRead,
-{
-    /// Get a reference to the underlying file
-    pub fn get_file_mut(&'b mut self) -> &'b mut PackFile<T> {
+impl<T> PackEntryAccessor<T> {
+    /// Return the contained [PackFile]
+    pub fn into_inner(self) -> PackFile<T> {
         self.file
     }
 
+    /// Get a mutable reference to the underlying file
+    pub fn get_mut(&mut self) -> &mut PackFile<T> {
+        &mut self.file
+    }
+
+    /// Get a reference to the underlying file
+    pub fn get_ref(&self) -> &PackFile<T> {
+        &self.file
+    }
+}
+
+impl<T> PackEntryAccessor<T>
+where
+    T: Seek + BufRead,
+{
     /// Get the specified entry if inside of count
     pub fn get_entry(&mut self, index: i32) -> io::Result<Option<PKEntry>> {
         if index >= 0 {
@@ -264,6 +277,42 @@ where
         } else {
             Ok(None)
         }
+    }
+
+    /// Implements a visitor pattern
+    ///
+    /// This [CRCTreeVisitor::visit] function is called once for every node in the tree
+    /// in tree order.
+    pub fn visit<V>(&mut self, visitor: &mut V) -> io::Result<()>
+    where
+        T: BufRead + Seek,
+        V: CRCTreeVisitor<PKEntryData>,
+    {
+        let parent = self.get_root_entry()?;
+        self.visit_recursive(visitor, parent)
+    }
+
+    /// Implements a visitor pattern
+    fn visit_recursive<V>(&mut self, visitor: &mut V, parent: Option<PKEntry>) -> io::Result<()>
+    where
+        T: BufRead + Seek,
+        V: CRCTreeVisitor<PKEntryData>,
+    {
+        let data = if let Some(entry) = parent {
+            entry
+        } else {
+            return Ok(());
+        };
+        {
+            let left = self.get_entry(data.left)?;
+            self.visit_recursive(visitor, left)?;
+        }
+        visitor.visit(data.crc, data.data);
+        {
+            let right = self.get_entry(data.right)?;
+            self.visit_recursive(visitor, right)?;
+        }
+        Ok(())
     }
 
     /// Get the root entrys if not empty

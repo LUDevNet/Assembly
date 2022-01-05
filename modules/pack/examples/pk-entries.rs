@@ -1,39 +1,33 @@
 use argh::FromArgs;
-use assembly_pack::pk::file::PKEntry;
+use assembly_pack::common::CRCTreeVisitor;
+use assembly_pack::pk::file::PKEntryData;
 use assembly_pack::pk::reader::{PackEntryAccessor, PackFile};
+use serde::ser::SerializeMap;
+use serde::Serializer;
+use serde_json::ser::Formatter;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Seek};
+use std::io::{self, BufReader, Stdout};
 use std::path::PathBuf;
 
-fn print_entries<T>(
-    args: &Args,
-    entries: &mut PackEntryAccessor<'_, T>,
-    parent: Option<PKEntry>,
-) -> io::Result<()>
+struct JsonVisitor<'a, W, F>(serde_json::ser::Compound<'a, W, F>);
+
+impl<'a, W, F> CRCTreeVisitor<PKEntryData> for JsonVisitor<'a, W, F>
 where
-    T: BufRead + Seek,
+    W: io::Write,
+    F: Formatter,
 {
-    let data = if let Some(entry) = parent {
-        entry
-    } else {
-        return Ok(());
-    };
-    {
-        let left = entries.get_entry(data.left)?;
-        print_entries(args, entries, left)?;
+    fn visit(&mut self, key: u32, value: PKEntryData) {
+        let _ = self.0.serialize_entry(&key, &value);
     }
-    if args.json {
-        let json = if args.pretty {
-            serde_json::to_string_pretty(&data)
-        } else {
-            serde_json::to_string(&data)
-        }
-        .unwrap();
-        println!("{}", json);
-    } else {
+}
+
+struct PrintVisitor;
+
+impl CRCTreeVisitor<PKEntryData> for PrintVisitor {
+    fn visit(&mut self, crc: u32, data: PKEntryData) {
         println!(
             "{:10} {:9} {:9} {} {} {:08x}",
-            data.crc,
+            crc,
             data.orig_file_size,
             data.compr_file_size,
             data.orig_file_hash,
@@ -41,11 +35,6 @@ where
             data.is_compressed,
         );
     }
-    {
-        let right = entries.get_entry(data.right)?;
-        print_entries(args, entries, right)?;
-    }
-    Ok(())
 }
 
 #[derive(FromArgs)]
@@ -67,6 +56,22 @@ struct Args {
     pretty: bool,
 }
 
+fn visit_entries_json<F>(
+    mut entries: PackEntryAccessor<&mut BufReader<File>>,
+    make_ser: impl Fn() -> serde_json::ser::Serializer<Stdout, F>,
+) -> color_eyre::Result<()>
+where
+    F: Formatter,
+{
+    let mut ser = make_ser();
+    let seq = ser.serialize_map(None)?;
+    let mut jv = JsonVisitor(seq);
+    entries.visit(&mut jv)?;
+    jv.0.end()?;
+    println!();
+    Ok(())
+}
+
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     let args: Args = argh::from_env();
@@ -82,7 +87,18 @@ fn main() -> color_eyre::Result<()> {
     //}
 
     let mut entries = pack.get_entry_accessor(header.file_list_base_addr)?;
-    let root = entries.get_root_entry()?;
-    print_entries(&args, &mut entries, root)?;
+    if args.json {
+        if args.pretty {
+            visit_entries_json(
+                entries,
+                || serde_json::Serializer::pretty(std::io::stdout()),
+            )?;
+        } else {
+            visit_entries_json(entries, || serde_json::Serializer::new(std::io::stdout()))?;
+        }
+    } else {
+        entries.visit(&mut PrintVisitor)?;
+    }
+
     Ok(())
 }

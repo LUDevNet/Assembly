@@ -28,7 +28,7 @@ fn main() -> color_eyre::Result<()> {
 
     let mut entries = pack.get_entry_accessor(header.file_list_base_addr)?;
     if let Some(entry) = entries.find_entry(args.crc)? {
-        let mut stream = entries.get_file_mut().get_file_data(entry).unwrap();
+        let mut stream = entries.get_mut().get_file_data(entry).unwrap();
         let mut stdout = std::io::stdout();
         std::io::copy(&mut stream, &mut stdout).unwrap();
     }

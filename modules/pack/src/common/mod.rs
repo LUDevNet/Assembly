@@ -58,3 +58,9 @@ impl<D> DerefMut for CRCTreeNode<D> {
 /// binary tree. This is not necessarily the same as the Rust B-Tree, but
 /// the ordering is good enough for what we need.
 pub type CRCTree<T> = BTreeMap<u32, T>;
+
+/// A trait to visit a CRC tree from a reader
+pub trait CRCTreeVisitor<T> {
+    /// Called once for every
+    fn visit(&mut self, crc: u32, data: T);
+}
