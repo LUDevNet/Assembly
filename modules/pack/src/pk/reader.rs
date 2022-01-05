@@ -7,6 +7,7 @@ use crate::sd0;
 use crate::sd0::read::SegmentedDecoder;
 use nom::{Finish, IResult, Offset};
 
+use std::cmp::Ordering;
 use std::convert::TryFrom;
 use std::error::Error;
 use std::fmt;
@@ -61,23 +62,16 @@ impl From<ParseError> for io::Error {
 }
 
 /// A low level pack file reader
-pub struct PackFile<'a, T> {
-    inner: &'a mut T,
-}
-
-/// A low level random access to the entries
-pub struct PackEntryAccessor<'b, 'a, T> {
-    base_addr: u32,
-    count: u32,
-    file: &'b mut PackFile<'a, T>,
+pub struct PackFile<T> {
+    inner: T,
 }
 
 /// A low level read for a file
-pub struct PackStreamReader<'b, 'a, T> {
+pub struct PackStreamReader<'b, T> {
     base_addr: u32,
     offset: u32,
     size: u32,
-    file: &'b mut PackFile<'a, T>,
+    file: &'b mut PackFile<T>,
 }
 
 trait Readable {
@@ -127,13 +121,28 @@ fn read_value<V: Readable, R: Read + Seek>(reader: &mut R, addr: u64) -> io::Res
     Ok(value)
 }
 
-impl<'a, T> PackFile<'a, T>
+impl<T> PackFile<T>
 where
     T: Seek + BufRead,
 {
     /// Open a file from a stream
-    pub fn open<'b: 'a>(inner: &'b mut T) -> Self {
+    pub fn open(inner: T) -> Self {
         PackFile { inner }
+    }
+
+    /// Return the inner reader
+    pub fn into_inner(self) -> T {
+        self.inner
+    }
+
+    /// Get a reference to the inner reader
+    pub fn get_ref(&self) -> &T {
+        &self.inner
+    }
+
+    /// Get a mutable reference to the inner reader
+    pub fn get_mut(&mut self) -> &T {
+        &mut self.inner
     }
 
     /// Check for the magic bytes at the beginning of the file
@@ -156,15 +165,12 @@ where
     }
 
     /// Get an random access wrapper for the entries
-    pub fn get_entry_accessor<'b>(
-        &'b mut self,
-        addr: u32,
-    ) -> io::Result<PackEntryAccessor<'b, 'a, T>> {
+    pub fn get_entry_accessor<'b>(&'b mut self, addr: u32) -> io::Result<PackEntryAccessor<'b, T>> {
         let mut count_bytes: [u8; 4] = [0; 4];
         self.inner.seek(SeekFrom::Start(u64::from(addr)))?;
         self.inner.read_exact(&mut count_bytes)?;
         let count = u32::from_le_bytes(count_bytes);
-        Ok(PackEntryAccessor::<'b, 'a> {
+        Ok(PackEntryAccessor::<'b> {
             base_addr: addr + 4,
             count,
             file: self,
@@ -183,7 +189,7 @@ where
     }
 
     /// Get a boxed reader for the file stream
-    pub fn get_file_stream<'b>(&'b mut self, entry: PKEntry) -> PackStreamReader<'b, 'a, T> {
+    pub fn get_file_stream<'b>(&'b mut self, entry: PKEntry) -> PackStreamReader<'b, T> {
         let base_addr = entry.file_data_addr;
         let size = if (entry.is_compressed & 0xff) == 0 {
             entry.orig_file_size
@@ -192,7 +198,7 @@ where
             //entry.orig_file_size
         };
         //println!("{:?}", entry);
-        PackStreamReader::<'b, 'a, T> {
+        PackStreamReader::<'b, T> {
             file: self,
             base_addr,
             offset: 0,
@@ -201,10 +207,10 @@ where
     }
 
     /// Get some object with a read trait representing the data
-    pub fn get_file_data<'b>(
-        &'b mut self,
+    pub fn get_file_data(
+        &mut self,
         entry: PKEntry,
-    ) -> std::result::Result<PackDataStream<'b, 'a, T>, sd0::read::Error> {
+    ) -> std::result::Result<PackDataStream<T>, sd0::read::Error> {
         let is_compr = (entry.is_compressed & 0xff) > 0;
         let file_stream = self.get_file_stream(entry);
         Ok(if is_compr {
@@ -217,14 +223,14 @@ where
 }
 
 /// A stream that is either compressed or plain
-pub enum PackDataStream<'b, 'a, T> {
+pub enum PackDataStream<'b, T> {
     /// The stream is *not* sd0 compressed
-    Plain(PackStreamReader<'b, 'a, T>),
+    Plain(PackStreamReader<'b, T>),
     /// The stream *is* sd0 compressed
-    Compressed(SegmentedDecoder<PackStreamReader<'b, 'a, T>>),
+    Compressed(SegmentedDecoder<PackStreamReader<'b, T>>),
 }
 
-impl<'b, 'a, T: Seek + BufRead> std::io::Read for PackDataStream<'b, 'a, T> {
+impl<'b, T: Seek + BufRead> std::io::Read for PackDataStream<'b, T> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         match self {
             Self::Plain(inner) => inner.read(buf),
@@ -233,27 +239,64 @@ impl<'b, 'a, T: Seek + BufRead> std::io::Read for PackDataStream<'b, 'a, T> {
     }
 }
 
-impl<'b, 'a, T> PackEntryAccessor<'b, 'a, T>
+/// A low level random access to the entries
+pub struct PackEntryAccessor<'b, T> {
+    base_addr: u32,
+    count: u32,
+    file: &'b mut PackFile<T>,
+}
+
+impl<'b, T> PackEntryAccessor<'b, T>
 where
     T: Seek + BufRead,
 {
     /// Get a reference to the underlying file
-    pub fn get_file_mut(&'b mut self) -> &'b mut PackFile<'a, T> {
+    pub fn get_file_mut(&'b mut self) -> &'b mut PackFile<T> {
         self.file
     }
 
     /// Get the specified entry if inside of count
-    pub fn get_entry(&mut self, index: i32) -> Option<io::Result<PKEntry>> {
+    pub fn get_entry(&mut self, index: i32) -> io::Result<Option<PKEntry>> {
         if index >= 0 {
-            Some(self.file.get_entry(self.base_addr + (index as u32) * 100))
+            Ok(Some(
+                self.file.get_entry(self.base_addr + (index as u32) * 100)?,
+            ))
         } else {
-            None
+            Ok(None)
         }
     }
 
     /// Get the root entrys if not empty
-    pub fn get_root_entry(&mut self) -> Option<io::Result<PKEntry>> {
+    pub fn get_root_entry(&mut self) -> io::Result<Option<PKEntry>> {
         self.get_entry((self.count / 2) as i32)
+    }
+
+    fn find_entry_recursive(
+        &mut self,
+        parent: Option<PKEntry>,
+        crc: u32,
+    ) -> io::Result<Option<PKEntry>> {
+        let data = match parent {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+        match data.crc.cmp(&crc) {
+            Ordering::Less => {
+                let right = self.get_entry(data.right)?;
+                self.find_entry_recursive(right, crc)
+            }
+            Ordering::Greater => {
+                let left = self.get_entry(data.left)?;
+                self.find_entry_recursive(left, crc)
+            }
+            Ordering::Equal => Ok(Some(data)),
+        }
+    }
+
+    /// Find an entry given a CRC
+    pub fn find_entry(&mut self, crc: u32) -> io::Result<Option<PKEntry>> {
+        let root = self.get_root_entry()?;
+        self.find_entry_recursive(root, crc)
     }
 
     /// Return the number of entries
@@ -269,7 +312,7 @@ where
     io::Error::new(ErrorKind::Other, e)
 }
 
-impl<'b, 'a, T> Read for PackStreamReader<'b, 'a, T>
+impl<'b, T> Read for PackStreamReader<'b, T>
 where
     T: Seek + BufRead,
 {

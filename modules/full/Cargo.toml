@@ -24,4 +24,4 @@ serde-derives = [
 assembly-core = { path = "../core", version = "0.3.0", optional = true }
 assembly-data = { path = "../data", version = "0.4.0", optional = true }
 assembly-maps = { path = "../maps", version = "0.3.0", optional = true }
-assembly-pack = { path = "../pack", version = "0.3.0", optional = true }
+assembly-pack = { path = "../pack", version = "0.4.0", optional = true }
