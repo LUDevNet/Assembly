@@ -4,6 +4,7 @@
 
 use std::{
     borrow::{Borrow, BorrowMut},
+    collections::BTreeMap,
     ops::{Deref, DerefMut},
 };
 
@@ -50,3 +51,10 @@ impl<D> DerefMut for CRCTreeNode<D> {
         &mut self.data
     }
 }
+
+/// Datastructure to hold a CRC tree.
+///
+/// Within the file, the trees are sorted by CRC value and organised in
+/// binary tree. This is not necessarily the same as the Rust B-Tree, but
+/// the ordering is good enough for what we need.
+pub type CRCTree<T> = BTreeMap<u32, T>;

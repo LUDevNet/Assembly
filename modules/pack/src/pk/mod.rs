@@ -27,7 +27,7 @@
 //! * Use `PackLoader` for an efficient representation of the data
 //! * Use `PackData` for a datastructure that you can manipulate and write back easily
 
-//pub mod core;
 pub mod file;
 pub mod parser;
 pub mod reader;
+pub mod writer;
