@@ -1,6 +1,8 @@
 //! # Common datastructures and methods
 //!
 //! This module implements core traits for this library
+#![doc(html_logo_url = "https://assembly.lu-dev.net/rust-logo-lu-256.png")]
+#![doc(html_favicon_url = "https://assembly.lu-dev.net/rust-logo-lu-256.png")]
 #![warn(missing_docs)]
 use std::time::Instant;
 

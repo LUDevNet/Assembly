@@ -1,0 +1,28 @@
+title: Assembly
+theme: jekyll-theme-minimal
+logo: https://assembly.lu-dev.net/rust-logo-lu-256.png
+
+exclude:
+  - assembly
+  - assembly_core
+  - assembly_data
+  - assembly_fdb
+  - assembly_fdb_raw
+  - assembly_maps
+  - assembly_pack
+  - assembly_sysdiagram
+  - assembly_xml
+  - src
+  - implementors
+keep_files:
+  - assembly
+  - assembly_core
+  - assembly_data
+  - assembly_fdb
+  - assembly_fdb_raw
+  - assembly_maps
+  - assembly_pack
+  - assembly_sysdiagram
+  - assembly_xml
+  - src
+  - implementors

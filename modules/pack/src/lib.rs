@@ -1,5 +1,6 @@
 //! # Datastructures for working with the game packaging
 
+#![doc(html_logo_url = "https://assembly.lu-dev.net/rust-logo-lu-256.png")]
 #![warn(missing_docs)]
 
 pub mod common;

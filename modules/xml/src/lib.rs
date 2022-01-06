@@ -2,6 +2,8 @@
 //!
 //! The game client uses XML for a lot of data storage. This module contains helpers for
 //! typed access to these files.
+#![doc(html_logo_url = "https://assembly.lu-dev.net/rust-logo-lu-256.png")]
+#![doc(html_favicon_url = "https://assembly.lu-dev.net/rust-logo-lu-256.png")]
 #![warn(missing_docs)]
 
 pub use quick_xml as quick;

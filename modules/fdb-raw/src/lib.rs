@@ -10,6 +10,9 @@
 //! [`generic::Column::data_type`] only has a limited amount of defined values but
 //! covers the whole 32 bits.
 
+#![doc(html_logo_url = "https://assembly.lu-dev.net/rust-logo-lu-256.png")]
+#![doc(html_favicon_url = "https://assembly.lu-dev.net/rust-logo-lu-256.png")]
+
 pub mod aligned;
 #[cfg(feature = "bcast")]
 pub mod bcast;
