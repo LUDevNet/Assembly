@@ -7,6 +7,7 @@ use serde::Serializer;
 use serde_json::ser::Formatter;
 use std::fs::File;
 use std::io::{self, BufReader, Stdout};
+use std::ops::ControlFlow;
 use std::path::PathBuf;
 
 struct JsonVisitor<'a, W, F>(serde_json::ser::Compound<'a, W, F>);
@@ -16,15 +17,22 @@ where
     W: io::Write,
     F: Formatter,
 {
-    fn visit(&mut self, key: u32, value: PKEntryData) {
-        let _ = self.0.serialize_entry(&key, &value);
+    type Err = serde_json::Error;
+
+    fn visit(&mut self, key: u32, value: PKEntryData) -> ControlFlow<Self::Err> {
+        match self.0.serialize_entry(&key, &value) {
+            Ok(()) => ControlFlow::Continue(()),
+            Err(e) => ControlFlow::Break(e),
+        }
     }
 }
 
 struct PrintVisitor;
 
 impl CRCTreeVisitor<PKEntryData> for PrintVisitor {
-    fn visit(&mut self, crc: u32, data: PKEntryData) {
+    type Err = ();
+
+    fn visit(&mut self, crc: u32, data: PKEntryData) -> ControlFlow<()> {
         println!(
             "{:10} {:9} {:9} {} {} {:08x}",
             crc,
@@ -34,6 +42,7 @@ impl CRCTreeVisitor<PKEntryData> for PrintVisitor {
             data.compr_file_hash,
             data.is_compressed,
         );
+        ControlFlow::Continue(())
     }
 }
 
@@ -66,7 +75,9 @@ where
     let mut ser = make_ser();
     let seq = ser.serialize_map(None)?;
     let mut jv = JsonVisitor(seq);
-    entries.visit(&mut jv)?;
+    if let ControlFlow::Break(e) = entries.visit(&mut jv)? {
+        return Err(color_eyre::Report::from(e));
+    }
     jv.0.end()?;
     println!();
     Ok(())

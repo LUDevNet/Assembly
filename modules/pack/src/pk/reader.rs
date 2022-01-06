@@ -15,6 +15,7 @@ use std::fmt;
 use std::io::{self, ErrorKind};
 use std::io::{BufRead, Read, Seek, SeekFrom};
 use std::marker::{Send, Sync};
+use std::ops::ControlFlow;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 /// Failure when parsing
@@ -283,7 +284,7 @@ where
     ///
     /// This [CRCTreeVisitor::visit] function is called once for every node in the tree
     /// in tree order.
-    pub fn visit<V>(&mut self, visitor: &mut V) -> io::Result<()>
+    pub fn visit<V>(&mut self, visitor: &mut V) -> io::Result<ControlFlow<V::Err>>
     where
         T: BufRead + Seek,
         V: CRCTreeVisitor<PKEntryData>,
@@ -293,7 +294,11 @@ where
     }
 
     /// Implements a visitor pattern
-    fn visit_recursive<V>(&mut self, visitor: &mut V, parent: Option<PKEntry>) -> io::Result<()>
+    fn visit_recursive<V>(
+        &mut self,
+        visitor: &mut V,
+        parent: Option<PKEntry>,
+    ) -> io::Result<ControlFlow<V::Err>>
     where
         T: BufRead + Seek,
         V: CRCTreeVisitor<PKEntryData>,
@@ -301,18 +306,20 @@ where
         let data = if let Some(entry) = parent {
             entry
         } else {
-            return Ok(());
+            return Ok(ControlFlow::Continue(()));
         };
-        {
-            let left = self.get_entry(data.left)?;
-            self.visit_recursive(visitor, left)?;
+        let left = self.get_entry(data.left)?;
+        if let ControlFlow::Break(e) = self.visit_recursive(visitor, left)? {
+            return Ok(ControlFlow::Break(e));
         }
-        visitor.visit(data.crc, data.data);
-        {
-            let right = self.get_entry(data.right)?;
-            self.visit_recursive(visitor, right)?;
+        if let ControlFlow::Break(e) = visitor.visit(data.crc, data.data) {
+            return Ok(ControlFlow::Break(e));
         }
-        Ok(())
+        let right = self.get_entry(data.right)?;
+        if let ControlFlow::Break(e) = self.visit_recursive(visitor, right)? {
+            return Ok(ControlFlow::Break(e));
+        }
+        Ok(ControlFlow::Continue(()))
     }
 
     /// Get the root entrys if not empty
