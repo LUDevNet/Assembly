@@ -62,8 +62,8 @@ pub type CRCTree<T> = BTreeMap<u32, T>;
 /// A trait to visit a CRC tree from a reader
 pub trait CRCTreeVisitor<T> {
     /// The type of data to return on a premature break
-    type Err;
+    type Break;
 
     /// Called once for every
-    fn visit(&mut self, crc: u32, data: T) -> ControlFlow<Self::Err>;
+    fn visit(&mut self, crc: u32, data: T) -> ControlFlow<Self::Break>;
 }

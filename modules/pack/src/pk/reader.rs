@@ -284,7 +284,7 @@ where
     ///
     /// This [CRCTreeVisitor::visit] function is called once for every node in the tree
     /// in tree order.
-    pub fn visit<V>(&mut self, visitor: &mut V) -> io::Result<ControlFlow<V::Err>>
+    pub fn visit<V>(&mut self, visitor: &mut V) -> io::Result<ControlFlow<V::Break>>
     where
         T: BufRead + Seek,
         V: CRCTreeVisitor<PKEntryData>,
@@ -298,7 +298,7 @@ where
         &mut self,
         visitor: &mut V,
         parent: Option<PKEntry>,
-    ) -> io::Result<ControlFlow<V::Err>>
+    ) -> io::Result<ControlFlow<V::Break>>
     where
         T: BufRead + Seek,
         V: CRCTreeVisitor<PKEntryData>,

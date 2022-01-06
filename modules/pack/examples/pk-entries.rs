@@ -17,9 +17,9 @@ where
     W: io::Write,
     F: Formatter,
 {
-    type Err = serde_json::Error;
+    type Break = serde_json::Error;
 
-    fn visit(&mut self, key: u32, value: PKEntryData) -> ControlFlow<Self::Err> {
+    fn visit(&mut self, key: u32, value: PKEntryData) -> ControlFlow<Self::Break> {
         match self.0.serialize_entry(&key, &value) {
             Ok(()) => ControlFlow::Continue(()),
             Err(e) => ControlFlow::Break(e),
@@ -30,7 +30,7 @@ where
 struct PrintVisitor;
 
 impl CRCTreeVisitor<PKEntryData> for PrintVisitor {
-    type Err = ();
+    type Break = ();
 
     fn visit(&mut self, crc: u32, data: PKEntryData) -> ControlFlow<()> {
         println!(
