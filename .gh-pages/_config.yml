@@ -1,6 +1,7 @@
 title: Assembly RS
 theme: jekyll-theme-minimal
-logo: https://assembly.lu-dev.net/rust-logo-lu-256.png
+logo: https://assembly.lu-dev.net/rust-logo-lu.svg
+show_downloads: true
 
 keep_files:
   - assembly
