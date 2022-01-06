@@ -1,7 +1,8 @@
 # Assembly RS
 
 *Assembly* is a set of libraries and tools that can be used to process data from the defunct
-game LEGO Universe. This library is used in tool such as [LUnpack](https://github.com)
+game LEGO Universe. This library is used in tools such as [LUnpack](https://lu-dev.net/LUnpack)
+or [ParadoxServer](https://github.com/LUDevNet/ParadoxServer).
 
 ## Modules
 
