@@ -1,5 +1,5 @@
 title: Assembly RS
-theme: jekyll-theme-minimal
+remote_theme: LUDevNet/minimal
 logo: https://assembly.lu-dev.net/rust-logo-lu.svg
 show_downloads: true
 
