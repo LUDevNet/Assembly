@@ -10,17 +10,21 @@ use std::path::PathBuf;
 #[derive(FromArgs)]
 /// print the entry for a specific CRC in the PKI
 struct Args {
-    /// the PKI file
+    /// the directory to scan for files
     #[argh(positional)]
     path: PathBuf,
 
-    /// the PKI file
+    /// the directory of the cache
     #[argh(option)]
     output: Option<PathBuf>,
 
     /// a prefix to names
     #[argh(option, default = "String::new()")]
     prefix: String,
+
+    /// name of the patcher directory
+    #[argh(option, default = "String::from(\"luclient\")")]
+    patcherdir: String,
 }
 
 struct Visitor {
@@ -49,9 +53,10 @@ impl FsVisitor for Visitor {
 
 fn main() -> color_eyre::Result<()> {
     let args: Args = argh::from_env();
-    let output = args
+    let mut output = args
         .output
         .unwrap_or_else(|| std::env::current_dir().unwrap());
+    output.push(args.patcherdir);
 
     let mut visitor = Visitor {
         conv: Converter {

@@ -4,6 +4,7 @@ pub mod gen;
 mod lines;
 
 use std::collections::BTreeMap;
+use std::io::BufRead;
 use std::{fmt, io};
 
 use futures_util::{TryStream, TryStreamExt};
@@ -52,8 +53,8 @@ impl fmt::Display for Error {
             Self::MissingHeader(h) => write!(f, "Missing '{}' header", h),
             Self::ExpectedHeader(h, line) => write!(f, "Expected '{}' header, got {:?}", h, line),
             Self::MissingVersionLine => write!(f, "Missing version line"),
-            Self::IO(_) => write!(f, "I/O error"),
-            Self::Nom(_) => write!(f, "Parser error"),
+            Self::IO(_e) => write!(f, "I/O error"),
+            Self::Nom(_e) => write!(f, "Parser error"),
         }
     }
 }
@@ -86,11 +87,81 @@ where
 }
 
 /// A manifest file in-memory
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Manifest {
     /// The parsed version line
     pub version: VersionLine,
     /// The parsed, sorted list of files
     pub files: BTreeMap<String, FileLine>,
+}
+
+fn find_version_line<B: BufRead>(buffer: &mut String, reader: &mut B) -> Result<VersionLine> {
+    buffer.clear();
+    loop {
+        let len = reader.read_line(buffer)?;
+        assert_ne!(len, 0);
+
+        if buffer.trim() == Section::Version.as_header() {
+            buffer.clear();
+            reader.read_line(buffer)?;
+            //panic!("{:?}", buffer);
+            let line = version_line(buffer.trim())?;
+            //panic!("{:?}", &line);
+            break Ok(line);
+        }
+        buffer.clear();
+    }
+}
+
+fn find_files_lines<B: BufRead>(buffer: &mut String, reader: &mut B) -> Result<()> {
+    buffer.clear();
+    loop {
+        let len = reader.read_line(buffer)?;
+        assert_ne!(len, 0);
+
+        if buffer.trim() == Section::Files.as_header() {
+            buffer.clear();
+            break Ok(());
+        }
+        buffer.clear();
+    }
+}
+
+impl Manifest {
+    /// Read a manifest from a [BufRead] implementation
+    ///
+    /// ```
+    /// use std::{io::Cursor, collections::BTreeMap};
+    /// use assembly_pack::{md5::MD5Sum, txt::{Manifest, VersionLine}};
+    ///
+    /// let hash = MD5Sum::compute("32");
+    /// let text = format!("[version]\n32,{},Name\n[files]\n", hash);
+    /// let res = Manifest::from_buf_read(&mut Cursor::new(text));
+    ///
+    /// match res {
+    ///     Err(e) => panic!("{}", e),
+    ///     Ok(m) => {
+    ///         assert_eq!(m, Manifest {
+    ///             version: VersionLine::new(32, String::from("Name")),
+    ///             files: BTreeMap::new(),
+    ///         });
+    ///     }
+    /// }
+    /// ```
+    pub fn from_buf_read<B: BufRead>(reader: &mut B) -> Result<Self> {
+        let mut buffer = String::new();
+        let mut files = BTreeMap::new();
+        let version = find_version_line(&mut buffer, reader)?;
+        find_files_lines(&mut buffer, reader)?;
+
+        while reader.read_line(&mut buffer)? > 0 {
+            let (name, data) = file_line(buffer.trim())?;
+            files.insert(name.to_string(), data);
+            buffer.clear();
+        }
+
+        Ok(Self { version, files })
+    }
 }
 
 /// Load the manifest from a stream of lines

@@ -33,7 +33,7 @@ pub(crate) fn md5(input: &str) -> IResult<&str, MD5Sum> {
 }
 
 /// The line in the `[version]` section
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VersionLine {
     /// The version of this manifest
     pub version: u32,
@@ -107,7 +107,7 @@ pub struct FileMeta {
 /// One line in the `[files]` section
 ///
 /// This doesn't include the path, which is a key
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileLine {
     /// Size of the file
     pub filesize: u32,

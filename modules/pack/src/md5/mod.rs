@@ -21,6 +21,11 @@ pub use fs::md5sum;
 pub struct MD5Sum(pub [u8; 16]);
 
 impl MD5Sum {
+    /// Compute an MD5 Sum
+    pub fn compute<B: AsRef<[u8]> + ?Sized>(data: &B) -> Self {
+        Self(md5::compute(data).0)
+    }
+
     /// Read an MD5 sum from bytes
     pub fn from_hex_bytes(bytes: &[u8]) -> Result<Self, Error> {
         if bytes.len() != 32 {
