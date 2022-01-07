@@ -206,7 +206,7 @@ pub fn parse_line(line: &str) -> Option<Command> {
         }
         "end_pack" => return Some(Command::EndPack),
         _ => {
-            eprintln!("Invalid command {} w/ arg {:?}", cmd, arg)
+            log::error!("Invalid command {} w/ arg {:?}", cmd, arg)
         }
     }
 
