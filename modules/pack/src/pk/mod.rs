@@ -16,16 +16,6 @@
 //!
 //! The file would then be added to the appropriate PK file, as specified in
 //! the PKI (Pack-Index) file.
-//!
-//! ## This module
-//! This module contains datastructures, parsers, readers and and possibly
-//! writers to (de)serialize, analyze and manipulate the pack archive files.
-//!
-//! Rough guidelines on which API to use is as follows:
-//!
-//! * Use `PackFile` to walk through the raw data
-//! * Use `PackLoader` for an efficient representation of the data
-//! * Use `PackData` for a datastructure that you can manipulate and write back easily
 
 pub mod file;
 pub mod parser;

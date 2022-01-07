@@ -11,7 +11,7 @@ use nom_supreme::final_parser::Location;
 use thiserror::Error;
 
 use self::lines::{file_line, version_line};
-pub use self::lines::{FileLine, VersionLine};
+pub use self::lines::{FileLine, FileMeta, VersionLine};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 /// A section of the manifest

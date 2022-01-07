@@ -10,6 +10,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+pub mod fs;
 pub mod parser;
 pub mod writer;
 

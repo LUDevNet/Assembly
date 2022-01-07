@@ -10,6 +10,8 @@ use thiserror::Error;
 
 pub use flate2::Compression;
 
+use super::CHUNK_LEN;
+
 /// Writes a segmented stream
 /* FIXME: pub */
 struct SegmentedEncoderRaw<W> {
@@ -22,9 +24,6 @@ struct SegmentedEncoderRaw<W> {
     buf_in: Vec<u8>,
     buf_out: Vec<u8>,
 }
-
-/// Invariant: less than -i64::MIN - 4
-const CHUNK_LEN: usize = 1024 * 256;
 
 impl<W: Write + Seek> SegmentedEncoderRaw<W> {
     /// Create a new SegmentedEncoder

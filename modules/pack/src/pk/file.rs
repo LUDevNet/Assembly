@@ -3,6 +3,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{common::CRCTreeNode, md5::MD5Sum};
 
+/// Magic bytes at the start of a PK file
+pub const MAGIC_START: [u8; 7] = [b'n', b'd', b'p', b'k', 0x01, 0xff, 0x00];
+/// Magic bytes after files in a PK file
+pub const MAGIC_SEP: [u8; 5] = [0xff, 0x00, 0x00, 0xdd, 0x00];
+
 /// The header of a pack file#
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PKTrailer {

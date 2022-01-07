@@ -1,4 +1,7 @@
-use std::{fmt::Debug, str::FromStr};
+use std::{
+    fmt::{self, Debug},
+    str::FromStr,
+};
 
 use nom::{
     bytes::complete::{take, take_while},
@@ -34,10 +37,40 @@ pub(crate) fn md5(input: &str) -> IResult<&str, MD5Sum> {
 pub struct VersionLine {
     /// The version of this manifest
     pub version: u32,
-    /// The hash of ???
+    /// The hash of `version` as a string
     pub hash: MD5Sum,
     /// The name of this manifest
+    ///
+    /// This name in this field in `trunk.txt` is appended to the version on the loading screen.
     pub name: String,
+}
+
+impl fmt::Display for VersionLine {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{},{},{}", self.version, self.hash, self.name)
+    }
+}
+
+impl VersionLine {
+    /// Create a new version line
+    pub fn new(version: u32, name: String) -> VersionLine {
+        let hash = MD5Sum(md5::compute(version.to_string()).0);
+        VersionLine {
+            version,
+            hash,
+            name,
+        }
+    }
+
+    /// Hash the version number
+    pub fn hash_version(&self) -> MD5Sum {
+        MD5Sum(md5::compute(self.version.to_string()).0)
+    }
+
+    /// Check whether the version and it's hash match
+    pub fn verify(&self) -> bool {
+        self.hash == self.hash_version()
+    }
 }
 
 fn decimal(input: &str) -> IResult<&str, u32> {
@@ -63,6 +96,14 @@ pub(crate) fn version_line(input: &str) -> Result<VersionLine, nom::error::Error
     final_parser(_version_line)(input)
 }
 
+/// Metadata for a single file
+pub struct FileMeta {
+    /// Size of the file
+    pub size: u32,
+    /// md5sum of the file
+    pub hash: MD5Sum,
+}
+
 /// One line in the `[files]` section
 ///
 /// This doesn't include the path, which is a key
@@ -80,6 +121,20 @@ pub struct FileLine {
     pub line_hash: MD5Sum,
 }
 
+impl fmt::Display for FileLine {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{},{},{},{},{}",
+            self.filesize,
+            self.hash,
+            self.compressed_filesize,
+            self.compressed_hash,
+            self.line_hash
+        )
+    }
+}
+
 impl FileLine {
     /// Get the (relative) patcher URL for this file
     pub fn to_path(&self) -> String {
@@ -88,6 +143,21 @@ impl FileLine {
         let c1 = chars.next().unwrap();
         let c2 = chars.next().unwrap();
         format!("{}/{}/{}.sd0", c1, c2, hash)
+    }
+
+    /// Create a new file line
+    pub fn new(raw: FileMeta, compressed: FileMeta) -> Self {
+        let text = format!(
+            "{},{},{},{}",
+            raw.size, raw.hash, compressed.size, compressed.hash
+        );
+        Self {
+            filesize: raw.size,
+            hash: raw.hash,
+            compressed_filesize: compressed.size,
+            compressed_hash: compressed.hash,
+            line_hash: MD5Sum(md5::compute(&text).0),
+        }
     }
 }
 

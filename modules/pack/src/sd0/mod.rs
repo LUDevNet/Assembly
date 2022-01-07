@@ -15,10 +15,16 @@
 /// The magic bytes for the sd0 format
 pub const MAGIC: &[u8; 5] = b"sd0\x01\xff";
 
+/// Invariant: less than -i64::MIN - 4
+const SEGMENT_SIZE: u32 = 0x40000;
+const CHUNK_LEN: usize = SEGMENT_SIZE as usize;
+
 use std::io::Cursor;
 
 pub use flate2::Compression;
 
+pub mod fs;
+pub mod index;
 pub mod read;
 pub mod write;
 

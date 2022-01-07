@@ -17,6 +17,7 @@ use super::MD5Sum;
 pub struct IOSum<I> {
     inner: I,
     context: Context,
+    bytes: usize,
 }
 
 impl<I> IOSum<I> {
@@ -35,6 +36,7 @@ impl<I> IOSum<I> {
         Self {
             inner,
             context: Context::new(),
+            bytes: 0,
         }
     }
 
@@ -42,12 +44,18 @@ impl<I> IOSum<I> {
     pub fn digest(&self) -> MD5Sum {
         MD5Sum(self.context.clone().compute().0)
     }
+
+    /// Get the byte count
+    pub fn byte_count(&self) -> usize {
+        self.bytes
+    }
 }
 
 impl<R: Read> Read for IOSum<R> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let len = self.inner.read(buf)?;
         self.context.consume(&buf[..len]);
+        self.bytes += len;
         Ok(len)
     }
 }
@@ -56,6 +64,7 @@ impl<I: Write> Write for IOSum<I> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let len = self.inner.write(buf)?;
         self.context.consume(&buf[..len]);
+        self.bytes += len;
         Ok(len)
     }
 

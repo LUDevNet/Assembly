@@ -5,7 +5,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::crc::calculate_crc;
+use crate::{
+    common::fs::{scan_dir, FileInfo, FsVisitor},
+    crc::calculate_crc,
+};
 
 use super::core::{FileRef, PackFileRef, PackIndexFile};
 
@@ -66,6 +69,30 @@ impl<'a> From<&'a str> for Filter<'a> {
     }
 }
 
+struct Visitor<'c, 'f> {
+    filter: Filter<'f>,
+    effect: ArgEffect,
+    crc_set: &'c mut HashSet<u32>,
+}
+
+impl<'c, 'f> FsVisitor for Visitor<'c, 'f> {
+    fn visit_file(&mut self, info: FileInfo) {
+        if self.filter.matches(info.name()) {
+            let new_path = info.path();
+            let crc = calculate_crc(new_path.as_bytes());
+            println!("dir-file {}", new_path);
+            match self.effect {
+                ArgEffect::Include => {
+                    self.crc_set.insert(crc);
+                }
+                ArgEffect::Exclude => {
+                    self.crc_set.remove(&crc);
+                }
+            }
+        }
+    }
+}
+
 impl Config {
     /// Run the given config
     pub fn run(&self) -> PackIndexFile {
@@ -100,61 +127,12 @@ impl Config {
                         let real_path = arg.name.split('\\').fold(root.to_owned(), extend_path_buf);
 
                         let filter = Filter::from(filter.as_ref());
-
-                        let mut todo = vec![];
-                        todo.push((path, real_path));
-
-                        while let Some((path, real_path)) = todo.pop() {
-                            match std::fs::read_dir(&real_path) {
-                                Ok(rd) => {
-                                    for e in rd {
-                                        match e {
-                                            Ok(e) => {
-                                                let new_real_path = e.path();
-                                                let t = e.file_type().unwrap();
-                                                let name = new_real_path
-                                                    .file_name()
-                                                    .unwrap()
-                                                    .to_string_lossy();
-
-                                                if t.is_file() && filter.matches(name.as_ref()) {
-                                                    let new_path = format!("{}\\{}", path, name);
-                                                    let crc = calculate_crc(new_path.as_bytes());
-                                                    println!("dir-file {}", new_path);
-                                                    match arg.effect {
-                                                        ArgEffect::Include => {
-                                                            crc_set.insert(crc);
-                                                        }
-                                                        ArgEffect::Exclude => {
-                                                            crc_set.remove(&crc);
-                                                        }
-                                                    }
-                                                } else if t.is_dir() && *recurse {
-                                                    let new_path = format!("{}\\{}", path, name);
-                                                    todo.push((new_path, new_real_path));
-                                                }
-                                            }
-                                            Err(e) => {
-                                                log::error!(
-                                                    "Failed to read_dir entry {}: {}",
-                                                    real_path.display(),
-                                                    e
-                                                );
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-                                Err(e) => {
-                                    log::error!(
-                                        "Failed to read_dir {}: {}",
-                                        real_path.display(),
-                                        e
-                                    );
-                                    // FIXME: Handle Error
-                                }
-                            }
-                        }
+                        let mut visitor = Visitor {
+                            filter,
+                            effect: arg.effect,
+                            crc_set: &mut crc_set,
+                        };
+                        scan_dir(&mut visitor, path, &real_path, *recurse);
                     }
                 }
             }
