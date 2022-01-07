@@ -18,6 +18,7 @@
 //! the PKI (Pack-Index) file.
 
 pub mod file;
+pub mod fs;
 pub mod parser;
 pub mod reader;
 pub mod writer;

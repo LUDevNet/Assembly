@@ -10,7 +10,7 @@ use super::file::{PKEntryData, PKTrailer};
 ///
 /// This function takes a [Write] implementation and a CRCTree<PKEntryData>
 /// and writes the tree part of the PK directory to disk
-fn write_pk_directory_tree<W: Write>(
+pub fn write_pk_directory_tree<W: Write>(
     writer: &mut W,
     tree: &CRCTree<PKEntryData>,
 ) -> io::Result<()> {
@@ -18,7 +18,7 @@ fn write_pk_directory_tree<W: Write>(
 }
 
 /// Write the trailer of a PK file
-fn write_pk_trailer<W: Write>(writer: &mut W, trailer: &PKTrailer) -> io::Result<()> {
+pub fn write_pk_trailer<W: Write>(writer: &mut W, trailer: &PKTrailer) -> io::Result<()> {
     writer.write_all(&trailer.file_list_base_addr.to_le_bytes())?;
     writer.write_all(&trailer.num_compressed.to_le_bytes())?;
     Ok(())
