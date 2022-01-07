@@ -18,8 +18,6 @@ struct Args {
     generator_config: PathBuf,
 }
 
-// FIXME: Don't double pack a file, ever!
-
 fn main() -> color_eyre::Result<()> {
     let args: Args = argh::from_env();
 
@@ -44,12 +42,9 @@ fn main() -> color_eyre::Result<()> {
     for next_line in cfg_reader.lines() {
         let line = next_line.wrap_err("failed to read config line")?;
         if let Some(cmd) = assembly_pack::txt::gen::parse_line(&line) {
-            //println!("{:?}", cmd);
             push_command(&mut config, cmd);
         }
     }
-
-    //println!("{:#?}", config);
 
     let output = config.output.clone();
     let pki = config.run();

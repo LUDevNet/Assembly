@@ -139,13 +139,10 @@ impl Config {
 
             let has_entries = !crc_set.is_empty();
             for crc in crc_set {
-                files.insert(
-                    crc,
-                    FileRef {
-                        category: if pack_file.compressed { 1 } else { 0 },
-                        pack_file: index,
-                    },
-                );
+                files.entry(crc).or_insert(FileRef {
+                    category: if pack_file.compressed { 1 } else { 0 },
+                    pack_file: index,
+                });
             }
 
             if has_entries {
