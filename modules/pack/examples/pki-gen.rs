@@ -11,9 +11,9 @@ use std::{
 };
 
 #[derive(FromArgs)]
-/// print the entry for a specific CRC in the PKI
+/// generate a PKI file from a directory tree
 struct Args {
-    /// the PKI file
+    /// the generator configuration
     #[argh(positional)]
     generator_config: PathBuf,
 }
