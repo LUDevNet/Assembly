@@ -68,3 +68,32 @@ pub trait CRCTreeVisitor<T> {
     /// Called once for every
     fn visit(&mut self, crc: u32, data: T) -> ControlFlow<Self::Break>;
 }
+
+/// Simple visitor that collects a CRC tree to an instance of []
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct CRCTreeCollector<T> {
+    inner: CRCTree<T>,
+}
+
+impl<T> CRCTreeCollector<T> {
+    /// Create a new collector
+    pub fn new() -> Self {
+        Self {
+            inner: CRCTree::new(),
+        }
+    }
+
+    /// Return the contained map
+    pub fn into_inner(self) -> CRCTree<T> {
+        self.inner
+    }
+}
+
+impl<T> CRCTreeVisitor<T> for CRCTreeCollector<T> {
+    type Break = ();
+
+    fn visit(&mut self, crc: u32, data: T) -> ControlFlow<Self::Break> {
+        self.inner.insert(crc, data);
+        ControlFlow::Continue(())
+    }
+}
