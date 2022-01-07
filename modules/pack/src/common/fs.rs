@@ -1,10 +1,10 @@
 //! # Tools to handle a file system
-use std::{borrow::Cow, io, path::Path};
+use std::{collections::BTreeMap, io, path::Path};
 
 /// Information on a file
 pub struct FileInfo<'a> {
     _path: &'a str,
-    _name: Cow<'a, str>,
+    _name: String,
     _real: &'a Path,
 }
 
@@ -68,18 +68,29 @@ pub fn scan_dir<V: FsVisitor>(visitor: &mut V, path: String, real: &Path, recurs
         }
     };
 
+    // collect all entries
+    let mut entries = BTreeMap::new();
     for e in rd {
-        let e = match e {
-            Ok(e) => e,
+        match e {
+            Ok(e) => {
+                let new_real_path = e.path();
+                let name = new_real_path
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned();
+                entries.insert(name, (new_real_path, e));
+            }
             Err(e) => {
                 visitor.failed_next_dir_entry(real, e);
-                break;
+                return;
             }
         };
+    }
 
-        let new_real_path = e.path();
+    // loop over entries
+    for (name, (new_real_path, e)) in entries {
         let t = e.file_type().unwrap();
-        let name = new_real_path.file_name().unwrap().to_string_lossy();
 
         if t.is_file() {
             visitor.visit_file(FileInfo {

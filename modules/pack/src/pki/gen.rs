@@ -147,7 +147,7 @@ impl Config {
 
             if has_entries {
                 archives.push(PackFileRef {
-                    path: pack_file.name.clone(),
+                    path: format!("{}{}", self.prefix, &pack_file.name),
                 });
                 index += 1;
             }

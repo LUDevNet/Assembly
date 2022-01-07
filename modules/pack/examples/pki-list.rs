@@ -27,7 +27,7 @@ fn main() -> color_eyre::Result<()> {
 
     if args.pack_files {
         for pack in file.archives {
-            println!("{}", pack.path);
+            println!("'{}'", pack.path);
         }
         Ok(())
     } else if args.files {

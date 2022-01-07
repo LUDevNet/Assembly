@@ -150,8 +150,8 @@ pub fn parse_line(line: &str) -> Option<Command> {
     }
 
     let (cmd, arg) = match wo_comment.split_once('=') {
-        Some((l, r)) => (l, Some(r)),
-        None => (wo_comment, None),
+        Some((l, r)) => (l.trim(), Some(r.trim())),
+        None => (wo_comment.trim(), None),
     };
 
     match cmd {
@@ -175,7 +175,7 @@ pub fn parse_line(line: &str) -> Option<Command> {
                 let (name, rest) = split_first_eq(rest);
                 let force_compression = rest.map(str::trim_end) == Some("1");
                 return Some(Command::Pack {
-                    filename: name.to_owned(),
+                    filename: name.trim().to_owned(),
                     force_compression,
                 });
             }

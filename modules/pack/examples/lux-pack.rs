@@ -25,16 +25,20 @@ struct Args {
     #[argh(positional)]
     path: PathBuf,
 
-    /// the directory of the cache (default to current dir)
+    /// the directory of the cache
     #[argh(positional)]
-    cache: Option<PathBuf>,
+    cache: PathBuf,
 
-    /// path to trunk.txt, relative to `path`
-    #[argh(option, default = "String::from(\"versions/trunk.txt\")")]
+    /// the directory for manifests and PKI (default to current dir)
+    #[argh(positional)]
+    versions: Option<PathBuf>,
+
+    /// path to trunk.txt, relative to `versions`
+    #[argh(option, default = "String::from(\"trunk.txt\")")]
     manifest: String,
 
-    /// path to primary.pki, relative to `path`
-    #[argh(option, default = "String::from(\"versions/primary.pki\")")]
+    /// path to primary.pki, relative to `versions`
+    #[argh(option, default = "String::from(\"primary.pki\")")]
     pki: String,
 
     /// name of the patcher directory
@@ -55,22 +59,31 @@ impl<'a> PKWriter for Writer<'a> {
     }
 }
 
+fn win_join(base: &Path, path: &str) -> PathBuf {
+    path.split('\\').fold(base.to_owned(), |mut l, r| {
+        l.push(r);
+        l
+    })
+}
+
 fn main() -> color_eyre::Result<()> {
     let args: Args = argh::from_env();
 
     let base = args.path;
 
-    let manifest_path = base.join(&args.manifest);
+    let versions = args
+        .versions
+        .unwrap_or_else(|| std::env::current_dir().unwrap());
+
+    let manifest_path = versions.join(&args.manifest);
     println!("manifest: {}", manifest_path.display());
     let manifest = Manifest::from_file(&manifest_path)?;
 
-    let pack_index_path = base.join(&args.pki);
+    let pack_index_path = versions.join(&args.pki);
     println!("pack index: {}", pack_index_path.display());
     let pack_index = PackIndexFile::from_file(&pack_index_path)?;
 
-    let cachedir = args
-        .cache
-        .unwrap_or_else(|| std::env::current_dir().unwrap());
+    let cachedir = args.cache;
     let patchdir = cachedir.join(args.patcherdir);
     println!("patchdir: {}", patchdir.display());
 
@@ -99,7 +112,7 @@ fn main() -> color_eyre::Result<()> {
                 // File is in a pack we want
                 let pk = pack_files.entry(pk_id).or_insert_with(|| {
                     let name = &pack_index.archives[pk_id];
-                    let path = base.join(&name.path);
+                    let path = win_join(&base, &name.path);
                     println!("Opening PK {}", path.display());
                     PKHandle::open(&path).unwrap()
                 });
@@ -117,7 +130,7 @@ fn main() -> color_eyre::Result<()> {
                 let path = if is_compressed {
                     patchdir.join(file.to_path())
                 } else {
-                    base.join(name)
+                    win_join(&base, &name)
                 };
 
                 let mut writer = Writer { path: &path };
