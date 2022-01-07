@@ -3,7 +3,7 @@
 use super::file::{PKEntry, PKEntryData, PKTrailer};
 use super::parser;
 
-use crate::common::CRCTreeVisitor;
+use crate::common::{CRCTree, CRCTreeCollector, CRCTreeVisitor};
 use crate::sd0;
 use crate::sd0::read::SegmentedDecoder;
 use nom::{Finish, IResult, Offset};
@@ -280,13 +280,19 @@ where
         }
     }
 
+    /// Get all the entries
+    pub fn read_all(&mut self) -> io::Result<CRCTree<PKEntryData>> {
+        let mut collector = CRCTreeCollector::new();
+        self.visit(&mut collector)?;
+        Ok(collector.into_inner())
+    }
+
     /// Implements a visitor pattern
     ///
     /// This [CRCTreeVisitor::visit] function is called once for every node in the tree
     /// in tree order.
     pub fn visit<V>(&mut self, visitor: &mut V) -> io::Result<ControlFlow<V::Break>>
     where
-        T: BufRead + Seek,
         V: CRCTreeVisitor<PKEntryData>,
     {
         let parent = self.get_root_entry()?;
@@ -300,7 +306,6 @@ where
         parent: Option<PKEntry>,
     ) -> io::Result<ControlFlow<V::Break>>
     where
-        T: BufRead + Seek,
         V: CRCTreeVisitor<PKEntryData>,
     {
         let data = if let Some(entry) = parent {
