@@ -34,13 +34,14 @@ impl CRCTreeVisitor<PKEntryData> for PrintVisitor {
 
     fn visit(&mut self, crc: u32, data: PKEntryData) -> ControlFlow<()> {
         println!(
-            "{:10} {:9} {:9} {} {} {:08x}",
+            "{:10} {:9} {:9} {} {} {:08x} {:08x}",
             crc,
             data.orig_file_size,
             data.compr_file_size,
             data.orig_file_hash,
             data.compr_file_hash,
             data.is_compressed,
+            data.file_data_addr,
         );
         ControlFlow::Continue(())
     }

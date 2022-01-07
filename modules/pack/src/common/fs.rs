@@ -27,9 +27,8 @@ impl<'a> FileInfo<'a> {
 
 // Join a windows path to a prefix
 fn win_join(base: &str, name: &str) -> String {
-    let lower = name.to_lowercase();
     if base.is_empty() {
-        lower
+        name.to_string()
     } else if base.ends_with('\\') {
         format!("{}{}", base, name)
     } else {

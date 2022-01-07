@@ -3,7 +3,7 @@
 use std::convert::TryFrom;
 use std::fmt;
 use std::fs::File;
-use std::io::{BufReader, Error as IoError, Read};
+use std::io::{BufRead, BufReader, Error as IoError};
 use std::path::Path;
 use thiserror::Error;
 
@@ -62,11 +62,28 @@ impl TryFrom<&Path> for PackIndexFile {
     }
 }
 
+impl PackIndexFile {
+    /// Load the PKI from a file
+    pub fn from_file<P: AsRef<Path> + ?Sized>(path: &P) -> LoadResult<Self> {
+        let file = File::open(path).map_err(LoadError::FileOpen)?;
+        let mut reader = BufReader::new(file);
+        Self::from_buf_read(&mut reader)
+    }
+
+    /// Load the PKI from a [BufRead] implementation
+    pub fn from_buf_read<R: BufRead>(reader: &mut R) -> LoadResult<Self> {
+        let mut bytes: Vec<u8> = Vec::new();
+        reader.read_to_end(&mut bytes).map_err(LoadError::Read)?;
+        let (_rest, pki_file) = parser::parse_pki_file(&bytes)?;
+        Ok(pki_file)
+    }
+}
+
 impl TryFrom<&str> for PackIndexFile {
     type Error = LoadError;
 
     fn try_from(filename: &str) -> LoadResult<PackIndexFile> {
-        PackIndexFile::try_from(Path::new(filename))
+        PackIndexFile::from_file(filename)
     }
 }
 
@@ -74,10 +91,7 @@ impl TryFrom<File> for PackIndexFile {
     type Error = LoadError;
 
     fn try_from(file: File) -> LoadResult<PackIndexFile> {
-        let mut buf = BufReader::new(file);
-        let mut bytes: Vec<u8> = Vec::new();
-        buf.read_to_end(&mut bytes).map_err(LoadError::Read)?;
-        let (_rest, pki_file) = parser::parse_pki_file(&bytes)?;
-        Ok(pki_file)
+        let mut reader = BufReader::new(file);
+        PackIndexFile::from_buf_read(&mut reader)
     }
 }

@@ -18,6 +18,8 @@ struct Args {
     generator_config: PathBuf,
 }
 
+// FIXME: Don't double pack a file, ever!
+
 fn main() -> color_eyre::Result<()> {
     let args: Args = argh::from_env();
 

@@ -4,7 +4,9 @@ pub mod gen;
 mod lines;
 
 use std::collections::BTreeMap;
-use std::io::BufRead;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::path::Path;
 use std::{fmt, io};
 
 use futures_util::{TryStream, TryStreamExt};
@@ -161,6 +163,13 @@ impl Manifest {
         }
 
         Ok(Self { version, files })
+    }
+
+    /// Read a Manifest from a file
+    pub fn from_file(path: &Path) -> Result<Self> {
+        let file = File::open(path)?;
+        let mut reader = BufReader::new(file);
+        Self::from_buf_read(&mut reader)
     }
 }
 
