@@ -1,0 +1,38 @@
+on:
+  push:
+    branches: [main]
+
+name: Release Build
+
+jobs:
+  release:
+    name: Build (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Run cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --examples --all
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: lupdate-${{ matrix.os }}
+          path: |
+            target/release/examples
+            !*.d
+            !*_*
