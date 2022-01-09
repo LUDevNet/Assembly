@@ -34,5 +34,5 @@ jobs:
           name: assembly-${{ matrix.os }}
           path: |
             target/release/examples
-            !*.d
-            !*_*
+            !target/release/examples/*.d
+            !target/release/examples/*_*
