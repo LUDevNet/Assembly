@@ -51,10 +51,12 @@ fn main() -> eyre::Result<()> {
 
         // Get column types
         for column in &statement.columns() {
-            let decl_type = column.decl_type().expect("Failed to get column type");
+            let decl_type = column
+                .decl_type()
+                .expect("The SQLite database is missing column type information.");
 
-            let target_type =
-                ValueType::from_sqlite_type(decl_type).expect("Failed to convert column type");
+            let target_type = ValueType::from_sqlite_type(decl_type)
+                .expect("The SQLite database contains an unknown column type.");
 
             target_types.push(target_type);
         }
