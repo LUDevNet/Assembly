@@ -1,8 +1,7 @@
 use assembly_fdb::{common::Latin1String, common::ValueType, core::Field, store};
 use color_eyre::eyre::{self, eyre, WrapErr};
-
 use rusqlite::{types::ValueRef, Connection};
-use std::{fmt::Write, fs::File, io::BufWriter, path::PathBuf, time::Instant};
+use std::{fs::File, io::BufWriter, path::PathBuf, time::Instant};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -38,12 +37,8 @@ fn main() -> eyre::Result<()> {
     for table_name in table_names {
         let table_name = table_name?;
 
-        println!("");
-        println!("Processing table '{}'", table_name);
-
-        // Build select query with the same column names and order as the template FDB
-        let mut select_query = String::from("select * from ");
-        select_query.push_str(&table_name);
+        // Query used for getting column info and the actual data
+        let select_query = format!("select * from {}", &table_name);
 
         // Prepare statement
         let mut statement = conn.prepare(&select_query)?;
@@ -51,7 +46,7 @@ fn main() -> eyre::Result<()> {
         // Number of columns destination table should have
         let column_count = statement.columns().len();
 
-        // Vector to store target datatypes in as these can't be determined from the sqlite source db
+        // Vector to store target datatypes in
         let mut target_types: Vec<ValueType> = Vec::with_capacity(column_count);
 
         // Get column types
@@ -62,8 +57,6 @@ fn main() -> eyre::Result<()> {
                 ValueType::from_sqlite_type(decl_type).expect("Failed to convert column type");
 
             target_types.push(target_type);
-
-            println!("Column '{}' has type '{}'", column.name(), target_type);
         }
 
         // Find number of unique values in first column of source table
@@ -77,8 +70,6 @@ fn main() -> eyre::Result<()> {
             |row| row.get(0),
         )?;
 
-        println!("Number of unique keys: {}", unique_key_count);
-
         // Bucket count should be 0 or a power of two
         let new_bucket_count = if unique_key_count == 0 {
             0
@@ -91,7 +82,10 @@ fn main() -> eyre::Result<()> {
 
         // Add columns to destination table
         for (i, column) in statement.columns().iter().enumerate() {
-            dest_table.push_column(Latin1String::encode(column.name()), *target_types.get(i).unwrap());
+            dest_table.push_column(
+                Latin1String::encode(column.name()),
+                *target_types.get(i).unwrap(),
+            );
         }
 
         // Execute query
@@ -102,35 +96,21 @@ fn main() -> eyre::Result<()> {
             let mut fields: Vec<Field> = Vec::with_capacity(column_count);
 
             // Iterate over fields
-            #[allow(clippy::needless_range_loop)]
             for index in 0..column_count {
-                fields.push(match sqlite_row.get_raw(index) {
+                let value = sqlite_row.get_raw(index);
+                fields.push(match value {
                     ValueRef::Null => Field::Nothing,
-                    ValueRef::Integer(i) => match target_types[index] {
-                        ValueType::Integer => Field::Integer(i as i32),
-                        ValueType::Boolean => Field::Boolean(i == 1),
-                        ValueType::BigInt => Field::BigInt(i),
-                        _ => {
-                            return Err(eyre!(
-                                "Invalid target datatype; cannot store SQLite Integer as FDB {:?}",
-                                target_types[index]
-                            ))
+                    _ => match target_types[index] {
+                        ValueType::Nothing => Field::Nothing,
+                        ValueType::Integer => Field::Integer(value.as_i64().unwrap() as i32),
+                        ValueType::Float => Field::Float(value.as_f64().unwrap() as f32),
+                        ValueType::Text => Field::Text(String::from(value.as_str().unwrap())),
+                        ValueType::Boolean => Field::Boolean(value.as_i64().unwrap() != 0),
+                        ValueType::BigInt => Field::BigInt(value.as_i64().unwrap()),
+                        ValueType::VarChar => {
+                            Field::VarChar(String::from(value.as_str().unwrap() as &str))
                         }
                     },
-                    ValueRef::Real(f) => Field::Float(f as f32),
-                    ValueRef::Text(t) => match target_types[index] {
-                        ValueType::Text => Field::Text(String::from(std::str::from_utf8(t)?)),
-                        ValueType::VarChar => Field::VarChar(String::from(std::str::from_utf8(t)?)),
-                        _ => {
-                            return Err(eyre!(
-                                "Invalid target datatype; cannot store SQLite Text as FDB {:?}",
-                                target_types[index]
-                            ))
-                        }
-                    },
-                    ValueRef::Blob(_b) => {
-                        return Err(eyre!("SQLite Blob datatype cannot be converted"))
-                    }
                 });
             }
 
