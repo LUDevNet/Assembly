@@ -27,17 +27,24 @@ fn main() -> eyre::Result<()> {
     let start = Instant::now();
 
     // sqlite input
+    if !opts.src.exists() {
+        return Err(eyre!("SQLite file '{}' not found", opts.src.display()));
+    }
     let conn = Connection::open_with_flags(&opts.src, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
-        .wrap_err_with(|| format!("Failed to open sqlite file '{}'", opts.src.display()))?;
+        .wrap_err_with(|| format!("Failed to open SQLite file '{}'", opts.src.display()))?;
 
+    // this .unwrap() won't error because we just checked that the file exists and therefore it has a name
+    let src_stem = opts.src.file_stem().unwrap();
     let mut dest_path = opts.dest.clone();
 
-    // check if opts.dest is a directory
+    // check if destination path is a directory
     if dest_path.is_dir() {
-        dest_path = dest_path.join("output.fdb");
+        // save to source file name but with .fdb extension
+        dest_path = dest_path.join(src_stem).with_extension("fdb");
         if dest_path.exists() {
             return Err(eyre!(
-                "A directory was specified as output path, and in this directory the default filename 'output.fdb' is already in use."
+                "A directory was specified as output path, and in this directory the default filename '{}.fdb' is already in use.",
+                src_stem.to_str().unwrap_or("<invalid UTF-8>")
             ));
         }
     }
