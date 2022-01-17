@@ -30,9 +30,22 @@ fn main() -> eyre::Result<()> {
     let conn = Connection::open_with_flags(&opts.src, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
         .wrap_err_with(|| format!("Failed to open sqlite file '{}'", opts.src.display()))?;
 
+    let mut dest_path = opts.dest.clone();
+
+    // check if opts.dest is a directory
+    if dest_path.is_dir() {
+        dest_path = dest_path.join("output.fdb");
+        if dest_path.exists() {
+            return Err(eyre!(
+                "A directory was specified as output path, and in this directory the default filename 'output.fdb' is already in use."
+            ));
+        }
+    }
+
     // fdb output
-    let dest_file = File::create(&opts.dest)
+    let dest_file = File::create(&dest_path)
         .wrap_err_with(|| format!("Failed to create output file '{}'", opts.dest.display()))?;
+
     let mut dest_out = BufWriter::new(dest_file);
     let mut dest_db = store::Database::new();
 
@@ -63,6 +76,8 @@ fn main() -> eyre::Result<()> {
                 duration.as_secs(),
                 duration.subsec_millis()
             );
+
+            println!("Output written to '{}'", &dest_path.display());
             Ok(())
         }
         Err(e) => Err(e),
