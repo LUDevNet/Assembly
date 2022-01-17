@@ -16,8 +16,8 @@ struct Options {
     /// Output FDB file
     dest: PathBuf,
     /// Optional: an FDB file containing tables with correct columns but no rows used to determine type information
-    #[structopt(long, default_value = "")]
-    template: PathBuf,
+    #[structopt(long)]
+    template: Option<PathBuf>,
 }
 
 fn main() -> eyre::Result<()> {
@@ -38,11 +38,10 @@ fn main() -> eyre::Result<()> {
 
     let result;
 
-    if &opts.template != &PathBuf::from("") {
+    if let Some(template) = &opts.template {
         // fdb template
-        let template_file = File::open(&opts.template).wrap_err_with(|| {
-            format!("Failed to open fdb template '{}'", opts.template.display())
-        })?;
+        let template_file = File::open(template)
+            .wrap_err_with(|| format!("Failed to open fdb template '{}'", template.display()))?;
         let mmap = unsafe { Mmap::map(&template_file)? };
         let buffer: &[u8] = &mmap;
         let template_db = Database::new(buffer);
