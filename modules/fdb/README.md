@@ -71,9 +71,14 @@ $ cargo run --example fdb-to-sqlite <input fdb> <output sqlite>
 ### sqlite-to-fdb
 
 Convert an SQLite database to FDB
-Because there is no 1:1 mapping of FDB and SQLite value types, you first need to create a 'template' FDB file containing the column names and types.
+
+```shell
+$ cargo run --example sqlite-to-fdb <input sqlite> <output fdb>
+```
+
+If your SQLite database was generated with an old version of `fdb-to-sqlite`, it will be missing column type information. In this case, you can can first turn an existing FDB file into a template containing only the column names and types, and then supply this file to `sqlite-to-fdb`:
 
 ```shell
 $ cargo run --example template-fdb <input fdb> <output template fdb>
-$ cargo run --example sqlite-to-fdb <input template fdb> <input sqlite> <output fdb>
+$ cargo run --example sqlite-to-fdb <input sqlite> <output fdb> --template <input template fdb> 
 ```

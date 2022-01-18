@@ -1,44 +1,261 @@
-use assembly_fdb::{common::ValueType, core::Field, mem::Database, store};
+use assembly_fdb::{common::Latin1String, common::ValueType, core::Field, mem::Database, store};
 use color_eyre::eyre::{self, eyre, WrapErr};
 use mapr::Mmap;
 use rusqlite::{types::ValueRef, Connection};
-use std::{fmt::Write, fs::File, io::BufWriter, path::PathBuf, time::Instant};
-use structopt::StructOpt;
+use std::{fmt::Write, fs::File, io::BufWriter, io::Write as _, path::PathBuf, time::Instant};
+use structopt::{clap::ArgGroup, StructOpt};
 
 #[derive(StructOpt)]
-/// Fills a template FDB file (see template-fdb.rs) with rows from a sqlite database
+#[structopt(name = "sqlite-to-fdb")]
+#[structopt(author = "zaop")]
+#[structopt(group = ArgGroup::with_name("overwrite_policy").required(false))]
+/// Convert an SQLite database to FDB. By default, type information from the SQLite DB is used; if unavailable, you can specify the target
+/// datatypes through a 'template' FDB file with `--template` (see template-fdb.rs).
 struct Options {
-    /// "Template" FDB file, the table structure from this will be used for the output
-    template: PathBuf,
-    /// Input sqlite database
+    /// Input SQLite file
     src: PathBuf,
     /// Output FDB file
     dest: PathBuf,
+    /// Optional: an FDB file containing tables with correct columns but no rows used to determine type information
+    #[structopt(long)]
+    template: Option<PathBuf>,
+
+    #[allow(dead_code)]
+    #[structopt(
+        short = "f",
+        long = "force",
+        help = "Do not prompt before overwriting existing files (default)",
+        group = "overwrite_policy"
+    )]
+    force: bool,
+    #[structopt(
+        short = "i",
+        long = "interactive",
+        help = "Prompt before overwriting existing files",
+        group = "overwrite_policy"
+    )]
+    interactive: bool,
+    #[structopt(
+        short = "n",
+        long = "no-clobber",
+        help = "Do not overwrite existing files",
+        group = "overwrite_policy"
+    )]
+    no_clobber: bool,
 }
 
 fn main() -> eyre::Result<()> {
     color_eyre::install()?;
     let opts = Options::from_args();
+
     let start = Instant::now();
 
-    println!("Converting database, this may take a few seconds...");
-
-    // fdb template
-    let template_file = File::open(&opts.template)
-        .wrap_err_with(|| format!("Failed to open fdb template '{}'", opts.template.display()))?;
-    let mmap = unsafe { Mmap::map(&template_file)? };
-    let buffer: &[u8] = &mmap;
-    let template_db = Database::new(buffer);
-
     // sqlite input
+    if !opts.src.exists() {
+        return Err(eyre!("SQLite file '{}' not found", opts.src.display()));
+    }
     let conn = Connection::open_with_flags(&opts.src, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
-        .wrap_err_with(|| format!("Failed to open sqlite file '{}'", opts.src.display()))?;
+        .wrap_err_with(|| format!("Failed to open SQLite file '{}'", opts.src.display()))?;
+
+    // this .unwrap() won't error because we just checked that the file exists and therefore it has a name
+    let src_stem = opts.src.file_stem().unwrap();
+    let mut dest_path = opts.dest.clone();
+
+    // check if destination path is a directory
+    if dest_path.is_dir() {
+        // save to source file name but with .fdb extension
+        dest_path = dest_path.join(src_stem).with_extension("fdb");
+        if dest_path.is_dir() {
+            return Err(eyre!(
+                "Cannot overwrite directory '{}'",
+                dest_path.display()
+            ));
+        }
+    }
+
+    // check if destination file exists, overwrite depending on flags
+    if dest_path.is_file() {
+        if opts.no_clobber {
+            println!(
+                "File '{}' already exists. Overwrite using --force or --interactive.",
+                dest_path.display()
+            );
+            return Ok(());
+        } else if opts.interactive {
+            print!(
+                "File '{}' already exists. Overwrite? [y/N] ",
+                dest_path.display()
+            );
+            std::io::stdout().flush()?;
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            if input.trim() != "y" {
+                println!("Aborting");
+                return Ok(());
+            }
+        }
+        println!("Overwriting existing file '{}'", dest_path.display());
+    }
 
     // fdb output
-    let dest_file = File::create(&opts.dest)
-        .wrap_err_with(|| format!("Failed to crate output file '{}'", opts.dest.display()))?;
+    let dest_file = File::create(&dest_path)
+        .wrap_err_with(|| format!("Failed to create output file '{}'", opts.dest.display()))?;
+
     let mut dest_out = BufWriter::new(dest_file);
     let mut dest_db = store::Database::new();
+
+    let result;
+
+    if let Some(template) = &opts.template {
+        // fdb template
+        let template_file = File::open(template)
+            .wrap_err_with(|| format!("Failed to open fdb template '{}'", template.display()))?;
+        let mmap = unsafe { Mmap::map(&template_file)? };
+        let buffer: &[u8] = &mmap;
+        let template_db = Database::new(buffer);
+
+        result = convert_with_template(&conn, &mut dest_db, &template_db);
+    } else {
+        result = convert_without_template(&conn, &mut dest_db);
+    }
+
+    match result {
+        Ok(()) => {
+            dest_db
+                .write(&mut dest_out)
+                .wrap_err("Could not write output database")?;
+
+            let duration = start.elapsed();
+            println!(
+                "\nFinished in {}.{:#03}s",
+                duration.as_secs(),
+                duration.subsec_millis()
+            );
+
+            println!("Output written to '{}'", &dest_path.display());
+            Ok(())
+        }
+        Err(e) => Err(e),
+    }
+}
+
+fn convert_without_template(
+    conn: &Connection,
+    dest_db: &mut assembly_fdb::store::Database,
+) -> eyre::Result<()> {
+    println!("Using direct SQLite -> FDB conversion.");
+    println!("Converting database, this may take a few seconds...");
+
+    let tables_query = String::from("select name from sqlite_master where type='table'");
+    let mut statement = conn.prepare(&tables_query)?;
+    let table_names = statement.query_map::<String, _, _>(rusqlite::NO_PARAMS, |row| row.get(0))?;
+
+    for table_name in table_names {
+        let table_name = table_name?;
+
+        // Query used for getting column info and the actual data
+        let select_query = format!("select * from {}", &table_name);
+
+        // Prepare statement
+        let mut statement = conn.prepare(&select_query)?;
+
+        // Number of columns destination table should have
+        let column_count = statement.columns().len();
+
+        // Vector to store target datatypes in
+        let mut target_types: Vec<ValueType> = Vec::with_capacity(column_count);
+
+        // Get column types
+        for column in &statement.columns() {
+            let decl_type = column
+                .decl_type()
+                .expect("The SQLite database is missing column type information. Try converting using a template (see sqlite-to-fdb --help).");
+
+            let target_type = ValueType::from_sqlite_type(decl_type)
+                .expect("The SQLite database contains an unknown column type. Try converting using a template (see sqlite-to-fdb --help).");
+
+            target_types.push(target_type);
+        }
+
+        // Find number of unique values in first column of source table
+        let unique_key_count = conn.query_row::<u32, _, _>(
+            &format!(
+                "select count(distinct [{}]) as unique_count from {}",
+                statement.columns().get(0).unwrap().name(),
+                table_name
+            ),
+            rusqlite::NO_PARAMS,
+            |row| row.get(0),
+        )?;
+
+        // Bucket count should be 0 or a power of two
+        let new_bucket_count = if unique_key_count == 0 {
+            0
+        } else {
+            u32::next_power_of_two(unique_key_count)
+        };
+
+        // Create destination table
+        let mut dest_table = store::Table::new(new_bucket_count as usize);
+
+        // Add columns to destination table
+        for (i, column) in statement.columns().iter().enumerate() {
+            dest_table.push_column(
+                Latin1String::encode(column.name()),
+                *target_types.get(i).unwrap(),
+            );
+        }
+
+        // Execute query
+        let mut rows = statement.query(rusqlite::NO_PARAMS)?;
+
+        // Iterate over rows
+        while let Some(sqlite_row) = rows.next()? {
+            let mut fields: Vec<Field> = Vec::with_capacity(column_count);
+
+            // Iterate over fields
+            for index in 0..column_count {
+                let value = sqlite_row.get_raw(index);
+                fields.push(match value {
+                    ValueRef::Null => Field::Nothing,
+                    _ => match target_types[index] {
+                        ValueType::Nothing => Field::Nothing,
+                        ValueType::Integer => Field::Integer(value.as_i64().unwrap() as i32),
+                        ValueType::Float => Field::Float(value.as_f64().unwrap() as f32),
+                        ValueType::Text => Field::Text(String::from(value.as_str().unwrap())),
+                        ValueType::Boolean => Field::Boolean(value.as_i64().unwrap() != 0),
+                        ValueType::BigInt => Field::BigInt(value.as_i64().unwrap()),
+                        ValueType::VarChar => {
+                            Field::VarChar(String::from(value.as_str().unwrap() as &str))
+                        }
+                    },
+                });
+            }
+
+            // Determine primary key to use for bucket index
+            let pk = match &fields[0] {
+                Field::Integer(i) => *i as usize,
+                Field::BigInt(i) => *i as usize,
+                Field::Text(t) => (sfhash::digest(t.as_bytes())) as usize,
+                _ => return Err(eyre!("Cannot use {:?} as primary key", &fields[0])),
+            };
+
+            dest_table.push_row(pk, &fields);
+        }
+
+        dest_db.push_table(Latin1String::encode(&table_name), dest_table);
+    }
+
+    Ok(())
+}
+
+fn convert_with_template(
+    conn: &Connection,
+    dest_db: &mut assembly_fdb::store::Database,
+    template_db: &Database,
+) -> eyre::Result<()> {
+    println!("Using template FDB for conversion.");
+    println!("Converting database, this may take a few seconds...");
 
     for template_table in template_db.tables()?.iter() {
         let template_table = template_table?;
@@ -151,17 +368,6 @@ fn main() -> eyre::Result<()> {
 
         dest_db.push_table(template_table.name_raw(), dest_table);
     }
-
-    dest_db
-        .write(&mut dest_out)
-        .wrap_err("Could not write output database")?;
-
-    let duration = start.elapsed();
-    println!(
-        "Finished in {}.{:#03}s",
-        duration.as_secs(),
-        duration.subsec_millis()
-    );
 
     Ok(())
 }
