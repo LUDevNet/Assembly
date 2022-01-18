@@ -2,12 +2,13 @@ use assembly_fdb::{common::Latin1String, common::ValueType, core::Field, mem::Da
 use color_eyre::eyre::{self, eyre, WrapErr};
 use mapr::Mmap;
 use rusqlite::{types::ValueRef, Connection};
-use std::{fmt::Write, fs::File, io::BufWriter, path::PathBuf, time::Instant};
-use structopt::StructOpt;
+use std::{fmt::Write, fs::File, io::BufWriter, io::Write as _, path::PathBuf, time::Instant};
+use structopt::{clap::ArgGroup, StructOpt};
 
 #[derive(StructOpt)]
 #[structopt(name = "sqlite-to-fdb")]
 #[structopt(author = "zaop")]
+#[structopt(group = ArgGroup::with_name("overwrite_policy").required(false))]
 /// Convert an SQLite database to FDB. By default, type information from the SQLite DB is used; if unavailable, you can specify the target
 /// datatypes through a 'template' FDB file with `--template` (see template-fdb.rs).
 struct Options {
@@ -18,6 +19,29 @@ struct Options {
     /// Optional: an FDB file containing tables with correct columns but no rows used to determine type information
     #[structopt(long)]
     template: Option<PathBuf>,
+
+    #[allow(dead_code)]
+    #[structopt(
+        short = "f",
+        long = "force",
+        help = "Do not prompt before overwriting existing files (default)",
+        group = "overwrite_policy"
+    )]
+    force: bool,
+    #[structopt(
+        short = "i",
+        long = "interactive",
+        help = "Prompt before overwriting existing files",
+        group = "overwrite_policy"
+    )]
+    interactive: bool,
+    #[structopt(
+        short = "n",
+        long = "no-clobber",
+        help = "Do not overwrite existing files",
+        group = "overwrite_policy"
+    )]
+    no_clobber: bool,
 }
 
 fn main() -> eyre::Result<()> {
@@ -41,12 +65,36 @@ fn main() -> eyre::Result<()> {
     if dest_path.is_dir() {
         // save to source file name but with .fdb extension
         dest_path = dest_path.join(src_stem).with_extension("fdb");
-        if dest_path.exists() {
+        if dest_path.is_dir() {
             return Err(eyre!(
-                "A directory was specified as output path, and in this directory the default filename '{}.fdb' is already in use.",
-                src_stem.to_str().unwrap_or("<invalid UTF-8>")
+                "Cannot overwrite directory '{}'",
+                dest_path.display()
             ));
         }
+    }
+
+    // check if destination file exists, overwrite depending on flags
+    if dest_path.is_file() {
+        if opts.no_clobber {
+            println!(
+                "File '{}' already exists. Overwrite using --force or --interactive.",
+                dest_path.display()
+            );
+            return Ok(());
+        } else if opts.interactive {
+            print!(
+                "File '{}' already exists. Overwrite? [y/N] ",
+                dest_path.display()
+            );
+            std::io::stdout().flush()?;
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            if input.trim() != "y" {
+                println!("Aborting");
+                return Ok(());
+            }
+        }
+        println!("Overwriting existing file '{}'", dest_path.display());
     }
 
     // fdb output
@@ -79,7 +127,7 @@ fn main() -> eyre::Result<()> {
 
             let duration = start.elapsed();
             println!(
-                "Finished in {}.{:#03}s",
+                "\nFinished in {}.{:#03}s",
                 duration.as_secs(),
                 duration.subsec_millis()
             );
