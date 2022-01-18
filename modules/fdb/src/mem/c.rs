@@ -196,7 +196,7 @@ impl Repr for FDBFieldDataC {
             ValueType::BigInt => FDBFieldValue::BigInt(IndirectValue {
                 addr: u32::from_le_bytes(self.value.0),
             }),
-            ValueType::VarChar => FDBFieldValue::VarChar(IndirectValue {
+            ValueType::Xml => FDBFieldValue::Xml(IndirectValue {
                 addr: u32::from_le_bytes(self.value.0),
             }),
         }

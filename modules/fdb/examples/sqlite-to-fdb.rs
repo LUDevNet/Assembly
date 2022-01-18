@@ -341,7 +341,7 @@ fn convert_with_template(
                     ValueRef::Real(f) => Field::Float(f as f32),
                     ValueRef::Text(t) => match target_types[index] {
                         ValueType::Text => Field::Text(String::from(std::str::from_utf8(t)?)),
-                        ValueType::VarChar => Field::VarChar(String::from(std::str::from_utf8(t)?)),
+                        ValueType::Xml => Field::Xml(String::from(std::str::from_utf8(t)?)),
                         _ => {
                             return Err(eyre!(
                                 "Invalid target datatype; cannot store SQLite Text as FDB {:?}",

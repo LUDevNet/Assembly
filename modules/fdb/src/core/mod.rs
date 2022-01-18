@@ -48,7 +48,7 @@ impl From<MemField<'_>> for Field {
             MemField::Text(v) => Field::Text(v.decode().into_owned()),
             MemField::Boolean(v) => Field::Boolean(v),
             MemField::BigInt(v) => Field::BigInt(v),
-            MemField::VarChar(v) => Field::VarChar(v.decode().into_owned()),
+            MemField::Xml(v) => Field::Xml(v.decode().into_owned()),
         }
     }
 }
@@ -62,7 +62,7 @@ impl PartialEq<MemField<'_>> for Field {
             Value::Text(x) => matches!(self, Self::Text(y) if x.decode().as_ref() == y),
             Value::Boolean(x) => matches!(self, Self::Boolean(y) if x == y),
             Value::BigInt(x) => matches!(self, Self::BigInt(y) if x == y),
-            Value::VarChar(x) => matches!(self, Self::VarChar(y) if x.decode().as_ref() == y),
+            Value::Xml(x) => matches!(self, Self::Xml(y) if x.decode().as_ref() == y),
         }
     }
 }
@@ -76,7 +76,7 @@ impl fmt::Display for Field {
             Field::Text(t) => write!(f, "{:?}", t),
             Field::Boolean(b) => write!(f, "{}", b),
             Field::BigInt(i) => write!(f, "{}", i),
-            Field::VarChar(v) => write!(f, "{:?}", v),
+            Field::Xml(v) => write!(f, "{:?}", v),
         }
     }
 }

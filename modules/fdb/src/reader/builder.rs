@@ -54,10 +54,10 @@ where
                 .and_then(|addr| self.get_i64(addr))
                 .map(Field::BigInt)
                 .map_err(Into::into),
-            ValueType::VarChar => Ok(bytes)
+            ValueType::Xml => Ok(bytes)
                 .map(u32::from_le_bytes)
                 .and_then(|addr| self.get_string(addr))
-                .map(Field::VarChar)
+                .map(Field::Xml)
                 .map_err(Into::into),
         }
     }

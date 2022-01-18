@@ -20,7 +20,7 @@ impl<'a> ToSql for Field<'a> {
             Field::Text(s) => Value::Text(s.decode().into_owned()),
             Field::Boolean(b) => Value::Integer(if b { 1 } else { 0 }),
             Field::BigInt(i) => Value::Integer(i),
-            Field::VarChar(b) => Value::Text(b.decode().into_owned()),
+            Field::Xml(b) => Value::Text(b.decode().into_owned()),
         };
         Ok(ToSqlOutput::Owned(r))
     }
@@ -36,7 +36,7 @@ impl ValueType {
             ValueType::Text => "TEXT4",
             ValueType::Boolean => "INT_BOOL",
             ValueType::BigInt => "INT64",
-            ValueType::VarChar => "TEXT_XML",
+            ValueType::Xml => "TEXT_XML",
         }
     }
 
@@ -77,9 +77,7 @@ impl ValueType {
             "TEXT4" | "text_4" | "TEXT" => Some(ValueType::Text),
             "BIT" | "INT_BOOL" | "int_bool" => Some(ValueType::Boolean),
             "INT64" | "int64" | "BIGINT" | "INTEGER" => Some(ValueType::BigInt),
-            "XML" | "TEXT_XML" | "xml" | "text_8" | "text_xml" | "VARCHAR" => {
-                Some(ValueType::VarChar)
-            }
+            "XML" | "TEXT_XML" | "xml" | "text_8" | "text_xml" | "VARCHAR" => Some(ValueType::Xml),
             _ => None,
         }
     }

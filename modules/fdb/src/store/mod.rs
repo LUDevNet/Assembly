@@ -379,7 +379,7 @@ impl Table {
                     let v = i64s_base_offset + (i64_ref.index * size_of::<u64>()) as u32;
                     v.to_le_bytes()
                 }),
-                Field::VarChar(text_ref) => (8, {
+                Field::Xml(text_ref) => (8, {
                     let v = string_len_offsets.get(&text_ref.outer).unwrap()
                         + (text_ref.inner * text_ref.outer * 4) as u32;
                     v.to_le_bytes()

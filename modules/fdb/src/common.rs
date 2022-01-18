@@ -210,7 +210,7 @@ pub enum Value<T: Context> {
     /// A 64 bit integer
     BigInt(T::I64),
     /// A (XML?) string
-    VarChar(T::XML),
+    Xml(T::XML),
 }
 
 impl<T: Context> Clone for Value<T>
@@ -227,7 +227,7 @@ where
             Value::Text(v) => Value::Text(v.clone()),
             Value::Boolean(v) => Value::Boolean(*v),
             Value::BigInt(v) => Value::BigInt(v.clone()),
-            Value::VarChar(v) => Value::VarChar(v.clone()),
+            Value::Xml(v) => Value::Xml(v.clone()),
         }
     }
 }
@@ -254,7 +254,7 @@ impl<T: Context> Value<T> {
             Value::Text(v) => Value::Text(mapper.map_string(v)),
             Value::Boolean(v) => Value::Boolean(*v),
             Value::BigInt(v) => Value::BigInt(mapper.map_i64(v)),
-            Value::VarChar(v) => Value::VarChar(mapper.map_xml(v)),
+            Value::Xml(v) => Value::Xml(mapper.map_xml(v)),
         }
     }
 
@@ -305,7 +305,7 @@ impl<T: Context> Value<T> {
 
     /// Returns `Some` with the value if the field contains a [`Value::VarChar`].
     pub fn into_opt_varchar(self) -> Option<T::XML> {
-        if let Self::VarChar(value) = self {
+        if let Self::Xml(value) = self {
             Some(value)
         } else {
             None
@@ -322,7 +322,7 @@ impl<T: Context> From<&Value<T>> for ValueType {
             Value::Text(_) => ValueType::Text,
             Value::Boolean(_) => ValueType::Boolean,
             Value::BigInt(_) => ValueType::BigInt,
-            Value::VarChar(_) => ValueType::VarChar,
+            Value::Xml(_) => ValueType::Xml,
         }
     }
 }
@@ -344,7 +344,7 @@ pub enum ValueType {
     /// A 64 bit integer
     BigInt,
     /// An (XML?) string
-    VarChar,
+    Xml,
 }
 
 impl ValueType {
@@ -357,7 +357,7 @@ impl ValueType {
             ValueType::Text => "TEXT",
             ValueType::Boolean => "BOOLEAN",
             ValueType::BigInt => "BIGINT",
-            ValueType::VarChar => "VARCHAR",
+            ValueType::Xml => "VARCHAR",
         }
     }
 }
@@ -377,7 +377,7 @@ impl From<ValueType> for u8 {
             ValueType::Text => 4,
             ValueType::Boolean => 5,
             ValueType::BigInt => 6,
-            ValueType::VarChar => 8,
+            ValueType::Xml => 8,
         }
     }
 }
@@ -417,7 +417,7 @@ impl TryFrom<u32> for ValueType {
             4 => Ok(ValueType::Text),
             5 => Ok(ValueType::Boolean),
             6 => Ok(ValueType::BigInt),
-            8 => Ok(ValueType::VarChar),
+            8 => Ok(ValueType::Xml),
             _ => Err(UnknownValueType(value_type)),
         }
     }
