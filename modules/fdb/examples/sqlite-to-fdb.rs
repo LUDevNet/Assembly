@@ -148,7 +148,7 @@ fn convert_without_template(
 
     let tables_query = String::from("select name from sqlite_master where type='table'");
     let mut statement = conn.prepare(&tables_query)?;
-    let table_names = statement.query_map::<String, _, _>(rusqlite::NO_PARAMS, |row| row.get(0))?;
+    let table_names = statement.query_map::<String, _, _>([], |row| row.get(0))?;
 
     for table_name in table_names {
         let table_name = table_name?;
@@ -160,7 +160,7 @@ fn convert_without_template(
         let mut statement = conn.prepare(&select_query)?;
 
         // Number of columns destination table should have
-        let column_count = statement.columns().len();
+        let column_count = statement.column_count();
 
         // Vector to store target datatypes in
         let mut target_types: Vec<ValueType> = Vec::with_capacity(column_count);
@@ -181,10 +181,10 @@ fn convert_without_template(
         let unique_key_count = conn.query_row::<u32, _, _>(
             &format!(
                 "select count(distinct [{}]) as unique_count from {}",
-                statement.columns().get(0).unwrap().name(),
+                statement.column_name(0).unwrap(),
                 table_name
             ),
-            rusqlite::NO_PARAMS,
+            [],
             |row| row.get(0),
         )?;
 
@@ -199,35 +199,32 @@ fn convert_without_template(
         let mut dest_table = store::Table::new(new_bucket_count as usize);
 
         // Add columns to destination table
-        for (i, column) in statement.columns().iter().enumerate() {
-            dest_table.push_column(
-                Latin1String::encode(column.name()),
-                *target_types.get(i).unwrap(),
-            );
+        for (column, data_type) in statement.columns().iter().zip(target_types.iter().copied()) {
+            let name = Latin1String::encode(column.name());
+            dest_table.push_column(name, data_type);
         }
 
         // Execute query
-        let mut rows = statement.query(rusqlite::NO_PARAMS)?;
+        let mut rows = statement.query([])?;
 
         // Iterate over rows
         while let Some(sqlite_row) = rows.next()? {
             let mut fields: Vec<Field> = Vec::with_capacity(column_count);
 
             // Iterate over fields
-            for index in 0..column_count {
-                let value = sqlite_row.get_raw(index);
+            for (index, ty) in target_types.iter().enumerate() {
+                // This unwrap is OK because target_types was constructed from the sqlite declaration
+                let value = sqlite_row.get_ref(index).unwrap();
                 fields.push(match value {
                     ValueRef::Null => Field::Nothing,
-                    _ => match target_types[index] {
+                    _ => match ty {
                         ValueType::Nothing => Field::Nothing,
                         ValueType::Integer => Field::Integer(value.as_i64().unwrap() as i32),
                         ValueType::Float => Field::Float(value.as_f64().unwrap() as f32),
                         ValueType::Text => Field::Text(String::from(value.as_str().unwrap())),
                         ValueType::Boolean => Field::Boolean(value.as_i64().unwrap() != 0),
                         ValueType::BigInt => Field::BigInt(value.as_i64().unwrap()),
-                        ValueType::VarChar => {
-                            Field::VarChar(String::from(value.as_str().unwrap() as &str))
-                        }
+                        ValueType::VarChar => Field::VarChar(value.as_str().unwrap().to_owned()),
                     },
                 });
             }
@@ -259,6 +256,7 @@ fn convert_with_template(
 
     for template_table in template_db.tables()?.iter() {
         let template_table = template_table?;
+        let table_name = template_table.name();
 
         // Find number of unique values in first column of source table
         let unique_key_count = conn.query_row::<u32, _, _>(
@@ -268,12 +266,12 @@ fn convert_with_template(
                     .column_at(0)
                     .ok_or_else(|| eyre!(format!(
                         "FDB template contains no columns for table {}",
-                        template_table.name()
+                        table_name
                     )))?
                     .name(),
-                template_table.name()
+                table_name
             ),
-            rusqlite::NO_PARAMS,
+            [],
             |row| row.get(0),
         )?;
 
@@ -316,7 +314,7 @@ fn convert_with_template(
 
         // Execute query
         let mut statement = conn.prepare(&select_query)?;
-        let mut rows = statement.query(rusqlite::NO_PARAMS)?;
+        let mut rows = statement.query([])?;
 
         // Iterate over rows
         while let Some(sqlite_row) = rows.next()? {
@@ -325,34 +323,40 @@ fn convert_with_template(
             // Iterate over fields
             #[allow(clippy::needless_range_loop)]
             for index in 0..column_count {
-                fields.push(match sqlite_row.get_raw(index) {
-                    ValueRef::Null => Field::Nothing,
-                    ValueRef::Integer(i) => match target_types[index] {
-                        ValueType::Integer => Field::Integer(i as i32),
-                        ValueType::Boolean => Field::Boolean(i == 1),
-                        ValueType::BigInt => Field::BigInt(i),
-                        _ => {
-                            return Err(eyre!(
+                fields.push(
+                    match sqlite_row.get_ref(index).with_context(|| {
+                        format!("Missing column #{} in table {:?}", index, table_name)
+                    })? {
+                        ValueRef::Null => Field::Nothing,
+                        ValueRef::Integer(i) => match target_types[index] {
+                            ValueType::Integer => Field::Integer(i as i32),
+                            ValueType::Boolean => Field::Boolean(i == 1),
+                            ValueType::BigInt => Field::BigInt(i),
+                            _ => {
+                                return Err(eyre!(
                                 "Invalid target datatype; cannot store SQLite Integer as FDB {:?}",
                                 target_types[index]
                             ))
+                            }
+                        },
+                        ValueRef::Real(f) => Field::Float(f as f32),
+                        ValueRef::Text(t) => match target_types[index] {
+                            ValueType::Text => Field::Text(String::from(std::str::from_utf8(t)?)),
+                            ValueType::VarChar => {
+                                Field::VarChar(String::from(std::str::from_utf8(t)?))
+                            }
+                            _ => {
+                                return Err(eyre!(
+                                    "Invalid target datatype; cannot store SQLite Text as FDB {:?}",
+                                    target_types[index]
+                                ))
+                            }
+                        },
+                        ValueRef::Blob(_b) => {
+                            return Err(eyre!("SQLite Blob datatype cannot be converted"))
                         }
                     },
-                    ValueRef::Real(f) => Field::Float(f as f32),
-                    ValueRef::Text(t) => match target_types[index] {
-                        ValueType::Text => Field::Text(String::from(std::str::from_utf8(t)?)),
-                        ValueType::VarChar => Field::VarChar(String::from(std::str::from_utf8(t)?)),
-                        _ => {
-                            return Err(eyre!(
-                                "Invalid target datatype; cannot store SQLite Text as FDB {:?}",
-                                target_types[index]
-                            ))
-                        }
-                    },
-                    ValueRef::Blob(_b) => {
-                        return Err(eyre!("SQLite Blob datatype cannot be converted"))
-                    }
-                });
+                );
             }
 
             // Determine primary key to use for bucket index

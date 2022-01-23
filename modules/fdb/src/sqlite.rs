@@ -3,7 +3,8 @@
 use std::{borrow::Cow, fmt::Write};
 
 use rusqlite::{
-    types::{ToSqlOutput, Value, ValueRef},
+    params_from_iter,
+    types::{ToSqlOutput, Value},
     ToSql,
 };
 pub use rusqlite::{Connection, Error, Result};
@@ -14,16 +15,16 @@ use super::{
 };
 
 impl<'a> ToSql for Field<'a> {
-    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'a>> {
+    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
         Ok(match *self {
             Field::Nothing => ToSqlOutput::Owned(Value::Null),
-            Field::Integer(i) => ToSqlOutput::Owned(Value::Integer(i.into())),
-            Field::Float(f) => ToSqlOutput::Owned(Value::Real(f.into())),
-            Field::Boolean(b) => ToSqlOutput::Owned(Value::Integer(if b { 1 } else { 0 })),
-            Field::BigInt(i) => ToSqlOutput::Owned(Value::Integer(i)),
+            Field::Integer(i) => i.into(),
+            Field::Float(f) => f.into(),
+            Field::Boolean(b) => b.into(),
+            Field::BigInt(i) => i.into(),
             Field::Text(s) | Field::VarChar(s) => match s.decode() {
-                Cow::Borrowed(b) => ToSqlOutput::Borrowed(ValueRef::Text(b.as_bytes())),
-                Cow::Owned(s) => ToSqlOutput::Owned(Value::Text(s)),
+                Cow::Owned(s) => ToSqlOutput::from(s),
+                Cow::Borrowed(s) => ToSqlOutput::from(s),
             },
         })
     }
@@ -128,7 +129,7 @@ pub fn try_export_db(conn: &mut Connection, db: Database) -> rusqlite::Result<()
 
         let mut stmt = conn.prepare(&insert_query)?;
         for row in table.row_iter() {
-            stmt.execute(row)?;
+            stmt.execute(params_from_iter(row.field_iter()))?;
         }
     }
 
