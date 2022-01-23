@@ -1,8 +1,11 @@
 //! # SQLite conversions and tooling
 
-use std::fmt::Write;
+use std::{borrow::Cow, fmt::Write};
 
-use rusqlite::{types::ToSqlOutput, ToSql};
+use rusqlite::{
+    types::{ToSqlOutput, Value, ValueRef},
+    ToSql,
+};
 pub use rusqlite::{Connection, Error, Result};
 
 use super::{
@@ -11,18 +14,18 @@ use super::{
 };
 
 impl<'a> ToSql for Field<'a> {
-    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
-        use rusqlite::types::Value;
-        let r = match *self {
-            Field::Nothing => Value::Null,
-            Field::Integer(i) => Value::Integer(i.into()),
-            Field::Float(f) => Value::Real(f.into()),
-            Field::Text(s) => Value::Text(s.decode().into_owned()),
-            Field::Boolean(b) => Value::Integer(if b { 1 } else { 0 }),
-            Field::BigInt(i) => Value::Integer(i),
-            Field::VarChar(b) => Value::Text(b.decode().into_owned()),
-        };
-        Ok(ToSqlOutput::Owned(r))
+    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'a>> {
+        Ok(match *self {
+            Field::Nothing => ToSqlOutput::Owned(Value::Null),
+            Field::Integer(i) => ToSqlOutput::Owned(Value::Integer(i.into())),
+            Field::Float(f) => ToSqlOutput::Owned(Value::Real(f.into())),
+            Field::Boolean(b) => ToSqlOutput::Owned(Value::Integer(if b { 1 } else { 0 })),
+            Field::BigInt(i) => ToSqlOutput::Owned(Value::Integer(i)),
+            Field::Text(s) | Field::VarChar(s) => match s.decode() {
+                Cow::Borrowed(b) => ToSqlOutput::Borrowed(ValueRef::Text(b.as_bytes())),
+                Cow::Owned(s) => ToSqlOutput::Owned(Value::Text(s)),
+            },
+        })
     }
 }
 
