@@ -11,6 +11,7 @@ pub use rusqlite::{Connection, Error, Result};
 
 use super::{
     common::ValueType,
+    core,
     mem::{Database, Field},
 };
 
@@ -26,6 +27,20 @@ impl<'a> ToSql for Field<'a> {
                 Cow::Owned(s) => ToSqlOutput::from(s),
                 Cow::Borrowed(s) => ToSqlOutput::from(s),
             },
+        })
+    }
+}
+
+impl ToSql for core::Field {
+    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
+        Ok(match self {
+            core::Field::Nothing => ToSqlOutput::Owned(Value::Null),
+            core::Field::Integer(i) => (*i).into(),
+            core::Field::Float(f) => (*f).into(),
+            core::Field::Boolean(b) => (*b).into(),
+            core::Field::BigInt(i) => (*i).into(),
+            core::Field::Text(s) => s.as_str().into(),
+            core::Field::VarChar(s) => s.as_str().into(),
         })
     }
 }
