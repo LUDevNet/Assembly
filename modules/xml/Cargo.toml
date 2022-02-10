@@ -1,6 +1,6 @@
 [package]
 name = "assembly-xml"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2018"
 license = "MPL-2.0"
 description = "XML formats used in the game LEGO® Universe"
@@ -14,6 +14,7 @@ serialize = ["serde", "quick-xml/serialize"]
 [dependencies]
 thiserror = "1.0"
 displaydoc = "0.1.5"
+log = "0.4"
 
 [dependencies.quick-xml]
 version = "0.20"
