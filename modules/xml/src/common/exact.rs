@@ -149,9 +149,9 @@ pub fn expect_child_or_end<'a, B: BufRead>(
     buf: &'a mut Vec<u8>,
 ) -> Result<Option<XmlBytesStart<'a>>> {
     match reader.read_event(buf)? {
-        XmlEvent::Start(s) => check_start(s, start_key, &reader).map(Some),
+        XmlEvent::Start(s) => check_start(s, start_key, reader).map(Some),
         XmlEvent::End(e) => {
-            check_end(e, end_key, &reader)?;
+            check_end(e, end_key, reader)?;
             Ok(None)
         }
         e => Err(Error::ExpectedStartEndTag(

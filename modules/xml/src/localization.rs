@@ -114,7 +114,7 @@ pub fn load_locale(path: &Path) -> Result<LocaleNode, LocaleError> {
     let mut real_locale_count = 0;
     buf.clear();
 
-    while let Some(_) = expect_child_or_end(TAG_LOCALE, TAG_LOCALES, &mut reader, &mut buf)? {
+    while expect_child_or_end(TAG_LOCALE, TAG_LOCALES, &mut reader, &mut buf)?.is_some() {
         buf.clear();
 
         let locale = expect_text(&mut reader, &mut buf)?;
@@ -154,7 +154,7 @@ pub fn load_locale(path: &Path) -> Result<LocaleNode, LocaleError> {
             buf.clear();
 
             let trans = expect_text_or_end(TAG_TRANSLATION, &mut reader, &mut buf)?;
-            if &locale == LOCALE_EN_US {
+            if locale == LOCALE_EN_US {
                 translation = Some(trans);
             }
             buf.clear();
