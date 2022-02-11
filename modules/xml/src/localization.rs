@@ -14,6 +14,8 @@ use displaydoc::Display;
 use quick_xml::{events::Event as XmlEvent, Error as XmlError, Reader as XmlReader};
 use thiserror::Error;
 
+use crate::common::exact::{expect_child_or_end, expect_text_or_end};
+
 use super::common::exact::{expect_attribute, expect_end, expect_start, expect_text, Error};
 
 #[derive(Debug, Display, Error)]
@@ -71,6 +73,19 @@ impl LocaleNode {
     }
 }
 
+const TAG_LOCALIZATION: &str = "localization";
+const TAG_LOCALES: &str = "locales";
+const TAG_LOCALE: &str = "locale";
+const TAG_PHRASES: &str = "phrases";
+const TAG_PHRASE: &str = "phrase";
+const TAG_TRANSLATION: &str = "translation";
+
+const ATTR_COUNT: &str = "count";
+const ATTR_LOCALE: &str = "locale";
+const ATTR_ID: &str = "id";
+
+const LOCALE_EN_US: &str = "en_US";
+
 /// Load a locale file
 pub fn load_locale(path: &Path) -> Result<LocaleNode, LocaleError> {
     let file = File::open(path)?;
@@ -91,86 +106,60 @@ pub fn load_locale(path: &Path) -> Result<LocaleNode, LocaleError> {
     if let Ok(XmlEvent::Decl(_)) = reader.read_event(&mut buf) {}
     buf.clear();
 
-    let _ = expect_start("localization", &mut reader, &mut buf)?;
-    //println!("<localization>");
+    let _ = expect_start(TAG_LOCALIZATION, &mut reader, &mut buf)?;
     buf.clear();
 
-    let e_locales = expect_start("locales", &mut reader, &mut buf)?;
-    //println!("<locales>");
-    let locale_count = expect_attribute("count", &reader, &e_locales)?;
+    let e_locales = expect_start(TAG_LOCALES, &mut reader, &mut buf)?;
+    let locale_count: usize = expect_attribute(ATTR_COUNT, &reader, &e_locales)?;
+    let mut real_locale_count = 0;
     buf.clear();
 
-    for _ in 0..locale_count {
-        let _ = expect_start("locale", &mut reader, &mut buf)?;
-        //print!("<locale>");
+    while expect_child_or_end(TAG_LOCALE, TAG_LOCALES, &mut reader, &mut buf)?.is_some() {
         buf.clear();
 
-        let _locale = expect_text(&mut reader, &mut buf)?;
-        //print!("{}", locale);
+        let locale = expect_text(&mut reader, &mut buf)?;
+        log::debug!("Found locale '{}'", locale);
+
+        expect_end(TAG_LOCALE, &mut reader, &mut buf)?;
         buf.clear();
 
-        let _ = expect_end("locale", &mut reader, &mut buf)?;
-        //println!("</locale>");
-        buf.clear();
+        real_locale_count += 1;
+    }
+    buf.clear();
+
+    if real_locale_count != locale_count {
+        log::warn!(
+            "locale.xml specifies a locale count of {}, but has {}",
+            locale_count,
+            real_locale_count
+        );
     }
 
-    let _ = expect_end("locales", &mut reader, &mut buf)?;
-    buf.clear();
-    //println!("</locales>");
-
-    let e_locales = expect_start("phrases", &mut reader, &mut buf)?;
-    //println!("<phrases>");
-    let phrase_count = expect_attribute("count", &reader, &e_locales)?;
+    let e_locales = expect_start(TAG_PHRASES, &mut reader, &mut buf)?;
+    let phrase_count: usize = expect_attribute(ATTR_COUNT, &reader, &e_locales)?;
+    let mut real_phrase_count = 0;
     buf.clear();
 
-    for _ in 0..phrase_count {
-        let e_phrase = expect_start("phrase", &mut reader, &mut buf)?;
-        let id: String = expect_attribute("id", &reader, &e_phrase)?;
-
-        //let key = id.strip_prefix(&opt.prefix).map(|x| x.to_owned());
+    while let Some(e_phrase) = expect_child_or_end(TAG_PHRASE, TAG_PHRASES, &mut reader, &mut buf)?
+    {
+        let id: String = expect_attribute(ATTR_ID, &reader, &e_phrase)?;
         buf.clear();
 
         let mut translation = None;
 
-        loop {
-            let event = reader.read_event(&mut buf)?;
-            let e_translation = match event {
-                XmlEvent::End(e) => {
-                    if e.name() == b"phrase" {
-                        break;
-                    } else {
-                        let name_str = reader.decode(e.name());
-                        return Err(LocaleError::Xml(Error::ExpectedEndTag(
-                            String::from("phrase"),
-                            name_str.into_owned(),
-                        )));
-                    }
-                }
-                XmlEvent::Start(e) => {
-                    if e.name() == b"translation" {
-                        e
-                    } else {
-                        let name_str = reader.decode(e.name());
-                        return Err(LocaleError::Xml(Error::ExpectedEndTag(
-                            String::from("translation"),
-                            name_str.into_owned(),
-                        )));
-                    }
-                }
-                _ => panic!(),
-            };
-            let locale: String = expect_attribute("locale", &reader, &e_translation)?;
+        while let Some(e_translation) =
+            expect_child_or_end(TAG_TRANSLATION, TAG_PHRASE, &mut reader, &mut buf)?
+        {
+            let locale: String = expect_attribute(ATTR_LOCALE, &reader, &e_translation)?;
             buf.clear();
 
-            let trans = expect_text(&mut reader, &mut buf)?;
-            if &locale == "en_US" {
+            let trans = expect_text_or_end(TAG_TRANSLATION, &mut reader, &mut buf)?;
+            if locale == LOCALE_EN_US {
                 translation = Some(trans);
             }
             buf.clear();
-
-            let _ = expect_end("translation", &mut reader, &mut buf)?;
-            buf.clear();
         }
+        buf.clear();
 
         let mut node = &mut root;
         for comp in id.split('_') {
@@ -183,11 +172,18 @@ pub fn load_locale(path: &Path) -> Result<LocaleNode, LocaleError> {
         if let Some(translation) = translation {
             node.value = Some(translation);
         }
-    }
 
-    let _ = expect_end("phrases", &mut reader, &mut buf)?;
-    //println!("</phrases>");
+        real_phrase_count += 1;
+    }
     buf.clear();
+
+    if phrase_count != real_phrase_count {
+        log::warn!(
+            "locale.xml specifies a count of {} phrases, but has {}",
+            phrase_count,
+            real_phrase_count
+        );
+    }
 
     Ok(root)
 }
