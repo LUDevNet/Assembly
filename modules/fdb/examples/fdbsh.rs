@@ -1,7 +1,7 @@
-use std::{fs::File, path::PathBuf};
+use std::{fmt::Write, fs::File, path::PathBuf};
 
 use argh::FromArgs;
-use assembly_fdb::mem;
+use assembly_fdb::{mem, sqlite};
 use color_eyre::eyre::Context;
 use mapr::Mmap;
 use rusqlite::Connection;
@@ -18,23 +18,46 @@ struct Options {
 fn exec(conn: &rusqlite::Connection, sql: &str) -> rusqlite::Result<()> {
     let mut stmt = conn.prepare(sql)?;
     let col_count = stmt.column_count();
+    let mut table = prettytable::Table::new();
+    table.set_titles(prettytable::Row::new(
+        stmt.column_names()
+            .into_iter()
+            .map(prettytable::Cell::new)
+            .collect(),
+    ));
+
     let mut rows = stmt.query([])?;
 
+    let mut buf = String::new();
     while let Some(row) = rows.next()? {
+        let mut cells = Vec::with_capacity(col_count);
         for idx in 0..col_count {
             let value = row.get_ref(idx)?;
             match value {
-                rusqlite::types::ValueRef::Null => print!(" null"),
-                rusqlite::types::ValueRef::Integer(i) => print!(" {}", i),
-                rusqlite::types::ValueRef::Real(r) => print!(" {}", r),
-                rusqlite::types::ValueRef::Text(t) => {
-                    print!(" {:?}", std::str::from_utf8(t).unwrap())
+                rusqlite::types::ValueRef::Null => cells.push(prettytable::Cell::new("null")),
+                rusqlite::types::ValueRef::Integer(i) => {
+                    let _ = write!(buf, "{}", i);
+                    cells.push(prettytable::Cell::new(&buf));
                 }
-                rusqlite::types::ValueRef::Blob(b) => print!(" {:?}", b),
+                rusqlite::types::ValueRef::Real(r) => {
+                    let _ = write!(buf, "{}", r);
+                    cells.push(prettytable::Cell::new(&buf));
+                }
+                rusqlite::types::ValueRef::Text(t) => {
+                    let text = std::str::from_utf8(t).unwrap();
+                    let _ = write!(buf, "{:?}", text);
+                    cells.push(prettytable::Cell::new(&buf));
+                }
+                rusqlite::types::ValueRef::Blob(bytes) => {
+                    let _ = write!(buf, "{:?}", bytes);
+                    cells.push(prettytable::Cell::new(&buf));
+                }
             }
+            buf.clear();
         }
-        println!();
+        table.add_row(prettytable::Row::new(cells));
     }
+    table.printstd();
     Ok(())
 }
 
@@ -44,10 +67,25 @@ fn main() -> color_eyre::Result<()> {
     let src_file = File::open(&opts.src)
         .wrap_err_with(|| format!("Failed to open input file '{}'", opts.src.display()))?;
     let mmap = unsafe { Mmap::map(&src_file)? };
-    let buffer: &[u8] = &mmap;
+    let mmap: &'static Mmap = Box::leak(Box::new(mmap));
+    let buffer: &'static [u8] = mmap;
 
-    let _db = mem::Database::new(buffer);
+    let db = mem::Database::new(buffer);
     let conn = Connection::open_in_memory()?;
+    sqlite::load_module(&conn, db)?;
+
+    for table in db.tables()?.iter() {
+        let table = table?;
+        let name = table.name();
+
+        if name == "DBExclude" {
+            continue;
+        }
+
+        let sql = format!("CREATE VIRTUAL TABLE {} USING fdb;", name);
+        println!("Running: {}", sql);
+        conn.execute(&sql, [])?;
+    }
 
     let mut rl = rustyline::Editor::<()>::new();
 

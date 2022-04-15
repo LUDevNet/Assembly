@@ -1,6 +1,6 @@
 //! # Virtual Table implementation
 
-use rusqlite::vtab::{CreateVTab, VTab, VTabCursor};
+use rusqlite::vtab::{read_only_module, CreateVTab, VTab, VTabCursor};
 
 use crate::mem;
 
@@ -10,6 +10,14 @@ struct FdbTab<'vtab> {
     base: rusqlite::vtab::sqlite3_vtab,
     /* Virtual table implementations will typically add additional fields */
     table: mem::Table<'vtab>,
+}
+
+/// Register the module
+pub fn load_module(
+    conn: &rusqlite::Connection,
+    db: mem::Database<'static>,
+) -> rusqlite::Result<()> {
+    conn.create_module("fdb", read_only_module::<FdbTab>(), Some(db))
 }
 
 struct BufferedIter<'vtab> {
