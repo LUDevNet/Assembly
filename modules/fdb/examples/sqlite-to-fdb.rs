@@ -110,9 +110,7 @@ fn main() -> eyre::Result<()> {
     let mut dest_out = BufWriter::new(dest_file);
     let mut dest_db = store::Database::new();
 
-    let result;
-
-    if let Some(template) = &opts.template {
+    let result = if let Some(template) = &opts.template {
         // fdb template
         let template_file = File::open(template)
             .wrap_err_with(|| format!("Failed to open fdb template '{}'", template.display()))?;
@@ -120,10 +118,10 @@ fn main() -> eyre::Result<()> {
         let buffer: &[u8] = &mmap;
         let template_db = Database::new(buffer);
 
-        result = convert_with_template(&conn, &mut dest_db, &template_db);
+        convert_with_template(&conn, &mut dest_db, &template_db)
     } else {
-        result = convert_without_template(&conn, &mut dest_db);
-    }
+        convert_without_template(&conn, &mut dest_db)
+    };
 
     match result {
         Ok(()) => {
