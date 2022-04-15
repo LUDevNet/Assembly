@@ -5,6 +5,8 @@ use std::fmt::Write;
 use rusqlite::params_from_iter;
 pub use rusqlite::{Connection, Error, Result};
 
+mod vtab;
+
 use super::mem::Database;
 
 /// Try to export a database to a SQL connection
