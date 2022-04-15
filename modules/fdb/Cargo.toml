@@ -5,8 +5,9 @@ edition = "2018"
 license = "MIT or Apache-2.0"
 
 [features]
-default = ["sqlite", "serde-derives"]
+default = ["sqlite-vtab", "serde-derives"]
 sqlite = ["rusqlite"]
+sqlite-vtab = ["sqlite", "rusqlite/vtab"]
 serde-derives = ["serde"]
 
 [dependencies]
@@ -40,3 +41,4 @@ mapr = "0.8"
 structopt = "0.3"
 color-eyre = "0.5"
 serde_json = "1.0.61"
+rustyline = "9.1"

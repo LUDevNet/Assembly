@@ -29,6 +29,7 @@ pub enum BufferError {
 }
 
 #[derive(Copy, Clone)]
+#[repr(C)]
 /// Wrapper around a immutable reference to a byte slice
 pub struct Buffer<'a>(&'a [u8]);
 

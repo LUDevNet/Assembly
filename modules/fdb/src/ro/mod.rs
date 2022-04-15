@@ -41,6 +41,7 @@ impl<B: AsRef<[u8]>, T: Copy> ArcHandle<B, T> {
 /// the memory slice as well as a value that represents the
 /// current target.
 #[derive(Clone, Debug)]
+#[repr(C)]
 pub struct BaseHandle<P: Deref, T>
 where
     <P as Deref>::Target: AsRef<[u8]>,

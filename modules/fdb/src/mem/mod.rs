@@ -206,6 +206,7 @@ struct InnerTable<'a> {
 }
 
 #[derive(Copy, Clone)]
+#[repr(C)]
 /// Reference to a single table
 pub struct Table<'a> {
     inner: Handle<'a, InnerTable<'a>>,

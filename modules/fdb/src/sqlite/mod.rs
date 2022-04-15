@@ -9,6 +9,8 @@ use rusqlite::{
 };
 pub use rusqlite::{Connection, Error, Result};
 
+mod vtab;
+
 use super::{
     common::ValueType,
     mem::{Database, Field},
