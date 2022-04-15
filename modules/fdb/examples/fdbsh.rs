@@ -19,6 +19,7 @@ fn exec(conn: &rusqlite::Connection, sql: &str) -> rusqlite::Result<()> {
     let mut stmt = conn.prepare(sql)?;
     let col_count = stmt.column_count();
     let mut table = prettytable::Table::new();
+    table.set_format(*prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
     table.set_titles(prettytable::Row::new(
         stmt.column_names()
             .into_iter()
@@ -79,11 +80,12 @@ fn main() -> color_eyre::Result<()> {
         let name = table.name();
 
         if name == "DBExclude" {
+            println!("Skipping {:?}", name); // FIXME
             continue;
         }
 
         let sql = format!("CREATE VIRTUAL TABLE {} USING fdb;", name);
-        println!("Running: {}", sql);
+        //println!("Running: {}", sql);
         conn.execute(&sql, [])?;
     }
 
