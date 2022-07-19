@@ -1,6 +1,8 @@
 //! # Virtual Table implementation
 
-use rusqlite::vtab::{read_only_module, CreateVTab, VTab, VTabCursor};
+use std::iter::Enumerate;
+
+use rusqlite::vtab::{read_only_module, CreateVTab, IndexConstraintOp, VTab, VTabCursor};
 
 use crate::mem;
 
@@ -21,20 +23,40 @@ pub fn load_module(
 }
 
 struct BufferedIter<'vtab> {
-    /// The backing iterator
-    iter: mem::iter::TableRowIter<'vtab>,
+    // /// The backing iterator
+    // iter: mem::iter::TableRowIter<'vtab>,
+    /// The bucket iterator
+    buckets: Option<Enumerate<mem::iter::BucketIter<'vtab>>>,
+    /// The row iterator
+    rows: Option<(usize, Enumerate<mem::iter::RowHeaderIter<'vtab>>)>,
     /// The item at the front
-    next: Option<mem::Row<'vtab>>,
+    next: Option<(usize, mem::Row<'vtab>)>,
+
     /// The rowid
     rowid: i64,
 }
 
+fn map_index_bucket<'vtab>(
+    (index, bucket): (usize, mem::Bucket<'vtab>),
+) -> (usize, Enumerate<mem::RowHeaderIter<'vtab>>) {
+    (index, bucket.row_iter().enumerate())
+}
+
+fn rows_next<'vtab>(
+    (index, rows): (usize, Enumerate<mem::RowHeaderIter<'vtab>>),
+) -> Option<(usize, usize, mem::Row<'_>)> {
+    rows.next().map(|(x, y)| (index, x, y))
+}
+
 impl<'vtab> BufferedIter<'vtab> {
     pub fn new(table: mem::Table<'vtab>) -> Self {
-        let mut iter = table.row_iter();
-        let next = iter.next();
+        let mut bucket_iter = table.bucket_iter().enumerate();
+        let mut rows = bucket_iter.next().map(map_index_bucket);
+        let mut next = rows.as_mut().and_then(rows_next);
         Self {
-            iter,
+            //iter,
+            buckets: Some(bucket_iter),
+            rows,
             next,
             rowid: 0,
         }
@@ -46,7 +68,7 @@ impl<'vtab> BufferedIter<'vtab> {
     }
 
     pub fn next(&mut self) {
-        self.next = self.iter.next();
+        self.next = self.rows.and_then(|rows| rows.next().map(|x| x.1));
         self.rowid += 1;
     }
 }
@@ -62,10 +84,15 @@ struct FdbTabCursor<'vtab> {
 unsafe impl<'vtab> VTabCursor for FdbTabCursor<'vtab> {
     fn filter(
         &mut self,
-        _idx_num: std::os::raw::c_int,
+        idx_num: std::os::raw::c_int,
         _idx_str: Option<&str>,
-        _args: &rusqlite::vtab::Values<'_>,
+        args: &rusqlite::vtab::Values<'_>,
     ) -> rusqlite::Result<()> {
+        if idx_num == 1 {
+            // Filter by first column
+            let idx_value = args.get::<rusqlite::types::Value>(0)?;
+        }
+
         Ok(())
     }
 
@@ -166,7 +193,33 @@ unsafe impl<'vtab> VTab<'vtab> for FdbTab<'vtab> {
     }
 
     fn best_index(&self, info: &mut rusqlite::vtab::IndexInfo) -> rusqlite::Result<()> {
-        info.set_estimated_cost(1_000_000.0);
+        let mut argv_index = 0;
+        for (c, mut u) in info.constraints_and_usages() {
+            if c.column() == 0
+                && c.is_usable()
+                && c.operator() == IndexConstraintOp::SQLITE_INDEX_CONSTRAINT_EQ
+            {
+                argv_index += 1;
+                u.set_argv_index(argv_index);
+            }
+        }
+
+        match argv_index {
+            0 => {
+                info.set_estimated_cost(1_000_000.0);
+            }
+            1 => {
+                info.set_estimated_cost(1_000.0);
+                info.set_idx_num(1);
+            }
+            _ => {
+                return Err(rusqlite::Error::ModuleError(format!(
+                    "FDB: More than one ({}) EQ hashcol constraint",
+                    argv_index
+                )));
+            }
+        }
+
         Ok(())
     }
 
