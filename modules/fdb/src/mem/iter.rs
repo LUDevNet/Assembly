@@ -9,8 +9,6 @@ use super::{
 use crate::ro::{Handle, RefHandle, SliceIterHandle};
 use assembly_core::buffer::CastError;
 
-use std::iter::{Flatten, Map};
-
 #[derive(Clone)]
 /// Iterator created by [`Tables::iter`][`super::Tables::iter`]
 pub struct TableIter<'a> {
@@ -45,14 +43,14 @@ type FnBucketToRowIter<'a> = fn(Bucket<'a>) -> RowHeaderIter<'a>;
 
 /// Iterator produced by [`Table::row_iter`]
 pub struct TableRowIter<'a> {
-    inner: Flatten<Map<BucketIter<'a>, FnBucketToRowIter<'a>>>,
+    inner: std::iter::FlatMap<BucketIter<'a>, RowHeaderIter<'a>, FnBucketToRowIter<'a>>,
 }
 
 impl<'a> TableRowIter<'a> {
     /// Create a new row iter from a bucket iter
     pub fn new(inner: BucketIter<'a>) -> Self {
         Self {
-            inner: inner.map(bucket_rows as FnBucketToRowIter<'a>).flatten(),
+            inner: inner.flat_map(bucket_rows as FnBucketToRowIter<'a>),
         }
     }
 }

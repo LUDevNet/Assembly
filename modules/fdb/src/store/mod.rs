@@ -113,9 +113,9 @@ impl Database {
         let mut start_vec = Vec::with_capacity(self.tables.len());
         let table_list_base = base_offset + count * size_of::<FDBTableHeader>() as u32;
         let mut start = table_list_base;
-        for len in len_vec.iter().copied() {
+        for len in len_vec.iter() {
             start_vec.push(start);
-            Table::write_header(&mut start, &len, out)?;
+            Table::write_header(&mut start, len, out)?;
         }
 
         let mut start = table_list_base;
