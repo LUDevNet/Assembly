@@ -71,8 +71,8 @@ pub enum ValueType {
     Xml,
     /// `null`
     Null,
-	///'smalldatetime'
-	SmallDateTime,
+    ///'smalldatetime'
+    SmallDateTime,
 }
 
 #[cfg(feature = "serialize")]
@@ -122,8 +122,8 @@ impl FromStr for ValueType {
             "datetime" => Ok(Self::DateTime),
             "xml" => Ok(Self::Xml),
             "null" => Ok(Self::Null),
-			
-			"smalldatetime" => Ok(Self::SmallDateTime),
+
+            "smalldatetime" => Ok(Self::SmallDateTime),
 
             _ => Err(UnknownValueType(s.to_owned())),
         }
