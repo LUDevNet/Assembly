@@ -9,8 +9,8 @@ use super::{
 use crate::ro::{Handle, RefHandle, SliceIterHandle};
 use assembly_core::buffer::CastError;
 
-#[derive(Clone)]
 /// Iterator created by [`Tables::iter`][`super::Tables::iter`]
+#[derive(Clone)]
 pub struct TableIter<'a> {
     inner: Handle<'a, std::slice::Iter<'a, FDBTableHeaderC>>,
 }
@@ -42,6 +42,7 @@ fn bucket_rows(b: Bucket) -> RowHeaderIter {
 type FnBucketToRowIter<'a> = fn(Bucket<'a>) -> RowHeaderIter<'a>;
 
 /// Iterator produced by [`Table::row_iter`]
+#[derive(Clone)]
 pub struct TableRowIter<'a> {
     inner: std::iter::FlatMap<BucketIter<'a>, RowHeaderIter<'a>, FnBucketToRowIter<'a>>,
 }
@@ -63,8 +64,8 @@ impl<'a> Iterator for TableRowIter<'a> {
     }
 }
 
-#[derive(Clone)]
 /// Iterator produced by [`Table::bucket_iter`]
+#[derive(Clone)]
 pub struct BucketIter<'a> {
     inner: Handle<'a, std::slice::Iter<'a, FDBBucketHeaderC>>,
 }
@@ -95,6 +96,7 @@ impl<'a> Iterator for BucketIter<'a> {
 }
 
 /// Struct that implements [`Bucket::row_iter`].
+#[derive(Clone)]
 pub struct RowHeaderIter<'a> {
     next: Option<RefHandle<'a, FDBRowHeaderListEntryC>>,
 }
@@ -131,6 +133,7 @@ impl<'a> Iterator for RowHeaderIter<'a> {
 }
 
 /// An iterator over fields in a row
+#[derive(Clone)]
 pub struct FieldIter<'a> {
     inner: SliceIterHandle<'a, FDBFieldDataC>,
 }

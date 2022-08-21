@@ -13,6 +13,7 @@ use thiserror::Error;
 /// This structure works much like a pre-implemented closure
 /// for use in a `filter` function. It contains the hash of
 /// a value and uses that to check whether the fields match.
+#[derive(Debug, Clone)]
 pub struct PrimaryKeyFilter {
     hash_value: u32,
     value: Field,
@@ -22,6 +23,11 @@ impl PrimaryKeyFilter {
     /// Get the contained hash
     pub fn hash(&self) -> u32 {
         self.hash_value
+    }
+
+    /// Get the value used for exact comparison
+    pub fn original(&self) -> &Field {
+        &self.value
     }
 
     /// Check `other` against the filter
