@@ -19,65 +19,29 @@
 pub mod iter;
 
 use std::collections::BTreeMap;
-use std::fmt;
 
-use super::{
-    common::{Context, Value, ValueType},
-    mem::Field as MemField,
+use latin1str::Latin1Str;
+
+pub use assembly_fdb_core::value::{
+    mem::MemContext,
+    owned::{Field, OwnedContext},
+    Context, Value, ValueMapperMut, ValueType,
 };
 
-/// The `Value` context for `core::Field`
-#[derive(Debug, PartialEq, Eq)]
-pub struct OwnedContext;
+/// Map [MemContext] values to [OwnedContext] values
+pub struct MemToOwned;
 
-impl Context for OwnedContext {
-    type String = String;
-    type I64 = i64;
-    type XML = String;
-}
-
-/// An owned field value
-pub type Field = Value<OwnedContext>;
-
-impl From<MemField<'_>> for Field {
-    fn from(src: MemField<'_>) -> Self {
-        match src {
-            MemField::Nothing => Field::Nothing,
-            MemField::Integer(v) => Field::Integer(v),
-            MemField::Float(v) => Field::Float(v),
-            MemField::Text(v) => Field::Text(v.decode().into_owned()),
-            MemField::Boolean(v) => Field::Boolean(v),
-            MemField::BigInt(v) => Field::BigInt(v),
-            MemField::VarChar(v) => Field::VarChar(v.decode().into_owned()),
-        }
+impl<'a> ValueMapperMut<MemContext<'a>, OwnedContext> for MemToOwned {
+    fn map_string(&mut self, from: &&'a Latin1Str) -> String {
+        from.decode().into_owned()
     }
-}
 
-impl PartialEq<MemField<'_>> for Field {
-    fn eq(&self, other: &MemField<'_>) -> bool {
-        match other {
-            Value::Nothing => matches!(self, Self::Nothing),
-            Value::Integer(x) => matches!(self, Self::Integer(y) if x == y),
-            Value::Float(x) => matches!(self, Self::Float(y) if x == y),
-            Value::Text(x) => matches!(self, Self::Text(y) if x.decode().as_ref() == y),
-            Value::Boolean(x) => matches!(self, Self::Boolean(y) if x == y),
-            Value::BigInt(x) => matches!(self, Self::BigInt(y) if x == y),
-            Value::VarChar(x) => matches!(self, Self::VarChar(y) if x.decode().as_ref() == y),
-        }
+    fn map_i64(&mut self, from: &i64) -> i64 {
+        *from
     }
-}
 
-impl fmt::Display for Field {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Field::Nothing => write!(f, "NULL"),
-            Field::Integer(i) => write!(f, "{}", i),
-            Field::Float(v) => write!(f, "{}", v),
-            Field::Text(t) => write!(f, "{:?}", t),
-            Field::Boolean(b) => write!(f, "{}", b),
-            Field::BigInt(i) => write!(f, "{}", i),
-            Field::VarChar(v) => write!(f, "{:?}", v),
-        }
+    fn map_xml(&mut self, from: &&'a Latin1Str) -> String {
+        from.decode().into_owned()
     }
 }
 

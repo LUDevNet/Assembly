@@ -1,6 +1,9 @@
 use std::{fs::File, io::BufWriter, path::PathBuf, time::Instant};
 
-use assembly_fdb::{core::Field, mem, store};
+use assembly_fdb::{
+    core::{Field, MemToOwned},
+    mem, store,
+};
 use mapr::Mmap;
 use structopt::StructOpt;
 
@@ -48,7 +51,7 @@ fn main() -> eyre::Result<()> {
         for (pk, src_bucket) in src_table.bucket_iter().enumerate() {
             for src_row in src_bucket.row_iter() {
                 for field in src_row.field_iter() {
-                    row_buffer.push(Field::from(field));
+                    row_buffer.push(field.map(&mut MemToOwned));
                 }
                 dest_table.push_row(pk, &row_buffer[..]);
                 row_buffer.clear();

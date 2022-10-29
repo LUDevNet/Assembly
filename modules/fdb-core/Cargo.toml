@@ -1,0 +1,38 @@
+[package]
+name = "assembly-fdb-core"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/LUDevNet/Assembly/tree/main/modules/fdb-core"
+description = "Components to build FDB parsers and writers"
+license = "MIT or Apache-2.0"
+readme = "README.md"
+
+[dependencies]
+latin1str = "0.1.1"
+sfhash = "0.1.1"
+
+[dependencies.bytemuck]
+version = "1.4"
+optional = true
+
+[dependencies.bytemuck_derive]
+version = "1"
+optional = true
+
+[dependencies.rusqlite]
+version = "0.26.3"
+optional = true
+
+[dependencies.serde]
+version = "1"
+optional = true
+features = ["derive"]
+
+[features]
+bytemuck = ["dep:bytemuck","dep:bytemuck_derive"]
+sqlite = ["dep:rusqlite"]
+serde = ["dep:serde"]
+default = []
+
+[package.metadata.docs.rs]
+all-features = true

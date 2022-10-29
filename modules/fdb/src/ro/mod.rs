@@ -177,6 +177,14 @@ impl<'a, T> Handle<'a, T> {
     }
 }
 
+/// Try from a handle
+pub trait TryFromHandle<'a, T>: Sized {
+    /// Error type
+    type Error;
+    /// Conversion function
+    fn try_from(h: Handle<'a, T>) -> Result<Self, Self::Error>;
+}
+
 impl<'a, T> Iterator for Handle<'a, T>
 where
     T: Iterator,

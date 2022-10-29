@@ -9,11 +9,15 @@
 //! The only limitation is, that all references are bounded by the lifetime
 //! of the original database buffer.
 use assembly_core::buffer::{self, Repr, LEI64};
+pub use assembly_fdb_core::value::mem::{Field, MemContext};
 use buffer::CastError;
+use latin1str::Latin1Str;
 
 mod c;
+use crate::ro::TryFromHandle;
+
 use super::{
-    common::{Context, Latin1Str, Value, ValueMapperMut, ValueType},
+    common::{ValueMapperMut, ValueType},
     file::{FDBFieldValue, FileContext, IndirectValue},
     ro::{
         buffer::{compare_bytes, Buffer},
@@ -407,21 +411,6 @@ impl<'a> IntoIterator for Row<'a> {
     }
 }
 
-#[derive(Debug, PartialEq)]
-/// The context for `mem::Field`
-pub struct MemContext<'a> {
-    _m: std::marker::PhantomData<fn() -> &'a ()>,
-}
-
-impl<'a> Context for MemContext<'a> {
-    type String = &'a Latin1Str;
-    type I64 = i64;
-    type XML = &'a Latin1Str;
-}
-
-/// Value of or reference to a field value
-pub type Field<'a> = Value<MemContext<'a>>;
-
 struct MemFromFile<'a>(Buffer<'a>);
 
 impl<'a> ValueMapperMut<FileContext, MemContext<'a>> for MemFromFile<'a> {
@@ -438,7 +427,7 @@ impl<'a> ValueMapperMut<FileContext, MemContext<'a>> for MemFromFile<'a> {
     }
 }
 
-impl<'a> TryFrom<Handle<'a, FDBFieldValue>> for Field<'a> {
+impl<'a> TryFromHandle<'a, FDBFieldValue> for Field<'a> {
     type Error = Infallible;
 
     fn try_from(value: Handle<'a, FDBFieldValue>) -> Result<Self, Self::Error> {

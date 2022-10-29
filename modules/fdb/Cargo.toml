@@ -6,8 +6,8 @@ license = "MIT or Apache-2.0"
 
 [features]
 default = ["sqlite", "serde-derives"]
-sqlite = ["rusqlite"]
-serde-derives = ["serde", "latin1str/serde"]
+sqlite = ["rusqlite", "assembly-fdb-core/sqlite"]
+serde-derives = ["serde", "latin1str/serde", "assembly-fdb-core/serde"]
 
 [dependencies]
 bytemuck = "1.4"
@@ -18,6 +18,11 @@ nom = "7"
 sfhash = "0.1"
 thiserror = "1.0"
 latin1str = "0.1.1"
+
+[dependencies.assembly-fdb-core]
+version = "0.1.0"
+path = "../fdb-core"
+features = ["bytemuck"] # needed for `ro`
 
 [dependencies.assembly-core]
 version = "0.3.0"

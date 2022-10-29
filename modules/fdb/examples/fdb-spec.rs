@@ -1,7 +1,8 @@
 use assembly_fdb::{
-    common::{Latin1Str, Value},
+    common::Latin1Str,
     mem::{Database, Tables},
 };
+use assembly_fdb_core::value::mem;
 use mapr::Mmap;
 use serde::Serialize;
 use std::{
@@ -70,7 +71,7 @@ fn main() -> color_eyre::Result<()> {
         for row in table.row_iter() {
             for index in test_set.clone() {
                 if let Some(f) = row.field_at(index) {
-                    if f == Value::Nothing {
+                    if f == mem::Field::Nothing {
                         columns[index].nullable = true;
                         checked.insert(index);
                     }

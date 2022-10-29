@@ -1,5 +1,5 @@
 use assembly_fdb::{
-    core,
+    core::MemToOwned,
     mem::{self, Database, Field, Table},
     query::pk_filter,
 };
@@ -67,7 +67,7 @@ fn main() -> color_eyre::Result<()> {
         .row_iter()
         .filter(|row| {
             if let Some(index_field) = row.field_at(0) {
-                filter.filter(&core::Field::from(index_field))
+                filter.filter(&index_field.map(&mut MemToOwned))
             } else {
                 false
             }
