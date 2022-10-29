@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 /// Data for the [`LevelProgression` component](https://docs.lu-dev.net/en/latest/components/xxx-level-progression.html)
 #[allow(missing_docs)]
 pub struct Level {

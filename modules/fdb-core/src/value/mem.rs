@@ -4,7 +4,7 @@ use latin1str::Latin1Str;
 
 use super::{Context, Value};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 /// The context for `mem::Field`
 pub struct MemContext<'a> {
     _m: std::marker::PhantomData<fn() -> &'a ()>,

@@ -11,7 +11,7 @@ use displaydoc::Display;
 use thiserror::Error;
 
 /// The kind of an XML event
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum XmlEventKind {
     /// Start Tag `<tag>`
     Start,

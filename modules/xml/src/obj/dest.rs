@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Data for the [`Destructible` component](https://docs.lu-dev.net/en/latest/components/007-destroyable.html)
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Destructible {
     /// Current Armor
     #[serde(rename = "ac")]
@@ -40,5 +40,5 @@ pub struct Destructible {
 }
 
 /// Buff Component
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Buff {}

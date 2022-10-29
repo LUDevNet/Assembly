@@ -188,7 +188,7 @@ fn main() -> color_eyre::Result<()> {
         while let Some(node) = stack.pop() {
             if let Some(&check_root) = behavior_root.get(&node) {
                 // We already know the root of that node, now we need to check whether it's the same
-                match (&check_root).cmp(&root) {
+                match check_root.cmp(&root) {
                     Ordering::Less => {
                         // OOPS
                         conflicts.insert((check_root, root));

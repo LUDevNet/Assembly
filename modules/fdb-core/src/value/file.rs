@@ -4,7 +4,7 @@ use crate::file::FDBFieldData;
 
 use super::{Context, UnknownValueType, Value, ValueType};
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 /// The `common::Context` for used to make `file::FDBFieldValue`
 pub struct FileContext;
 

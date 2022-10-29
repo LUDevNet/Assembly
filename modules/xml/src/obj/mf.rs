@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 /// Data for the [`Minifig` component](https://docs.lu-dev.net/en/latest/components/035-minifig.html)
 pub struct Minifig {
     /// Chest Decal

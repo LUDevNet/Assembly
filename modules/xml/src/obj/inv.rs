@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Data for the [`Inventory` component](https://docs.lu-dev.net/en/latest/components/017-inventory.html)
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Inventory {
     /// LOT of the item in the consumable slot
     #[serde(rename = "csl")]
@@ -17,7 +17,7 @@ pub struct Inventory {
     pub items: Items,
 }
 
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 /// A list of bags
 pub struct Bags {
     #[serde(rename = "b")]
@@ -28,7 +28,7 @@ pub struct Bags {
 /// A storage container
 ///
 /// (e.g Items, Models, Vault Items, Behaviors)
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Bag {
     /// Type of the bag. See `InventoryType` enum for values.
     #[serde(rename = "t")]
@@ -39,7 +39,7 @@ pub struct Bag {
 }
 
 /// One group
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Group {
     /// `user_group XXX`
     pub attr_id: String,
@@ -54,7 +54,7 @@ pub struct Group {
 }
 
 /// All items
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Items {
     /// ??
     #[serde(rename = "nn")]
@@ -66,7 +66,7 @@ pub struct Items {
 }
 
 /// A list of items for a storage container
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct ItemBag {
     /// Type of the bag. See `InventoryType` enum for values.
     #[serde(rename = "t")]
@@ -77,7 +77,7 @@ pub struct ItemBag {
 }
 
 /// An item in an inventory
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Item {
     /// Whether the item is bound
     #[serde(rename = "b")]
@@ -108,7 +108,7 @@ pub struct Item {
 }
 
 /// Extra item information
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[allow(missing_docs)]
 pub struct ItemExtra {
     #[serde(rename = "b")]

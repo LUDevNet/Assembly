@@ -70,7 +70,7 @@ pub struct Placement3D {
 }
 
 /// Alias for u32 that represents a world map from the resources
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
 #[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct WorldID(u32);
@@ -83,7 +83,7 @@ impl WorldID {
 }
 
 /// Alias for u32 for an object template id
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
 #[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub struct ObjectTemplate(u32);

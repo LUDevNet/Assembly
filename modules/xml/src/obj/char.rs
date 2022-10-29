@@ -77,7 +77,7 @@ pub struct Character {
     pub zone_summaries: ZoneSummaries,
 }
 
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 /// Unlocked emotes
 pub struct UnlockedEmotes {
     /// List of unlocked emotes
@@ -85,14 +85,14 @@ pub struct UnlockedEmotes {
     pub children: Vec<UnlockedEmote>,
 }
 
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 /// A single unlocked emote
 pub struct UnlockedEmote {
     /// The ID from the [`Emotes` tables](https://docs.lu-dev.net/en/latest/database/Emotes.html)
     pub id: u32,
 }
 
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 /// List of zone summaries
 pub struct ZoneSummaries {
     /// The list of summaries
@@ -100,7 +100,7 @@ pub struct ZoneSummaries {
     pub children: Vec<ZoneSummary>,
 }
 
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 /// A single zone summary
 pub struct ZoneSummary {
     /// The relevant map ID from the [`ZoneTable`](https://docs.lu-dev.net/en/latest/database/ZoneTable.html)
@@ -122,7 +122,7 @@ pub struct ZoneSummary {
     pub quick_builds_constructed: u32,
 }
 
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 /// List of zone summaries
 pub struct VisitedLevels {
     /// The list of summaries
@@ -130,7 +130,7 @@ pub struct VisitedLevels {
     pub children: Vec<VisitedLevel>,
 }
 
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 /// A level the player visited
 pub struct VisitedLevel {
     /// Clone ID (used for properties, 0 if not a property)

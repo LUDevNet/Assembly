@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Data for the [`Pet Control` component](https://docs.lu-dev.net/en/latest/components/034-pet-control.html)
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Pets {
     /// List of pets
     #[serde(default, rename = "p")]
@@ -11,7 +11,7 @@ pub struct Pets {
 }
 
 /// A single pet
-#[derive(Default, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Pet {
     /// Pet ObjectID
     pub id: u64,
