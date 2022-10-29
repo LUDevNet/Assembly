@@ -1,8 +1,7 @@
-use assembly_fdb::{
-    common::Latin1Str,
-    mem::{Database, Tables},
-};
+use assembly_fdb::mem::{Database, Tables};
 use assembly_fdb_core::value::mem;
+use assembly_fdb_core::value::ValueType;
+use latin1str::Latin1Str;
 use mapr::Mmap;
 use serde::Serialize;
 use std::{
@@ -26,7 +25,7 @@ pub struct TableSpec<'a> {
 #[derive(Serialize)]
 pub struct ColumnSpec<'a> {
     name: &'a Latin1Str,
-    ty: assembly_fdb::common::ValueType,
+    ty: ValueType,
     nullable: bool,
 }
 

@@ -42,7 +42,6 @@
 #![doc(html_favicon_url = "https://assembly.lu-dev.net/rust-logo-lu-256.png")]
 #![warn(missing_docs)]
 
-pub mod common;
 #[cfg(feature = "core")]
 pub mod core;
 #[cfg(any(feature = "io-read", feature = "io-write"))]
@@ -57,7 +56,8 @@ pub mod store;
 mod handle;
 mod util;
 
-pub use assembly_fdb_core::FdbHash;
+// Re-exports
+pub use assembly_fdb_core::{file, value, FdbHash};
 
 #[cfg(feature = "sqlite")]
 pub mod sqlite;

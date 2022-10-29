@@ -3,11 +3,11 @@
 //! This module provides a struct which can be used to access
 //! a FDB file in any order the user desires.
 
+use assembly_fdb_core::value::{UnknownValueType, ValueType};
 use displaydoc::Display;
 use thiserror::Error;
 
 mod parser;
-use crate::common::{UnknownValueType, ValueType};
 use assembly_core::reader::{FileError, FileResult};
 use assembly_fdb_core::file::{
     FDBHeader, FDBRowHeader, FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader,

@@ -1,3 +1,5 @@
+//! Values as stored in byte slices
+
 use latin1str::Latin1Str;
 
 use super::{Context, Value};

@@ -1,3 +1,5 @@
+//! # Value as stored in owned allocation
+
 use super::{Context, Value};
 
 /// The `Value` context for `core::Field`

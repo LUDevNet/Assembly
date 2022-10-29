@@ -1,6 +1,11 @@
-use assembly_fdb::{common::Latin1String, common::ValueType, core::Field, mem::Database, store};
+use assembly_fdb::{
+    mem::Database,
+    store,
+    value::{owned::Field, ValueType},
+};
 use assembly_fdb_core::FdbHash;
 use color_eyre::eyre::{self, eyre, WrapErr};
+use latin1str::Latin1String;
 use mapr::Mmap;
 use rusqlite::{types::ValueRef, Connection};
 use std::{fmt::Write, fs::File, io::BufWriter, io::Write as _, path::PathBuf, time::Instant};

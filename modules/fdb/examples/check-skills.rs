@@ -5,11 +5,9 @@ use std::{
     path::PathBuf,
 };
 
-use assembly_fdb::{
-    common::Latin1Str,
-    mem::{Database, Row, RowHeaderIter, Table, Tables},
-};
+use assembly_fdb::mem::{Database, Row, RowHeaderIter, Table, Tables};
 use color_eyre::eyre::{eyre, WrapErr};
+use latin1str::Latin1Str;
 use mapr::Mmap;
 use structopt::StructOpt;
 

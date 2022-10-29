@@ -1,7 +1,5 @@
-use assembly_fdb::{
-    common::{Value, ValueType},
-    mem::{Database, Tables},
-};
+use assembly_fdb::mem::{Database, Tables};
+use assembly_fdb_core::value::{Value, ValueType};
 use mapr::Mmap;
 use std::{fs::File, path::PathBuf, time::Instant};
 use structopt::StructOpt;

@@ -8,15 +8,15 @@ use super::{
     slice::{FDBBucketHeaderSlice, FDBColumnHeaderSlice, FDBFieldDataSlice, FDBTableHeaderSlice},
     BaseHandle, Handle,
 };
-use crate::common::{Latin1Str, UnknownValueType, ValueType};
 use assembly_fdb_core::{
     file::{
         FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBHeader, FDBRowHeader,
         FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
     },
-    value::file::FDBFieldValue,
+    value::{file::FDBFieldValue, UnknownValueType, ValueType},
 };
 use displaydoc::Display;
+use latin1str::Latin1Str;
 use std::{convert::TryFrom, error::Error, fmt, ops::Deref, result::Result as StdResult};
 
 /// Custom result type for this module

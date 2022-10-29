@@ -1,11 +1,12 @@
 //! # General methods for aligned access to a byte buffer
 
-use crate::{common::Latin1Str, handle::Buffer, util::compare_bytes};
+use crate::{handle::Buffer, util::compare_bytes};
 use assembly_fdb_core::file::{
     ArrayHeader, FDBHeader, FDBRowHeader, FDBRowHeaderListEntry, FDBTableDataHeader,
     FDBTableDefHeader, FDBTableHeader,
 };
 use displaydoc::Display;
+use latin1str::Latin1Str;
 use std::{cmp::Ordering, convert::TryInto, mem::size_of, ops::Range};
 use thiserror::Error;
 

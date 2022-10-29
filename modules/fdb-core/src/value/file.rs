@@ -1,3 +1,5 @@
+//! # Values as serialized to a file
+
 use crate::file::FDBFieldData;
 
 use super::{Context, UnknownValueType, Value, ValueType};

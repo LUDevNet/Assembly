@@ -6,9 +6,9 @@
 //! ## Usage
 //!
 //! ```
+//! use latin1str::Latin1String;
 //! use assembly_fdb::{
-//!     common::{ValueType, Latin1String},
-//!     core::{Field},
+//!     value::{ValueType, owned::{Field}},
 //!     store::{Database, Table},
 //! };
 //!
@@ -35,15 +35,15 @@
 //! db.write(&mut out).expect("success");
 //! ```
 
-use super::{
-    common::{Context, Latin1Str, Latin1String, Value, ValueMapperMut, ValueType},
-    core::OwnedContext,
+use crate::io::write::WriteLE;
+use assembly_fdb_core::{
+    file::{
+        ArrayHeader, FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBHeader, FDBRowHeader,
+        FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
+    },
+    value::{owned::OwnedContext, Context, Value, ValueMapperMut, ValueType},
 };
-use crate::{common::req_buf_len, io::write::WriteLE};
-use assembly_fdb_core::file::{
-    ArrayHeader, FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBHeader, FDBRowHeader,
-    FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
-};
+use latin1str::{Latin1Str, Latin1String};
 use std::{
     collections::BTreeMap,
     convert::{TryFrom, TryInto},
@@ -53,6 +53,12 @@ use std::{
 
 #[cfg(test)]
 mod tests;
+
+/// Calculates the number of 4-byte units that are needed to store
+/// this string with at least one null terminator.
+fn req_buf_len(s: &Latin1Str) -> usize {
+    s.len() / 4 + 1
+}
 
 /// The whole database
 pub struct Database {
@@ -207,7 +213,7 @@ impl Table {
     }
 
     /// Push a row into this table
-    pub fn push_row(&mut self, pk: usize, fields: &[super::core::Field]) {
+    pub fn push_row(&mut self, pk: usize, fields: &[crate::value::owned::Field]) {
         let first_field_index = self.fields.len();
         let row = self.rows.len();
 
