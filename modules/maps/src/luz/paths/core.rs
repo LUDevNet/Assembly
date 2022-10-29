@@ -1,19 +1,55 @@
-use assembly_core::num_derive::{FromPrimitive, ToPrimitive};
 use assembly_core::types::{ObjectID, ObjectTemplate, Quaternion, Vector3f, WorldID};
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 #[cfg(feature = "serde-derives")]
 use serde::Serialize;
 
+enum ErrorKind {
+    /// Invalid argument parsed (e.g. undefined integer in enum)
+    ArgumentError,
+}
+
+pub struct Error {
+    kind: ErrorKind,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.kind {
+            ErrorKind::ArgumentError => write!(f, "Argument Error"),
+        }
+    }
+}
+
+impl Error {
+    fn argument_error() -> Self {
+        Self {
+            kind: ErrorKind::ArgumentError,
+        }
+    }
+}
+
 /// Version / first field of path data
 #[cfg_attr(feature = "serde-derives", derive(Serialize))]
-#[derive(Clone, Debug, FromPrimitive, ToPrimitive)]
+#[derive(Clone, Debug)]
 pub struct ZonePathsVersion(u32);
+
+impl From<u32> for ZonePathsVersion {
+    fn from(v: u32) -> Self {
+        Self(v)
+    }
+}
 
 /// Version of this path data
 #[cfg_attr(feature = "serde-derives", derive(Serialize))]
-#[derive(Clone, Copy, Debug, FromPrimitive, ToPrimitive)]
+#[derive(Clone, Copy, Debug)]
 pub struct PathVersion(u32);
+
+impl From<u32> for PathVersion {
+    fn from(v: u32) -> Self {
+        Self(v)
+    }
+}
 
 impl PathVersion {
     pub fn min(self, val: u32) -> bool {
@@ -27,7 +63,7 @@ impl PathVersion {
 
 /// Type of this path
 #[cfg_attr(feature = "serde-derives", derive(Serialize))]
-#[derive(Debug, FromPrimitive, ToPrimitive)]
+#[derive(Debug, Copy, Clone)]
 pub enum PathType {
     Movement,
     MovingPlatform,
@@ -39,9 +75,26 @@ pub enum PathType {
     Rail,
 }
 
+impl PathType {
+    const VALUES: [PathType; 8] = [
+        Self::Movement,
+        Self::MovingPlatform,
+        Self::Property,
+        Self::Camera,
+        Self::Spawner,
+        Self::Showcase,
+        Self::Race,
+        Self::Rail,
+    ];
+
+    pub fn from_u32(v: u32) -> Option<Self> {
+        Self::VALUES.get(v as usize).copied()
+    }
+}
+
 /// Interpretation of this path
 #[cfg_attr(feature = "serde-derives", derive(Serialize))]
-#[derive(Debug, FromPrimitive, ToPrimitive)]
+#[derive(Debug)]
 pub enum PathComposition {
     /// A closed polygon
     Polygon,
@@ -49,6 +102,20 @@ pub enum PathComposition {
     Points,
     /// A sequence of points
     Line,
+}
+
+impl PathComposition {
+    /// Turn a u32 into a value
+    pub fn from_u32(v: u32) -> Result<Self, Error> {
+        match v {
+            0 => Ok(Self::Polygon),
+            1 => Ok(Self::Points),
+            2 => Ok(Self::Line),
+            _ => Err(Error {
+                kind: ErrorKind::ArgumentError,
+            }),
+        }
+    }
 }
 
 /// General data for a movement path
@@ -72,7 +139,7 @@ pub enum PathDataMovingPlatform {
 }
 
 /// Time units for rental time
-#[derive(Debug, FromPrimitive, ToPrimitive)]
+#[derive(Debug)]
 #[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub enum PropertyRentalTimeUnit {
     Forever,
@@ -85,8 +152,24 @@ pub enum PropertyRentalTimeUnit {
     Years,
 }
 
+impl PropertyRentalTimeUnit {
+    pub fn from_u32(v: u32) -> Option<Self> {
+        match v {
+            0 => Some(Self::Forever),
+            1 => Some(Self::Seconds),
+            2 => Some(Self::Minutes),
+            3 => Some(Self::Hours),
+            4 => Some(Self::Days),
+            5 => Some(Self::Weeks),
+            6 => Some(Self::Months),
+            7 => Some(Self::Years),
+            _ => None,
+        }
+    }
+}
+
 /// Achievement required to rent a property
-#[derive(Debug, FromPrimitive, ToPrimitive)]
+#[derive(Debug)]
 #[cfg_attr(feature = "serde-derives", derive(Serialize))]
 pub enum PropertyAchievementRequired {
     None,
@@ -100,6 +183,25 @@ pub enum PropertyAchievementRequired {
     MasterArchitect,
     Visionary,
     Exemplar,
+}
+
+impl PropertyAchievementRequired {
+    pub fn from_u32(v: u32) -> Result<Option<PropertyAchievementRequired>, Error> {
+        match v {
+            0 => Ok(None),
+            1 => Ok(Some(Self::Builder)),
+            2 => Ok(Some(Self::Craftsman)),
+            3 => Ok(Some(Self::SeniorBuilder)),
+            4 => Ok(Some(Self::Journeyman)),
+            5 => Ok(Some(Self::MasterBuilder)),
+            6 => Ok(Some(Self::Architect)),
+            7 => Ok(Some(Self::SeniorArchitect)),
+            8 => Ok(Some(Self::MasterArchitect)),
+            9 => Ok(Some(Self::Visionary)),
+            10 => Ok(Some(Self::Exemplar)),
+            _ => Err(Error::argument_error()),
+        }
+    }
 }
 
 /// General data for a property (border) path
@@ -129,7 +231,7 @@ pub struct PathDataProperty {
     /// Unit for rental time
     pub rental_time_unit: PropertyRentalTimeUnit,
     /// Required achievement
-    pub achievement_required: PropertyAchievementRequired,
+    pub achievement_required: Option<PropertyAchievementRequired>,
     /// Coordinate of the player
     pub player_zone_coordinate: Vector3f,
     /// Maximum building height

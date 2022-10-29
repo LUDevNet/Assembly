@@ -3,20 +3,16 @@ name = "assembly-core"
 version = "0.3.0"
 authors = ["Xiphoseer"]
 edition = "2018"
-homepage = "https://xiphoseer.github.io"
-repository = "https://github.com/xiphoseer/assembly_rs"
+homepage = "https://assembly.lu-dev.net/"
+repository = "https://github.com/LUDevNet/Assembly/tree/main/modules/core"
 description = "Core functionality of the assembly crate"
 license = "MIT"
 readme = "README.md"
 
 [dependencies]
 nom = "7"
-num-traits = "0.2"
-num-derive = "0.2"
-#byteorder = "1"
 displaydoc = "0.1.5"
 thiserror = "1.0"
-derive-new = "0.5"
 
 [dependencies.serde]
 version = "1"

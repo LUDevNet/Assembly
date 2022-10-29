@@ -3,7 +3,7 @@ use super::types::{ObjectID, ObjectTemplate, Quaternion, Vector3f, WorldID};
 //use encoding::{all::UTF_16LE, DecoderTrap, Encoding};
 use nom::{
     bytes::complete::take,
-    combinator::{map, map_opt, map_res},
+    combinator::{map, map_res},
     error::FromExternalError,
     multi::length_data,
     sequence::tuple,
@@ -13,7 +13,6 @@ use nom::{
     number::complete::{le_f32, le_u32, le_u8},
     IResult,
 };
-use num_traits::FromPrimitive;
 use std::{char::decode_utf16, string::FromUtf8Error};
 
 /// Helper method to dump some values
@@ -63,7 +62,7 @@ pub fn parse_world_id<'a, E>(input: &'a [u8]) -> Res<'a, WorldID, E>
 where
     E: ParseError<&'a [u8]>,
 {
-    map_opt(le_u32, WorldID::from_u32)(input)
+    map(le_u32, WorldID::new)(input)
 }
 
 /// Parse an ObjectTemplate
@@ -71,7 +70,7 @@ pub fn parse_object_template<'a, E>(input: &'a [u8]) -> Res<'a, ObjectTemplate, 
 where
     E: ParseError<&'a [u8]>,
 {
-    map_opt(le_u32, ObjectTemplate::from_u32)(input)
+    map(le_u32, ObjectTemplate::new)(input)
 }
 
 /// Parse an ObjectID

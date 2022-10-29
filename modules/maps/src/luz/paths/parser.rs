@@ -1,6 +1,6 @@
 use super::core::*;
 use assembly_core::nom::{
-    combinator::{cond, map_opt, map_res},
+    combinator::{cond, map, map_opt, map_res},
     multi::{fold_many_m_n, length_count},
     number::complete::{le_f32, le_u32, le_u8},
     sequence::tuple,
@@ -10,16 +10,15 @@ use assembly_core::parser::{
     parse_object_id, parse_object_template, parse_quat, parse_quat_wxyz, parse_u32_wstring,
     parse_u8_bool, parse_u8_wstring, parse_vec3f, parse_world_id,
 };
-use num_traits::FromPrimitive;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
 pub fn parse_zone_paths_version(input: &[u8]) -> IResult<&[u8], ZonePathsVersion> {
-    map_opt(le_u32, ZonePathsVersion::from_u32)(input)
+    map(le_u32, ZonePathsVersion::from)(input)
 }
 
 pub fn parse_path_version(input: &[u8]) -> IResult<&[u8], PathVersion> {
-    map_opt(le_u32, PathVersion::from_u32)(input)
+    map(le_u32, PathVersion::from)(input)
 }
 
 pub fn parse_path_type(input: &[u8]) -> IResult<&[u8], PathType> {
@@ -27,7 +26,7 @@ pub fn parse_path_type(input: &[u8]) -> IResult<&[u8], PathType> {
 }
 
 pub fn parse_path_composition(input: &[u8]) -> IResult<&[u8], PathComposition> {
-    map_opt(le_u32, PathComposition::from_u32)(input)
+    map_res(le_u32, PathComposition::from_u32)(input)
 }
 
 pub fn parse_path_data_movement(input: &[u8]) -> IResult<&[u8], PathDataMovement> {
@@ -66,8 +65,8 @@ pub fn parse_property_rental_time_unit(input: &[u8]) -> IResult<&[u8], PropertyR
 
 pub fn parse_property_achievement_required(
     input: &[u8],
-) -> IResult<&[u8], PropertyAchievementRequired> {
-    map_opt(le_u32, PropertyAchievementRequired::from_u32)(input)
+) -> IResult<&[u8], Option<PropertyAchievementRequired>> {
+    map_res(le_u32, PropertyAchievementRequired::from_u32)(input)
 }
 
 pub fn parse_path_data_property(input: &[u8]) -> IResult<&[u8], PathDataProperty> {

@@ -15,15 +15,10 @@ pub mod parser;
 pub mod reader;
 pub mod types;
 
-#[macro_use]
-#[doc(hidden)]
-pub extern crate num_derive;
 #[doc(hidden)]
 pub extern crate nom;
 #[doc(hidden)]
 pub use displaydoc;
-#[doc(hidden)]
-pub use num_traits;
 
 /// Run the function `run` and print the how much time the execution took.
 pub fn time<F, E>(run: F) -> Result<(), E>
