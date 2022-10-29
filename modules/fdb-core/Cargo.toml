@@ -1,6 +1,6 @@
 [package]
 name = "assembly-fdb-core"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 repository = "https://github.com/LUDevNet/Assembly/tree/main/modules/fdb-core"
 description = "Components to build FDB parsers and writers"

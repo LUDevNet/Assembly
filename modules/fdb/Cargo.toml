@@ -1,6 +1,6 @@
 [package]
 name = "assembly-fdb"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2018"
 repository = "https://github.com/LUDevNet/Assembly/tree/main/modules/fdb"
 description = "Tools to use an create FDB files"
@@ -46,11 +46,11 @@ version = "7"
 optional = true
 
 [dependencies.assembly-fdb-core]
-version = "0.1.0"
+version = "0.1.1"
 path = "../fdb-core"
 
 [dependencies.assembly-core]
-version = "0.3.0"
+version = "0.3.1"
 path = "../core"
 
 [dependencies.rusqlite]
