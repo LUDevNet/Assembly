@@ -16,9 +16,7 @@ use crate::{
     },
 };
 use displaydoc::Display;
-use std::{
-    borrow::Cow, convert::TryFrom, error::Error, fmt, ops::Deref, result::Result as StdResult,
-};
+use std::{convert::TryFrom, error::Error, fmt, ops::Deref, result::Result as StdResult};
 
 /// Custom result type for this module
 pub type Result<'a, T> = std::result::Result<Handle<'a, T>, BufferError>;
@@ -508,12 +506,5 @@ impl<'a> Handle<'a, FDBFieldData> {
     pub fn try_get_value(&self) -> Result<'a, FDBFieldValue> {
         // FIXME: propagate error
         Ok(self.map(|_, r| FDBFieldValue::try_from(r).unwrap()))
-    }
-}
-
-impl<'a> Handle<'a, &'a Latin1Str> {
-    /// Decode the string contained in this handle
-    pub fn to_str(&self) -> Cow<'a, str> {
-        self.raw.decode()
     }
 }

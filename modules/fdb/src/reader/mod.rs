@@ -9,13 +9,18 @@ use std::io::{self, BufRead, Read, Seek, SeekFrom};
 
 use super::{
     file::{
-        lists::{FDBBucketHeaderList, FDBColumnHeaderList, FDBFieldDataList, FDBTableHeaderList},
-        FDBHeader, FDBRowHeader, FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader,
+        //lists::{FDBBucketHeaderList, FDBColumnHeaderList, FDBFieldDataList, FDBTableHeaderList},
+        FDBHeader,
+        FDBRowHeader,
+        FDBRowHeaderListEntry,
+        FDBTableDataHeader,
+        FDBTableDefHeader,
     },
     parser::{ParseFDB, ParseLE},
 };
 
 use assembly_core::reader::{FileError, FileResult};
+use assembly_fdb_core::file::{FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBTableHeader};
 use latin1str::Latin1String;
 use nom::{Finish, IResult};
 
@@ -106,10 +111,10 @@ where
     }
 
     /// Read the table header
-    fn get_table_header_list(&mut self, header: FDBHeader) -> FileResult<FDBTableHeaderList> {
+    fn get_table_header_list(&mut self, header: FDBHeader) -> FileResult<Vec<FDBTableHeader>> {
         let addr = header.tables.base_offset;
         let count = header.tables.count;
-        parse_list_at(self, addr, count).map(FDBTableHeaderList::from)
+        parse_list_at(self, addr, count)
     }
 
     /// Read the table def header
@@ -130,9 +135,8 @@ where
     fn get_column_header_list(
         &mut self,
         header: &FDBTableDefHeader,
-    ) -> FileResult<FDBColumnHeaderList> {
+    ) -> FileResult<Vec<FDBColumnHeader>> {
         parse_list_at(self, header.column_header_list_addr, header.column_count)
-            .map(FDBColumnHeaderList::from)
     }
 
     /// Get the table data header
@@ -145,10 +149,10 @@ where
     fn get_bucket_header_list(
         &mut self,
         header: &FDBTableDataHeader,
-    ) -> FileResult<FDBBucketHeaderList> {
+    ) -> FileResult<Vec<FDBBucketHeader>> {
         let addr = header.buckets.base_offset;
         let count = header.buckets.count;
-        parse_list_at(self, addr, count).map(FDBBucketHeaderList::from)
+        parse_list_at(self, addr, count)
     }
 
     /// Get a row header list entry
@@ -164,9 +168,8 @@ where
     }
 
     /// Returns a vector of `FDBFieldData`
-    fn get_field_data_list(&mut self, header: FDBRowHeader) -> FileResult<FDBFieldDataList> {
+    fn get_field_data_list(&mut self, header: FDBRowHeader) -> FileResult<Vec<FDBFieldData>> {
         parse_list_at(self, header.fields.base_offset, header.fields.count)
-            .map(FDBFieldDataList::from)
     }
 
     /// Returns an iterator over `FDBRowHeader` offsets

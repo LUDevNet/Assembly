@@ -8,8 +8,8 @@
 //! structure defined in the `core` module.
 
 use super::file::{
-    FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBRowHeader, FDBTableDataHeader,
-    FDBTableDefHeader, FDBTableHeader,
+    FDBBucketHeader, FDBColumnHeader, FDBRowHeader, FDBTableDataHeader, FDBTableDefHeader,
+    FDBTableHeader,
 };
 use super::reader::builder::DatabaseBuilder;
 use super::reader::{DatabaseBufReader, DatabaseReader};
@@ -85,9 +85,8 @@ where
     pub fn try_load_row(&mut self, header: FDBRowHeader) -> FileResult<Row> {
         let a = &mut self.inner;
         let field_list = a.get_field_data_list(header)?;
-        let field_data: Vec<FDBFieldData> = field_list.into();
-        let mut fields: Vec<Field> = Vec::with_capacity(field_data.len());
-        for field in field_data {
+        let mut fields: Vec<Field> = Vec::with_capacity(field_list.len());
+        for field in field_list {
             match self.inner.try_load_field(&field) {
                 Ok(value) => fields.push(value),
                 Err(e) => println!("{:?}", e),
@@ -123,7 +122,7 @@ where
     pub fn try_load_table_def(&mut self, header: FDBTableDefHeader) -> FileResult<TableDef> {
         let name = self.inner.get_string(header.table_name_addr)?;
         let column_header_list: Vec<FDBColumnHeader> =
-            self.inner.get_column_header_list(&header)?.into();
+            self.inner.get_column_header_list(&header)?;
 
         let columns: Vec<Column> = column_header_list
             .iter()
@@ -136,7 +135,7 @@ where
     /// Try to load table data
     pub fn try_load_table_data(&mut self, header: FDBTableDataHeader) -> FileResult<TableData> {
         let bucket_header_list: Vec<FDBBucketHeader> =
-            self.inner.get_bucket_header_list(&header)?.into();
+            self.inner.get_bucket_header_list(&header)?;
 
         let buckets: Vec<Bucket> = bucket_header_list
             .iter()
@@ -166,8 +165,7 @@ where
     /// Try to load a schema
     pub fn try_load_schema(&mut self) -> FileResult<Schema> {
         let header = self.inner.get_header()?;
-        let table_header_list: Vec<FDBTableHeader> =
-            self.inner.get_table_header_list(header)?.into();
+        let table_header_list: Vec<FDBTableHeader> = self.inner.get_table_header_list(header)?;
         let tables: Vec<Table> = table_header_list
             .iter()
             .map(|table_header| self.try_load_table(*table_header))

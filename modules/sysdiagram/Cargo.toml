@@ -20,6 +20,6 @@ displaydoc = "0.1"
 thiserror = "1.0"
 
 [dev-dependencies]
-assembly-fdb = { path = "../fdb", version = "0.1.0" }
+assembly-fdb = { path = "../fdb", version = "0.1.0", features = ["io"] }
 anyhow = "1.0"
 getopts = "0.2"

@@ -9,7 +9,7 @@ use crate::{
     handle::Buffer,
     util::compare_bytes,
 };
-use bytemuck::from_bytes;
+use assembly_fdb_core::file::ArrayHeader;
 use displaydoc::Display;
 use std::{cmp::Ordering, convert::TryInto, mem::size_of, ops::Range};
 use thiserror::Error;
@@ -205,7 +205,13 @@ impl BufferExt for [u8] {
 
     fn table_data_header(&self, addr: u32) -> Res<FDBTableDataHeader> {
         let buf = self.get_len_at(addr as usize, 8)?;
-        Ok(*from_bytes(buf))
+        let (a, b) = buf.split_at(4);
+        Ok(FDBTableDataHeader {
+            buckets: ArrayHeader {
+                count: u32::from_le_bytes(a.try_into().unwrap()),
+                base_offset: u32::from_le_bytes(b.try_into().unwrap()),
+            },
+        })
     }
 
     /// Get the `FDBRowHeader` list entry at the given addr.
@@ -221,6 +227,12 @@ impl BufferExt for [u8] {
     /// Get the `FDBRowHeader` at the given addr.
     fn row_header(&self, addr: u32) -> Res<FDBRowHeader> {
         let buf = self.get_len_at(addr as usize, 8)?;
-        Ok(*from_bytes(buf))
+        let (a, b) = buf.split_at(4);
+        Ok(FDBRowHeader {
+            fields: ArrayHeader {
+                count: u32::from_le_bytes(a.try_into().unwrap()),
+                base_offset: u32::from_le_bytes(b.try_into().unwrap()),
+            },
+        })
     }
 }

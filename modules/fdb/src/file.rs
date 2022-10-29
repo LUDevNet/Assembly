@@ -10,7 +10,7 @@
 //! [`FDBColumnHeader::column_data_type`] only has a limited amount of defined values but
 //! covers the whole 32 bits.
 
-pub mod lists;
+// pub mod lists;
 
 pub use assembly_fdb_core::file::*;
 pub use assembly_fdb_core::value::file::{FDBFieldValue, FileContext, IndirectValue};

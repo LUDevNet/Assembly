@@ -45,17 +45,18 @@
 pub mod common;
 pub mod core;
 pub mod file;
+#[cfg(feature = "io")]
 pub mod io;
 pub mod mem;
 pub mod parser;
 pub mod query;
 pub mod reader;
+#[cfg(feature = "ro")]
+pub mod ro;
+pub mod store;
 
 mod handle;
 mod util;
-
-pub mod ro;
-pub mod store;
 
 pub use assembly_fdb_core::FdbHash;
 

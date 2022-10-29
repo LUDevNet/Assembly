@@ -5,24 +5,22 @@ edition = "2018"
 license = "MIT or Apache-2.0"
 
 [features]
+ro = []
+io = []
 default = ["sqlite", "serde-derives"]
 sqlite = ["rusqlite", "assembly-fdb-core/sqlite"]
 serde-derives = ["serde", "latin1str/serde", "assembly-fdb-core/serde"]
+bytemuck = ["assembly-fdb-core/bytemuck"]
 
 [dependencies]
-bytemuck = "1.4"
-bytemuck_derive = "1"
-derive-new = "0.5"
 displaydoc = "0.2"
 nom = "7"
-sfhash = "0.1"
 thiserror = "1.0"
 latin1str = "0.1.1"
 
 [dependencies.assembly-fdb-core]
 version = "0.1.0"
 path = "../fdb-core"
-features = ["bytemuck"] # needed for `ro`
 
 [dependencies.assembly-core]
 version = "0.3.0"
@@ -44,3 +42,6 @@ mapr = "0.8"
 structopt = "0.3"
 color-eyre = "0.5"
 serde_json = "1.0.61"
+
+[package.metadata.docs.rs]
+all-features = true
