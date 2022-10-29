@@ -2,14 +2,13 @@
 //!
 //! This module contains the types that can be used to iterate over the structs in the `assembly_fdb::mem` module.
 
-use crate::handle::{Buffer, Handle, RefHandle, SliceIterHandle};
+use crate::handle::{Handle, RefHandle, SliceIterHandle};
 
 use super::{
     c::{FDBBucketHeaderC, FDBFieldDataC, FDBRowHeaderC, FDBRowHeaderListEntryC, FDBTableHeaderC},
     get_field, get_row_header_list_entry, map_table_header, Bucket, Field, Row, Table,
 };
-//use crate::ro::{Handle, RefHandle, SliceIterHandle};
-use assembly_core::buffer::CastError;
+use assembly_core::buffer::{Buffer, CastError};
 
 /// Iterator created by [`Tables::iter`][`super::Tables::iter`]
 #[derive(Clone)]

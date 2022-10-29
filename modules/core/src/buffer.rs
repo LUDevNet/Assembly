@@ -74,6 +74,48 @@ pub fn try_cast_slice<T: MinimallyAligned>(
     }
 }
 
+/// Additional methods on byte slices
+pub trait Buffer {
+    /// Try to cast to T
+    fn try_cast<T: MinimallyAligned>(&self, offset: u32) -> Result<&T, CastError>;
+
+    /// Try to cast to T
+    fn try_cast_slice<T: MinimallyAligned>(&self, offset: u32, len: u32)
+        -> Result<&[T], CastError>;
+
+    /// Cast to T
+    fn cast<T: MinimallyAligned>(&self, offset: u32) -> &T;
+
+    /// Cast to slice of T
+    fn cast_slice<T: MinimallyAligned>(&self, offset: u32, len: u32) -> &[T];
+}
+
+impl Buffer for [u8] {
+    /// Try to cast to T
+    fn try_cast<T: MinimallyAligned>(&self, offset: u32) -> Result<&T, CastError> {
+        try_cast(self, offset)
+    }
+
+    /// Try to cast to T
+    fn try_cast_slice<T: MinimallyAligned>(
+        &self,
+        offset: u32,
+        len: u32,
+    ) -> Result<&[T], CastError> {
+        try_cast_slice(self, offset, len)
+    }
+
+    /// Cast to T
+    fn cast<T: MinimallyAligned>(&self, offset: u32) -> &T {
+        cast(self, offset)
+    }
+
+    /// Cast to slice of T
+    fn cast_slice<T: MinimallyAligned>(&self, offset: u32, len: u32) -> &[T] {
+        cast_slice(self, offset, len)
+    }
+}
+
 /// Similar to `From<&U> for T`
 pub trait Repr {
     /// The value that this struct encodes

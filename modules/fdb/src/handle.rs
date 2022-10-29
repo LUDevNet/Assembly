@@ -1,4 +1,4 @@
-use assembly_core::buffer::{CastError, MinimallyAligned, Repr};
+use assembly_core::buffer::{CastError, MinimallyAligned, Repr, Buffer};
 use assembly_fdb_core::file::ArrayHeader;
 use latin1str::Latin1Str;
 use std::{convert::TryFrom, mem::size_of, ops::Deref, result::Result};
@@ -185,47 +185,6 @@ impl<'a, T: Repr> RefHandle<'a, T> {
 
 /// A handle that contains a slice iterator
 pub type SliceIterHandle<'a, T> = Handle<'a, std::slice::Iter<'a, T>>;
-
-pub trait Buffer {
-    /// Try to cast to T
-    fn try_cast<T: MinimallyAligned>(&self, offset: u32) -> Result<&T, CastError>;
-
-    /// Try to cast to T
-    fn try_cast_slice<T: MinimallyAligned>(&self, offset: u32, len: u32)
-        -> Result<&[T], CastError>;
-
-    /// Cast to T
-    fn cast<T: MinimallyAligned>(&self, offset: u32) -> &T;
-
-    /// Cast to slice of T
-    fn cast_slice<T: MinimallyAligned>(&self, offset: u32, len: u32) -> &[T];
-}
-
-impl Buffer for [u8] {
-    /// Try to cast to T
-    fn try_cast<T: MinimallyAligned>(&self, offset: u32) -> Result<&T, CastError> {
-        assembly_core::buffer::try_cast(self, offset)
-    }
-
-    /// Try to cast to T
-    fn try_cast_slice<T: MinimallyAligned>(
-        &self,
-        offset: u32,
-        len: u32,
-    ) -> Result<&[T], CastError> {
-        assembly_core::buffer::try_cast_slice(self, offset, len)
-    }
-
-    /// Cast to T
-    fn cast<T: MinimallyAligned>(&self, offset: u32) -> &T {
-        assembly_core::buffer::cast(self, offset)
-    }
-
-    /// Cast to slice of T
-    fn cast_slice<T: MinimallyAligned>(&self, offset: u32, len: u32) -> &[T] {
-        assembly_core::buffer::cast_slice(self, offset, len)
-    }
-}
 
 /// Get a buffer as a latin1 string
 pub fn get_string(buf: &[u8], offset: u32) -> Result<&Latin1Str, CastError> {

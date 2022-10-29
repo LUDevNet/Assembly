@@ -8,7 +8,7 @@
 //!
 //! The only limitation is, that all references are bounded by the lifetime
 //! of the original database buffer.
-use assembly_core::buffer::{self, Repr, LEI64};
+use assembly_core::buffer::{self, Buffer, Repr, LEI64};
 pub use assembly_fdb_core::value::mem::{Field, MemContext};
 use assembly_fdb_core::value::{
     file::{FDBFieldValue, FileContext, IndirectValue},
@@ -22,7 +22,7 @@ mod c;
 
 //use super::ro::{Handle, RefHandle, TryFromHandle};
 use crate::{
-    handle::{self, Buffer, Handle, RefHandle, TryFromHandle},
+    handle::{self, Handle, RefHandle, TryFromHandle},
     util::compare_bytes,
 };
 use c::{
