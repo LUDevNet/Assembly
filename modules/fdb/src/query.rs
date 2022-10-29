@@ -1,6 +1,8 @@
 //! ## Query the database
 use std::num::ParseIntError;
 
+use crate::hash::FdbHash;
+
 use super::{
     common::{Context, Value, ValueType},
     core::Field,
@@ -37,6 +39,30 @@ impl PrimaryKeyFilter {
     {
         &self.value == other
     }
+
+    /// Create an integer PK hash
+    pub fn integer(value: i32) -> Self {
+        Self {
+            hash_value: FdbHash::hash(&value),
+            value: Field::Integer(value),
+        }
+    }
+
+    /// Create an integer PK hash
+    pub fn bigint(value: i64) -> Self {
+        Self {
+            hash_value: FdbHash::hash(&value),
+            value: Field::BigInt(value),
+        }
+    }
+
+    /// Create a text PK hash
+    pub fn text(value: String) -> Self {
+        Self {
+            hash_value: FdbHash::hash(&value),
+            value: Field::Text(value),
+        }
+    }
 }
 
 #[derive(Error, Debug, Display)]
@@ -51,29 +77,19 @@ pub enum PKFilterError {
 
 /// Create a text PK filter
 pub fn text_pk_filter(key: String) -> Result<PrimaryKeyFilter, PKFilterError> {
-    let hash_value = sfhash::digest(key.as_bytes());
-    let value = Field::Text(key);
-    Ok(PrimaryKeyFilter { hash_value, value })
+    Ok(PrimaryKeyFilter::text(key))
 }
 
 /// Create an integer PK filter
-pub fn integer_pk_filter(key: String) -> Result<PrimaryKeyFilter, PKFilterError> {
+pub fn integer_pk_filter(key: &str) -> Result<PrimaryKeyFilter, PKFilterError> {
     let value: i32 = key.parse().map_err(PKFilterError::KeyError)?;
-    let hash_value = u32::from_ne_bytes(value.to_ne_bytes());
-    Ok(PrimaryKeyFilter {
-        hash_value,
-        value: Field::Integer(value),
-    })
+    Ok(PrimaryKeyFilter::integer(value))
 }
 
 /// Create a bigint PK filter
-pub fn bigint_pk_filter(key: String) -> Result<PrimaryKeyFilter, PKFilterError> {
+pub fn bigint_pk_filter(key: &str) -> Result<PrimaryKeyFilter, PKFilterError> {
     let value: i64 = key.parse().map_err(PKFilterError::KeyError)?;
-    let hash_value = (u64::from_ne_bytes(value.to_ne_bytes()) % 0x1_0000_0000) as u32;
-    Ok(PrimaryKeyFilter {
-        hash_value,
-        value: Field::BigInt(value),
-    })
+    Ok(PrimaryKeyFilter::bigint(value))
 }
 
 /// Create a PK filter from a string
@@ -83,8 +99,8 @@ pub fn pk_filter<T: Into<String>>(
 ) -> Result<PrimaryKeyFilter, PKFilterError> {
     match field_type {
         ValueType::Text => text_pk_filter(key.into()),
-        ValueType::Integer => integer_pk_filter(key.into()),
-        ValueType::BigInt => bigint_pk_filter(key.into()),
+        ValueType::Integer => integer_pk_filter(key.into().as_ref()),
+        ValueType::BigInt => bigint_pk_filter(key.into().as_ref()),
         _ => Err(PKFilterError::UnsupportedType(field_type)),
     }
 }

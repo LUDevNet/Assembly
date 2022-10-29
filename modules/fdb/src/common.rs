@@ -13,11 +13,6 @@ pub fn req_buf_len(s: &Latin1Str) -> usize {
     s.len() / 4 + 1
 }
 
-/// Hash the string using [`sfhash`]
-pub fn str_hash(s: &Latin1Str) -> u32 {
-    sfhash::digest(s.as_bytes())
-}
-
 /// Type-Parameters to [`Value`]
 ///
 /// This trait is used to parameterize `Value` to produce the concrete types

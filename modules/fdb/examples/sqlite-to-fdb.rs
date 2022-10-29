@@ -1,4 +1,6 @@
-use assembly_fdb::{common::Latin1String, common::ValueType, core::Field, mem::Database, store};
+use assembly_fdb::{
+    common::Latin1String, common::ValueType, core::Field, hash::FdbHash, mem::Database, store,
+};
 use color_eyre::eyre::{self, eyre, WrapErr};
 use mapr::Mmap;
 use rusqlite::{types::ValueRef, Connection};
@@ -230,13 +232,7 @@ fn convert_without_template(
             }
 
             // Determine primary key to use for bucket index
-            let pk = match &fields[0] {
-                Field::Integer(i) => *i as usize,
-                Field::BigInt(i) => *i as usize,
-                Field::Text(t) => (sfhash::digest(t.as_bytes())) as usize,
-                _ => return Err(eyre!("Cannot use {:?} as primary key", &fields[0])),
-            };
-
+            let pk = FdbHash::hash(&fields[0]) as usize;
             dest_table.push_row(pk, &fields);
         }
 
@@ -363,7 +359,7 @@ fn convert_with_template(
             let pk = match &fields[0] {
                 Field::Integer(i) => *i as usize,
                 Field::BigInt(i) => *i as usize,
-                Field::Text(t) => (sfhash::digest(t.as_bytes())) as usize,
+                Field::Text(t) => FdbHash::hash(t) as usize,
                 _ => return Err(eyre!("Cannot use {:?} as primary key", &fields[0])),
             };
 

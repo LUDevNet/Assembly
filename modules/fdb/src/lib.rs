@@ -45,6 +45,7 @@
 pub mod common;
 pub mod core;
 pub mod file;
+pub mod hash;
 pub mod io;
 pub mod mem;
 pub mod parser;
