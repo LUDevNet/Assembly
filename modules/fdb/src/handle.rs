@@ -1,4 +1,4 @@
-use assembly_core::buffer::{CastError, MinimallyAligned, Repr, Buffer};
+use assembly_core::buffer::{Buffer, CastError, MinimallyAligned, Repr};
 use assembly_fdb_core::file::ArrayHeader;
 use latin1str::Latin1Str;
 use std::{convert::TryFrom, mem::size_of, ops::Deref, result::Result};

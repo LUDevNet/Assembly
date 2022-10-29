@@ -10,12 +10,16 @@ pub mod borrow;
 pub mod buffer;
 pub mod ldf;
 #[doc(hidden)]
+#[cfg(feature = "nom")]
 pub mod nom_ext;
+#[cfg(feature = "nom")]
 pub mod parser;
+#[cfg(feature = "nom")]
 pub mod reader;
 pub mod types;
 
 #[doc(hidden)]
+#[cfg(feature = "nom")]
 pub extern crate nom;
 #[doc(hidden)]
 pub use displaydoc;

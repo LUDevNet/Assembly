@@ -10,9 +10,12 @@ license = "MIT"
 readme = "README.md"
 
 [dependencies]
-nom = "7"
 displaydoc = "0.1.5"
 thiserror = "1.0"
+
+[dependencies.nom]
+version = "7"
+optional = true
 
 [dependencies.serde]
 version = "1"
@@ -21,3 +24,4 @@ features = ["derive"]
 
 [features]
 serde-derives = ["serde"]
+nom = ["dep:nom"]
