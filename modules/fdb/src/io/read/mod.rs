@@ -6,7 +6,7 @@
 use displaydoc::Display;
 use thiserror::Error;
 
-use crate::parser::{ParseFDB, ParseLE};
+mod parser;
 use crate::{
     common::{UnknownValueType, ValueType},
     core::Field,
@@ -18,6 +18,7 @@ use assembly_fdb_core::file::{
 };
 use latin1str::Latin1String;
 use nom::{Finish, IResult};
+use parser::{ParseFDB, ParseLE};
 use std::convert::TryFrom;
 use std::io::{self, BufRead, Read, Seek, SeekFrom};
 

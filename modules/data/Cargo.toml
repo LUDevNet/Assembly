@@ -9,7 +9,12 @@ description = "Database module for the assembly crate"
 license = "MIT"
 readme = "README.md"
 
+[[example]]
+name = "xmldb-to-fdb"
+required-features = ["fdb-store"]
+
 [features]
+fdb-store = ["assembly-fdb/store"]
 default = ["sqlite", "serde-derives"]
 sqlite = ["assembly-fdb/sqlite"]
 serde-derives = ["assembly-fdb/serde-derives", "assembly-xml/serialize"]

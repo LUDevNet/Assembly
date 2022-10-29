@@ -7,10 +7,26 @@ license = "MIT or Apache-2.0"
 [features]
 ro = []
 io = []
+io-read = []
+io-write = []
+store = ["io-write"]
+core-loader = ["io-read"]
 default = ["sqlite", "serde-derives"]
 sqlite = ["rusqlite", "assembly-fdb-core/sqlite"]
 serde-derives = ["serde", "latin1str/serde", "assembly-fdb-core/serde"]
 bytemuck = ["assembly-fdb-core/bytemuck"]
+
+[[example]]
+name = "sqlite-to-fdb"
+required-features = ["store"]
+
+[[example]]
+name = "template-fdb"
+required-features = ["store"]
+
+[[example]]
+name = "fdb-copy"
+required-features = ["store"]
 
 [dependencies]
 displaydoc = "0.2"

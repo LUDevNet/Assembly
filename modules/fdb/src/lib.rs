@@ -46,10 +46,10 @@ pub mod common;
 pub mod core;
 pub mod io;
 pub mod mem;
-pub mod parser;
 pub mod query;
 #[cfg(feature = "ro")]
 pub mod ro;
+#[cfg(feature = "store")]
 pub mod store;
 
 mod handle;

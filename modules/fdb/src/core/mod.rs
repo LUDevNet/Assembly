@@ -17,6 +17,7 @@
 //! Types corresponding to the layout of each row.
 
 pub mod iter;
+#[cfg(feature = "core-loader")]
 pub mod loader;
 
 use std::collections::BTreeMap;
