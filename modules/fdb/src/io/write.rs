@@ -1,15 +1,17 @@
+//! # Low-level [`std::io`] writer
+
 use std::{hint::unreachable_unchecked, io};
 
-use crate::{
-    common::Latin1Str,
-    file::{
-        ArrayHeader, FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBRowHeader,
-        FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
-    },
+use assembly_fdb_core::file::{
+    ArrayHeader, FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBRowHeader,
+    FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
 };
+use latin1str::Latin1Str;
 
 #[allow(clippy::upper_case_acronyms)]
+/// A trait to write assembly data to file
 pub trait WriteLE {
+    /// Write `self` as little-endian bytes to `IO`
     fn write_le<IO: io::Write>(&self, out: &mut IO) -> io::Result<()>;
 }
 

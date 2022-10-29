@@ -35,27 +35,21 @@
 //! db.write(&mut out).expect("success");
 //! ```
 
+use super::{
+    common::{Context, Latin1Str, Latin1String, Value, ValueMapperMut, ValueType},
+    core::OwnedContext,
+};
+use crate::{common::req_buf_len, io::write::WriteLE};
+use assembly_fdb_core::file::{
+    ArrayHeader, FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBHeader, FDBRowHeader,
+    FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
+};
 use std::{
     collections::BTreeMap,
     convert::{TryFrom, TryInto},
     io,
     mem::size_of,
 };
-
-use crate::common::req_buf_len;
-
-use self::writer::WriteLE;
-
-use super::{
-    common::{Context, Latin1Str, Latin1String, Value, ValueMapperMut, ValueType},
-    core::OwnedContext,
-    file::{
-        ArrayHeader, FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBHeader, FDBRowHeader,
-        FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
-    },
-};
-
-mod writer;
 
 #[cfg(test)]
 mod tests;

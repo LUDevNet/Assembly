@@ -1,6 +1,8 @@
 use anyhow::{anyhow, Context};
-use assembly_fdb::core::Field;
-use assembly_fdb::io::{LoaderConfigImpl, SchemaLoader};
+use assembly_fdb::core::{
+    loader::{LoaderConfigImpl, SchemaLoader},
+    Field,
+};
 use assembly_sysdiagram::core::SysDiagram;
 use getopts::Options;
 use std::convert::TryFrom;

@@ -1,7 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 //! # Handling of slice references into the in-memory DB file
 
-use crate::file::{FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBTableHeader};
+use assembly_fdb_core::file::{FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBTableHeader};
 use std::convert::TryInto;
 
 /// Invariant: length must always be a multiple of 8 bytes

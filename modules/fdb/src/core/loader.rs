@@ -7,14 +7,13 @@
 //! This uses the methods defined in the `reader` module and produces the data
 //! structure defined in the `core` module.
 
-use super::file::{
+use super::*;
+use crate::io::read::{DatabaseBufReader, DatabaseBuilder, DatabaseReader};
+use assembly_core::reader::{FileError, FileResult};
+use assembly_fdb_core::file::{
     FDBBucketHeader, FDBColumnHeader, FDBRowHeader, FDBTableDataHeader, FDBTableDefHeader,
     FDBTableHeader,
 };
-use super::reader::builder::DatabaseBuilder;
-use super::reader::{DatabaseBufReader, DatabaseReader};
-use super::{common::ValueType, core::*};
-use assembly_core::reader::{FileError, FileResult};
 use std::convert::TryFrom;
 use std::fs;
 use std::io::{BufRead, BufReader, Seek};

@@ -1,12 +1,15 @@
 #![allow(clippy::upper_case_acronyms)]
 use std::convert::TryFrom;
 
-use crate::file::{
-    FDBBucketHeader, FDBColumnHeader, FDBFieldValue, FDBHeader, FDBRowHeader,
-    FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader, IndirectValue,
-};
-use crate::{common::ValueType, file::ArrayHeader};
+use crate::common::ValueType;
 use assembly_core::buffer::{MinimallyAligned, Repr, LEU32};
+use assembly_fdb_core::{
+    file::{
+        ArrayHeader, FDBBucketHeader, FDBColumnHeader, FDBHeader, FDBRowHeader,
+        FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
+    },
+    value::file::{FDBFieldValue, IndirectValue},
+};
 
 /// An FDB header usable for unaligned reads
 #[repr(C, align(1))]

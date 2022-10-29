@@ -22,7 +22,7 @@
 //! that may reference other structs by offset from the start of the file. These structs
 //! form a tree without circular references.
 //!
-//! These basic structs are implemented in the [`mod@file`] module.
+//! These basic structs are implemented in the [`assembly_fdb_core`] crate.
 //!
 //! ## Using this library
 //!
@@ -44,13 +44,10 @@
 
 pub mod common;
 pub mod core;
-pub mod file;
-#[cfg(feature = "io")]
 pub mod io;
 pub mod mem;
 pub mod parser;
 pub mod query;
-pub mod reader;
 #[cfg(feature = "ro")]
 pub mod ro;
 pub mod store;

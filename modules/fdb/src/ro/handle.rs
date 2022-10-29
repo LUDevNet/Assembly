@@ -8,12 +8,13 @@ use super::{
     slice::{FDBBucketHeaderSlice, FDBColumnHeaderSlice, FDBFieldDataSlice, FDBTableHeaderSlice},
     BaseHandle, Handle,
 };
-use crate::{
-    common::{Latin1Str, UnknownValueType, ValueType},
+use crate::common::{Latin1Str, UnknownValueType, ValueType};
+use assembly_fdb_core::{
     file::{
-        FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBFieldValue, FDBHeader, FDBRowHeader,
+        FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBHeader, FDBRowHeader,
         FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader, FDBTableHeader,
     },
+    value::file::FDBFieldValue,
 };
 use displaydoc::Display;
 use std::{convert::TryFrom, error::Error, fmt, ops::Deref, result::Result as StdResult};

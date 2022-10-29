@@ -1,6 +1,6 @@
 //! # Parse structures from a byte buffer
 
-use super::file::*;
+use assembly_fdb_core::file::*;
 use nom::{
     bytes::complete::take, combinator::map, number::complete::le_u32, sequence::tuple, IResult,
 };
