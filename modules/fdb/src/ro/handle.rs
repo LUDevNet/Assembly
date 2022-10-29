@@ -4,7 +4,7 @@
 //! a reference into the in-memory file.
 
 use super::{
-    buffer::{self, cmp_table_header_name, Buffer, BufferError, Res},
+    buffer::{self, cmp_table_header_name, BufferError, BufferExt, Res},
     slice::{FDBBucketHeaderSlice, FDBColumnHeaderSlice, FDBFieldDataSlice, FDBTableHeaderSlice},
     BaseHandle, Handle,
 };
@@ -178,15 +178,12 @@ pub type Database<'a> = Handle<'a, ()>;
 impl<'a> Database<'a> {
     /// Create a new database handle
     pub fn new_ref(mem: &'a [u8]) -> Self {
-        Self {
-            mem: Buffer::new(mem),
-            raw: (),
-        }
+        Self { mem, raw: () }
     }
 
     /// Get the header for the local database
     pub fn tables(&self) -> Result<'a, FDBHeader> {
-        let header = buffer::header(self.mem.as_bytes(), ())?;
+        let header = buffer::header(self.mem, ())?;
         Ok(self.wrap(header))
     }
 }

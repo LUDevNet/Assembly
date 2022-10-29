@@ -50,6 +50,10 @@ pub mod mem;
 pub mod parser;
 pub mod query;
 pub mod reader;
+
+mod handle;
+mod util;
+
 pub mod ro;
 pub mod store;
 

@@ -6,17 +6,12 @@ use crate::{
         FDBHeader, FDBRowHeader, FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader,
         FDBTableHeader,
     },
+    handle::Buffer,
+    util::compare_bytes,
 };
-use assembly_core::buffer::{CastError, MinimallyAligned};
 use bytemuck::from_bytes;
 use displaydoc::Display;
-use std::{
-    cmp::Ordering,
-    convert::TryInto,
-    fmt,
-    mem::size_of,
-    ops::{Deref, Range},
-};
+use std::{cmp::Ordering, convert::TryInto, mem::size_of, ops::Range};
 use thiserror::Error;
 
 #[derive(Error, Debug, Display, Clone, PartialEq, Eq)]
@@ -28,12 +23,12 @@ pub enum BufferError {
     Unaligned(usize),
 }
 
-#[derive(Copy, Clone)]
-/// Wrapper around a immutable reference to a byte slice
-pub struct Buffer<'a>(&'a [u8]);
-
 /// Result with a [`BufferError`]
 pub type Res<T> = Result<T, BufferError>;
+
+/*#[derive(Copy, Clone)]
+/// Wrapper around a immutable reference to a byte slice
+pub struct Buffer<'a>(&'a [u8]);
 
 impl<'a> Deref for Buffer<'a> {
     type Target = [u8];
@@ -41,32 +36,7 @@ impl<'a> Deref for Buffer<'a> {
     fn deref(&self) -> &Self::Target {
         self.0
     }
-}
-
-/// Compares two name strings
-///
-/// ## Safety
-///
-/// This panics if name_bytes does not contains a null terminator
-pub(crate) fn compare_bytes(bytes: &[u8], name_bytes: &[u8]) -> Ordering {
-    for i in 0..bytes.len() {
-        match name_bytes[i].cmp(&bytes[i]) {
-            Ordering::Equal => {}
-            Ordering::Less => {
-                // the null terminator is a special case of this one
-                return Ordering::Less;
-            }
-            Ordering::Greater => {
-                return Ordering::Greater;
-            }
-        }
-    }
-    if name_bytes[bytes.len()] == 0 {
-        Ordering::Equal
-    } else {
-        Ordering::Greater
-    }
-}
+}*/
 
 /// Get a reference to a type at the given address of this buffer
 ///
@@ -173,78 +143,56 @@ pub fn cmp_table_header_name(buf: &[u8], bytes: &[u8], table_header: FDBTableHea
     compare_bytes(bytes, name_bytes)
 }
 
-impl<'a> Buffer<'a> {
-    /// Creates a new instance.
-    pub fn new(buf: &'a [u8]) -> Self {
-        Self(buf)
-    }
-
-    /// Returns the contained byte slice
-    pub fn as_bytes(self) -> &'a [u8] {
-        self.0
-    }
-
-    /// Try to cast to T
-    pub fn try_cast<T: MinimallyAligned>(
-        self,
-        offset: u32,
-    ) -> std::result::Result<&'a T, CastError> {
-        assembly_core::buffer::try_cast(self.as_bytes(), offset)
-    }
-
-    /// Try to cast to T
-    pub fn try_cast_slice<T: MinimallyAligned>(
-        self,
-        offset: u32,
-        len: u32,
-    ) -> std::result::Result<&'a [T], CastError> {
-        assembly_core::buffer::try_cast_slice(self.as_bytes(), offset, len)
-    }
-
-    /// Cast to T
-    pub fn cast<T: MinimallyAligned>(self, offset: u32) -> &'a T {
-        assembly_core::buffer::cast(self.as_bytes(), offset)
-    }
-
-    /// Cast to slice of T
-    pub fn cast_slice<T: MinimallyAligned>(self, offset: u32, len: u32) -> &'a [T] {
-        assembly_core::buffer::cast_slice(self.as_bytes(), offset, len)
-    }
-
+/// Additional methods on `&[u8]`
+pub trait BufferExt: Buffer {
     /// Get a subslice a the given offset of the given length
-    pub fn get_len_at(self, start: usize, len: usize) -> Res<&'a [u8]> {
+    fn get_len_at(&self, start: usize, len: usize) -> Res<&[u8]>;
+    /// Get a buffer as a latin1 string
+    fn string(&self, addr: u32) -> Res<&Latin1Str>;
+    /// Get i64
+    fn i64(&self, addr: u32) -> Res<i64>;
+    /// Get the table definition header at the given addr.
+    fn table_def_header(&self, addr: u32) -> Res<FDBTableDefHeader>;
+    /// Get the table data header at the given addr.
+    fn table_data_header(&self, addr: u32) -> Res<FDBTableDataHeader>;
+    /// Get the `FDBRowHeader` list entry at the given addr.
+    fn row_header_list_entry(&self, addr: u32) -> Res<FDBRowHeaderListEntry>;
+    /// Get the `FDBRowHeader` at the given addr.
+    fn row_header(&self, addr: u32) -> Res<FDBRowHeader>;
+}
+
+impl BufferExt for [u8] {
+    /// Get a subslice a the given offset of the given length
+    fn get_len_at(&self, start: usize, len: usize) -> Res<&[u8]> {
         let end = start + len;
-        self.0
-            .get(Range { start, end })
-            .ok_or(BufferError::OutOfBounds(Range { start, end }))
+        let range = Range { start, end };
+        self.get(range.clone())
+            .ok_or(BufferError::OutOfBounds(range))
     }
 
-    /// Get a buffer as a latin1 string
-    pub fn string(self, addr: u32) -> Res<&'a Latin1Str> {
+    fn string(&self, addr: u32) -> Res<&Latin1Str> {
         let start = addr as usize;
-        let buf = self.0.get(start..).ok_or_else(|| {
-            let end = self.0.len();
+        let buf = self.get(start..).ok_or_else(|| {
+            let end = self.len();
             BufferError::OutOfBounds(Range { start, end })
         })?;
         Ok(Latin1Str::from_bytes_until_nul(buf))
     }
 
-    /// Get i64
-    pub fn i64(self, addr: u32) -> Res<i64> {
+    fn i64(&self, addr: u32) -> Res<i64> {
         let start = addr as usize;
         let end = start + size_of::<u64>();
-        if end > self.0.len() {
+        if end > self.len() {
             Err(BufferError::OutOfBounds(Range { start, end }))
         } else {
-            let (_, base) = self.0.split_at(start);
+            let (_, base) = self.split_at(start);
             let (bytes, _) = base.split_at(size_of::<u64>());
             let val = i64::from_le_bytes(bytes.try_into().unwrap());
             Ok(val)
         }
     }
 
-    /// Get the table definition header at the given addr.
-    pub fn table_def_header(&self, addr: u32) -> Res<FDBTableDefHeader> {
+    fn table_def_header(&self, addr: u32) -> Res<FDBTableDefHeader> {
         let buf = self.get_len_at(addr as usize, 12)?;
         let (a, buf) = buf.split_at(4);
         let (b, c) = buf.split_at(4);
@@ -255,14 +203,13 @@ impl<'a> Buffer<'a> {
         })
     }
 
-    /// Get the table data header at the given addr.
-    pub fn table_data_header(self, addr: u32) -> Res<FDBTableDataHeader> {
+    fn table_data_header(&self, addr: u32) -> Res<FDBTableDataHeader> {
         let buf = self.get_len_at(addr as usize, 8)?;
         Ok(*from_bytes(buf))
     }
 
     /// Get the `FDBRowHeader` list entry at the given addr.
-    pub fn row_header_list_entry(self, addr: u32) -> Res<FDBRowHeaderListEntry> {
+    fn row_header_list_entry(&self, addr: u32) -> Res<FDBRowHeaderListEntry> {
         let buf = self.get_len_at(addr as usize, 8)?;
         let (a, b) = buf.split_at(4);
         Ok(FDBRowHeaderListEntry {
@@ -272,17 +219,8 @@ impl<'a> Buffer<'a> {
     }
 
     /// Get the `FDBRowHeader` at the given addr.
-    pub fn row_header(self, addr: u32) -> Res<FDBRowHeader> {
+    fn row_header(&self, addr: u32) -> Res<FDBRowHeader> {
         let buf = self.get_len_at(addr as usize, 8)?;
         Ok(*from_bytes(buf))
-    }
-}
-
-impl<'a> fmt::Debug for Buffer<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Buffer")
-            .field("base", &self.0.as_ptr())
-            .field("len", &self.0.len())
-            .finish()
     }
 }

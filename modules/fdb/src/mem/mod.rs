@@ -19,9 +19,10 @@ use latin1str::Latin1Str;
 
 mod c;
 
-use super::ro::{
-    buffer::{compare_bytes, Buffer},
-    Handle, RefHandle, TryFromHandle,
+//use super::ro::{Handle, RefHandle, TryFromHandle};
+use crate::{
+    handle::{self, Buffer, Handle, RefHandle, TryFromHandle},
+    util::compare_bytes,
 };
 use c::{
     FDBBucketHeaderC, FDBColumnHeaderC, FDBFieldDataC, FDBHeaderC, FDBRowHeaderListEntryC,
@@ -54,7 +55,7 @@ pub struct Database<'a> {
 impl<'a> Database<'a> {
     /// Create a new database reference
     pub fn new(buf: &'a [u8]) -> Self {
-        let inner = Handle::new_ref(buf);
+        let inner = Handle::new(buf);
         Self { inner }
     }
 
@@ -97,7 +98,7 @@ fn map_table_header<'a>(handle: RefHandle<'a, FDBTableHeaderC>) -> Result<Table<
         handle.buf().try_cast(table_header.table_data_header_addr)?;
     let data_header = data_header.extract();
 
-    let name = get_latin1_str(handle.buf().as_bytes(), def_header.table_name_addr);
+    let name = get_latin1_str(handle.buf(), def_header.table_name_addr);
 
     let columns: RefHandle<'a, [FDBColumnHeaderC]> =
         handle.try_map_cast_slice(def_header.column_header_list_addr, def_header.column_count)?;
@@ -146,13 +147,11 @@ impl<'a> Tables<'a> {
             .into_raw()
             .binary_search_by(|table_header| {
                 let def_header_addr = table_header.table_def_header_addr.extract();
-                let def_header = buffer::cast::<FDBTableDefHeaderC>(
-                    self.inner.buf().as_bytes(),
-                    def_header_addr,
-                );
+                let def_header =
+                    buffer::cast::<FDBTableDefHeaderC>(self.inner.buf(), def_header_addr);
 
                 let name_addr = def_header.table_name_addr.extract() as usize;
-                let name_bytes = &self.inner.buf().as_bytes()[name_addr..];
+                let name_bytes = &self.inner.buf()[name_addr..];
 
                 compare_bytes(bytes, name_bytes)
             })
@@ -175,7 +174,7 @@ fn map_column_header<'a>(
     }
 }
 
-fn get_row_header_list_entry(buf: Buffer, addr: u32) -> Option<&FDBRowHeaderListEntryC> {
+fn get_row_header_list_entry(buf: &[u8], addr: u32) -> Option<&FDBRowHeaderListEntryC> {
     if addr == u32::MAX {
         None
     } else {
@@ -238,7 +237,7 @@ impl<'a> Table<'a> {
             .raw
             .columns
             .get(index)
-            .map(map_column_header(self.inner.mem.as_bytes()))
+            .map(map_column_header(self.inner.mem))
     }
 
     /// Get the column iterator
@@ -249,7 +248,7 @@ impl<'a> Table<'a> {
             .raw
             .columns
             .iter()
-            .map(map_column_header(self.inner.mem.as_bytes()))
+            .map(map_column_header(self.inner.mem))
     }
 
     /// The amount of columns in this table
@@ -350,20 +349,20 @@ pub struct Row<'a> {
     inner: RefHandle<'a, [FDBFieldDataC]>,
 }
 
-fn get_field<'a>(buf: Buffer<'a>, data: &'a FDBFieldDataC) -> Field<'a> {
+fn get_field<'a>(buf: &'a [u8], data: &'a FDBFieldDataC) -> Field<'a> {
     let data_type = ValueType::try_from(data.data_type.extract()).unwrap();
     let bytes = data.value.0;
     get_field_raw(buf, data_type, bytes)
 }
 
-fn get_field_raw(buf: Buffer, data_type: ValueType, bytes: [u8; 4]) -> Field {
+fn get_field_raw(buf: &[u8], data_type: ValueType, bytes: [u8; 4]) -> Field {
     match data_type {
         ValueType::Nothing => Field::Nothing,
         ValueType::Integer => Field::Integer(i32::from_le_bytes(bytes)),
         ValueType::Float => Field::Float(f32::from_le_bytes(bytes)),
         ValueType::Text => {
             let addr = u32::from_le_bytes(bytes);
-            let text = get_latin1_str(buf.as_bytes(), addr);
+            let text = get_latin1_str(buf, addr);
             Field::Text(text)
         }
         ValueType::Boolean => Field::Boolean(bytes != [0, 0, 0, 0]),
@@ -374,7 +373,7 @@ fn get_field_raw(buf: Buffer, data_type: ValueType, bytes: [u8; 4]) -> Field {
         }
         ValueType::VarChar => {
             let addr = u32::from_le_bytes(bytes);
-            let text = get_latin1_str(buf.as_bytes(), addr);
+            let text = get_latin1_str(buf, addr);
             Field::VarChar(text)
         }
     }
@@ -410,19 +409,19 @@ impl<'a> IntoIterator for Row<'a> {
     }
 }
 
-struct MemFromFile<'a>(Buffer<'a>);
+struct MemFromFile<'a>(&'a [u8]);
 
 impl<'a> ValueMapperMut<FileContext, MemContext<'a>> for MemFromFile<'a> {
     fn map_string(&mut self, from: &IndirectValue) -> &'a Latin1Str {
-        self.0.string(from.addr).unwrap()
+        handle::get_string(self.0, from.addr).unwrap()
     }
 
     fn map_i64(&mut self, from: &IndirectValue) -> i64 {
-        self.0.i64(from.addr).unwrap()
+        handle::get_i64(self.0, from.addr).unwrap()
     }
 
     fn map_xml(&mut self, from: &IndirectValue) -> &'a Latin1Str {
-        self.0.string(from.addr).unwrap()
+        handle::get_string(self.0, from.addr).unwrap()
     }
 }
 
