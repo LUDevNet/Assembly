@@ -12,6 +12,7 @@ use assembly_data::{
         quick::Reader,
     },
 };
+use assembly_fdb::common::str_hash;
 use color_eyre::eyre::WrapErr;
 use std::{
     collections::HashMap,
@@ -135,11 +136,11 @@ fn main() -> color_eyre::Result<()> {
                         }
                         core::Field::Text(text) => {
                             let lat1 = Latin1String::encode(text);
-                            pk = Some((lat1.hash() % 128) as usize);
+                            pk = Some((str_hash(&lat1) % 128) as usize);
                         }
                         core::Field::VarChar(var_char) => {
                             let lat1 = Latin1String::encode(var_char);
-                            pk = Some((lat1.hash() % 128) as usize);
+                            pk = Some((str_hash(&lat1) % 128) as usize);
                         }
                         _ => panic!("Can't use {:?} as PK", &dest_value),
                     }

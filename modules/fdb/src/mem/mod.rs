@@ -10,7 +10,6 @@
 //! of the original database buffer.
 use assembly_core::buffer::{self, Repr, LEI64};
 use buffer::CastError;
-use memchr::memchr;
 
 mod c;
 use super::{
@@ -37,15 +36,8 @@ pub use iter::{FieldIter, RowHeaderIter, TableIter}; // < FIXME> remove with nex
 
 fn get_latin1_str(buf: &[u8], offset: u32) -> &Latin1Str {
     let (_, haystack) = buf.split_at(offset as usize);
-    if let Some(end) = memchr(0, haystack) {
-        let (content, _) = haystack.split_at(end);
-        unsafe { Latin1Str::from_bytes_unchecked(content) }
-    } else {
-        panic!(
-            "Offset {} is supposed to be a string but does not have a null-terminator",
-            offset
-        );
-    }
+    // FIXME: this silently ignores end of file problems
+    Latin1Str::from_bytes_until_nul(haystack)
 }
 
 /// A complete in-memory read-only database

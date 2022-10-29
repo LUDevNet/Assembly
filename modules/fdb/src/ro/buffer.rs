@@ -222,14 +222,11 @@ impl<'a> Buffer<'a> {
     /// Get a buffer as a latin1 string
     pub fn string(self, addr: u32) -> Res<&'a Latin1Str> {
         let start = addr as usize;
-        let mut buf = self.0.get(start..).ok_or_else(|| {
+        let buf = self.0.get(start..).ok_or_else(|| {
             let end = self.0.len();
             BufferError::OutOfBounds(Range { start, end })
         })?;
-        if let Some(nullpos) = memchr::memchr(0, buf) {
-            buf = buf.split_at(nullpos).0;
-        }
-        Ok(Latin1Str::new(buf))
+        Ok(Latin1Str::from_bytes_until_nul(buf))
     }
 
     /// Get i64

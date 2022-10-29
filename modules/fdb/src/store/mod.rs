@@ -42,6 +42,8 @@ use std::{
     mem::size_of,
 };
 
+use crate::common::req_buf_len;
+
 use self::writer::WriteLE;
 
 use super::{
@@ -153,7 +155,7 @@ struct StoreMapper<'t> {
 impl<'t> ValueMapperMut<OwnedContext, StoreContext> for StoreMapper<'t> {
     fn map_string(&mut self, from: &String) -> TextRef {
         let s = Latin1String::encode(from).into_owned();
-        let lkey = s.req_buf_len();
+        let lkey = req_buf_len(&s);
         let lstrings = self.strings.entry(lkey).or_default();
         let inner = /*if let Some(index) = lstrings.iter().position(|p| s == *p) {
             index
@@ -279,14 +281,14 @@ impl Table {
         }
         .write_le(out)?;
 
-        let mut column_name_addr = table_name_addr + (table_name.req_buf_len() as u32 * 4);
+        let mut column_name_addr = table_name_addr + (req_buf_len(table_name) as u32 * 4);
         for column in &self.columns {
             FDBColumnHeader {
                 column_data_type: column.data_type.into(),
                 column_name_addr,
             }
             .write_le(out)?;
-            column_name_addr += column.name.req_buf_len() as u32 * 4;
+            column_name_addr += req_buf_len(&column.name) as u32 * 4;
         }
 
         table_name.write_le(out)?;
@@ -406,12 +408,12 @@ impl Table {
 
     fn compute_def_size(&self, name: &Latin1Str) -> usize {
         size_of::<FDBTableDefHeader>()
-            + name.req_buf_len() * 4
+            + req_buf_len(name) * 4
             + size_of::<FDBColumnHeader>() * self.columns.len()
             + self
                 .columns
                 .iter()
-                .map(|c| c.name.req_buf_len())
+                .map(|c| req_buf_len(&c.name))
                 .sum::<usize>()
                 * 4
     }

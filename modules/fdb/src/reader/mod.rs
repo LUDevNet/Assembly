@@ -16,7 +16,7 @@ use super::{
 };
 
 use assembly_core::reader::{FileError, FileResult};
-use encoding_rs::WINDOWS_1252;
+use latin1str::Latin1String;
 use nom::{Finish, IResult};
 
 /// Implementation of [`DatabaseReader::get_row_header_addr_iterator`]
@@ -40,14 +40,9 @@ where
     T: Seek + BufRead,
 {
     fn get_string(&mut self, addr: u32) -> io::Result<String> {
-        let mut string: Vec<u8> = Vec::new();
         self.seek(SeekFrom::Start(addr.into()))?;
-        self.read_until(0x00, &mut string)?;
-        if string.ends_with(&[0x00]) {
-            string.pop();
-        }
-        let (decoded, _, _) = WINDOWS_1252.decode(&string);
-        Ok(decoded.into_owned())
+        let string = Latin1String::read_cstring(self)?;
+        Ok(string.decode().into_owned())
     }
 }
 impl<T> DatabaseReader for T where T: Seek + Read + ?Sized {}
