@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/LUDevNet/Assembly/tree/main/modules/fdb-core"
 description = "Components to build FDB parsers and writers"
-license = "MIT or Apache-2.0"
+license = "MIT OR Apache-2.0"
 readme = "README.md"
 
 [dependencies]
