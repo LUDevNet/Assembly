@@ -7,14 +7,14 @@ use displaydoc::Display;
 use thiserror::Error;
 
 mod parser;
-use crate::{
-    common::{UnknownValueType, ValueType},
-    core::Field,
-};
+use crate::common::{UnknownValueType, ValueType};
 use assembly_core::reader::{FileError, FileResult};
-use assembly_fdb_core::file::{FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBTableHeader};
 use assembly_fdb_core::file::{
     FDBHeader, FDBRowHeader, FDBRowHeaderListEntry, FDBTableDataHeader, FDBTableDefHeader,
+};
+use assembly_fdb_core::{
+    file::{FDBBucketHeader, FDBColumnHeader, FDBFieldData, FDBTableHeader},
+    value::owned::Field,
 };
 use latin1str::Latin1String;
 use nom::{Finish, IResult};

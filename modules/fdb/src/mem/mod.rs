@@ -12,6 +12,7 @@ use assembly_core::buffer::{self, Repr, LEI64};
 pub use assembly_fdb_core::value::mem::{Field, MemContext};
 use assembly_fdb_core::value::{
     file::{FDBFieldValue, FileContext, IndirectValue},
+    owned::OwnedContext,
     ValueMapperMut, ValueType,
 };
 use buffer::CastError;
@@ -406,6 +407,23 @@ impl<'a> IntoIterator for Row<'a> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.field_iter()
+    }
+}
+
+/// Map [MemContext] values to [OwnedContext] values
+pub struct MemToOwned;
+
+impl<'a> ValueMapperMut<MemContext<'a>, OwnedContext> for MemToOwned {
+    fn map_string(&mut self, from: &&'a Latin1Str) -> String {
+        from.decode().into_owned()
+    }
+
+    fn map_i64(&mut self, from: &i64) -> i64 {
+        *from
+    }
+
+    fn map_xml(&mut self, from: &&'a Latin1Str) -> String {
+        from.decode().into_owned()
     }
 }
 

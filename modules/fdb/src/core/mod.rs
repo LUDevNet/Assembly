@@ -20,32 +20,12 @@ pub mod iter;
 #[cfg(feature = "core-loader")]
 pub mod loader;
 
-use std::collections::BTreeMap;
-
-use latin1str::Latin1Str;
-
 pub use assembly_fdb_core::value::{
     mem::MemContext,
     owned::{Field, OwnedContext},
     Context, Value, ValueMapperMut, ValueType,
 };
-
-/// Map [MemContext] values to [OwnedContext] values
-pub struct MemToOwned;
-
-impl<'a> ValueMapperMut<MemContext<'a>, OwnedContext> for MemToOwned {
-    fn map_string(&mut self, from: &&'a Latin1Str) -> String {
-        from.decode().into_owned()
-    }
-
-    fn map_i64(&mut self, from: &i64) -> i64 {
-        *from
-    }
-
-    fn map_xml(&mut self, from: &&'a Latin1Str) -> String {
-        from.decode().into_owned()
-    }
-}
+use std::collections::BTreeMap;
 
 /// A sequence of fields
 #[derive(Debug, Default)]

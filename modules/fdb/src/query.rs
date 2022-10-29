@@ -1,12 +1,9 @@
 //! ## Query the database
 use std::num::ParseIntError;
 
-use assembly_fdb_core::FdbHash;
+use assembly_fdb_core::{value::owned::Field, FdbHash};
 
-use super::{
-    common::{Context, Value, ValueType},
-    core::Field,
-};
+use super::common::{Context, Value, ValueType};
 use displaydoc::Display;
 use thiserror::Error;
 

@@ -1,6 +1,5 @@
 use assembly_fdb::{
-    core::MemToOwned,
-    mem::{self, Database, Field, Table},
+    mem::{self, Database, Field, MemToOwned, Table},
     query::pk_filter,
 };
 use color_eyre::eyre::{eyre, WrapErr};

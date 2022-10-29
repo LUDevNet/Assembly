@@ -43,7 +43,9 @@
 #![warn(missing_docs)]
 
 pub mod common;
+#[cfg(feature = "core")]
 pub mod core;
+#[cfg(any(feature = "io-read", feature = "io-write"))]
 pub mod io;
 pub mod mem;
 pub mod query;
