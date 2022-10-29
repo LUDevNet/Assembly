@@ -1,6 +1,7 @@
 //! # General methods for aligned access to a byte buffer
 
-use crate::{handle::Buffer, util::compare_bytes};
+use crate::util::compare_bytes;
+use assembly_core::buffer::Buffer;
 use assembly_fdb_core::file::{
     ArrayHeader, FDBHeader, FDBRowHeader, FDBRowHeaderListEntry, FDBTableDataHeader,
     FDBTableDefHeader, FDBTableHeader,

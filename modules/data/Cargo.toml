@@ -30,3 +30,4 @@ path = "../xml"
 [dev-dependencies]
 structopt = "0.3"
 color-eyre = "0.5"
+latin1str = "0.1.1"

@@ -1,8 +1,5 @@
 use assembly_data::{
-    fdb::{
-        common::{self, Latin1String},
-        core, store,
-    },
+    fdb::{core, store, value},
     xml::{
         common::{expect_decl, expect_end},
         database::{
@@ -14,6 +11,7 @@ use assembly_data::{
 };
 use assembly_fdb::FdbHash;
 use color_eyre::eyre::WrapErr;
+use latin1str::Latin1String;
 use std::{
     collections::HashMap,
     fs::File,
@@ -69,34 +67,34 @@ fn main() -> color_eyre::Result<()> {
 
         while let Some(col) = expect_column_or_end_columns(xml, buf)? {
             let data_type = match col.r#type {
-                ValueType::Bit => common::ValueType::Boolean,
-                ValueType::Float => common::ValueType::Float,
-                ValueType::Real => common::ValueType::Float,
-                ValueType::Int => common::ValueType::Integer,
-                ValueType::BigInt => common::ValueType::BigInt,
-                ValueType::SmallInt => common::ValueType::Integer,
-                ValueType::TinyInt => common::ValueType::Integer,
-                ValueType::Binary => common::ValueType::Text,
-                ValueType::VarBinary => common::ValueType::Text,
-                ValueType::Char => common::ValueType::Text,
-                ValueType::VarChar => common::ValueType::Text,
-                ValueType::NChar => common::ValueType::Text,
-                ValueType::NVarChar => common::ValueType::Text,
-                ValueType::NText => common::ValueType::VarChar,
-                ValueType::Text => common::ValueType::VarChar,
-                ValueType::Image => common::ValueType::VarChar,
-                ValueType::DateTime => common::ValueType::BigInt,
-                ValueType::Xml => common::ValueType::VarChar,
-                ValueType::Null => common::ValueType::Nothing,
-                ValueType::SmallDateTime => common::ValueType::Integer,
+                ValueType::Bit => value::ValueType::Boolean,
+                ValueType::Float => value::ValueType::Float,
+                ValueType::Real => value::ValueType::Float,
+                ValueType::Int => value::ValueType::Integer,
+                ValueType::BigInt => value::ValueType::BigInt,
+                ValueType::SmallInt => value::ValueType::Integer,
+                ValueType::TinyInt => value::ValueType::Integer,
+                ValueType::Binary => value::ValueType::Text,
+                ValueType::VarBinary => value::ValueType::Text,
+                ValueType::Char => value::ValueType::Text,
+                ValueType::VarChar => value::ValueType::Text,
+                ValueType::NChar => value::ValueType::Text,
+                ValueType::NVarChar => value::ValueType::Text,
+                ValueType::NText => value::ValueType::VarChar,
+                ValueType::Text => value::ValueType::VarChar,
+                ValueType::Image => value::ValueType::VarChar,
+                ValueType::DateTime => value::ValueType::BigInt,
+                ValueType::Xml => value::ValueType::VarChar,
+                ValueType::Null => value::ValueType::Nothing,
+                ValueType::SmallDateTime => value::ValueType::Integer,
             };
             if col_map.is_empty() {
                 // first col
-                if data_type == common::ValueType::Float {
+                if data_type == value::ValueType::Float {
                     let id_col_name = format!("{}ID", table_name);
                     dest_table.push_column(
                         Latin1String::encode(&id_col_name),
-                        common::ValueType::Integer,
+                        value::ValueType::Integer,
                     );
                     col_map.insert(id_col_name, col_map.len());
                 }
@@ -117,13 +115,13 @@ fn main() -> color_eyre::Result<()> {
                 let col_index = *col_map.get(&key).unwrap();
                 let value_type = dest_table.columns().get(col_index).unwrap().value_type();
                 let dest_value = match value_type {
-                    common::ValueType::Nothing => core::Field::Nothing,
-                    common::ValueType::Integer => core::Field::Integer(src_value.parse().unwrap()),
-                    common::ValueType::Float => core::Field::Float(src_value.parse().unwrap()),
-                    common::ValueType::Text => core::Field::Text(src_value),
-                    common::ValueType::Boolean => core::Field::Boolean(&src_value != "0"),
-                    common::ValueType::BigInt => core::Field::BigInt(src_value.parse().unwrap()),
-                    common::ValueType::VarChar => core::Field::VarChar(src_value),
+                    value::ValueType::Nothing => core::Field::Nothing,
+                    value::ValueType::Integer => core::Field::Integer(src_value.parse().unwrap()),
+                    value::ValueType::Float => core::Field::Float(src_value.parse().unwrap()),
+                    value::ValueType::Text => core::Field::Text(src_value),
+                    value::ValueType::Boolean => core::Field::Boolean(&src_value != "0"),
+                    value::ValueType::BigInt => core::Field::BigInt(src_value.parse().unwrap()),
+                    value::ValueType::VarChar => core::Field::VarChar(src_value),
                 };
 
                 if col_index == 0 {
