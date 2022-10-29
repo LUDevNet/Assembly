@@ -45,7 +45,6 @@
 pub mod common;
 pub mod core;
 pub mod file;
-pub mod hash;
 pub mod io;
 pub mod mem;
 pub mod parser;
@@ -53,6 +52,8 @@ pub mod query;
 pub mod reader;
 pub mod ro;
 pub mod store;
+
+pub use assembly_fdb_core::FdbHash;
 
 #[cfg(feature = "sqlite")]
 pub mod sqlite;

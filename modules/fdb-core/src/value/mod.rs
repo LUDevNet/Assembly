@@ -9,9 +9,9 @@ use std::{
     fmt::{self, Debug},
 };
 
+pub mod file;
 pub mod mem;
 pub mod owned;
-pub mod file;
 
 /// Type-Parameters to [`Value`]
 ///

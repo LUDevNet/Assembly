@@ -10,19 +10,18 @@
 //! of the original database buffer.
 use assembly_core::buffer::{self, Repr, LEI64};
 pub use assembly_fdb_core::value::mem::{Field, MemContext};
+use assembly_fdb_core::value::{
+    file::{FDBFieldValue, FileContext, IndirectValue},
+    ValueMapperMut, ValueType,
+};
 use buffer::CastError;
 use latin1str::Latin1Str;
 
 mod c;
-use crate::ro::TryFromHandle;
 
-use super::{
-    common::{ValueMapperMut, ValueType},
-    file::{FDBFieldValue, FileContext, IndirectValue},
-    ro::{
-        buffer::{compare_bytes, Buffer},
-        Handle, RefHandle,
-    },
+use super::ro::{
+    buffer::{compare_bytes, Buffer},
+    Handle, RefHandle, TryFromHandle,
 };
 use c::{
     FDBBucketHeaderC, FDBColumnHeaderC, FDBFieldDataC, FDBHeaderC, FDBRowHeaderListEntryC,

@@ -1,7 +1,7 @@
 //! ## Query the database
 use std::num::ParseIntError;
 
-use crate::hash::FdbHash;
+use assembly_fdb_core::FdbHash;
 
 use super::{
     common::{Context, Value, ValueType},

@@ -1,6 +1,5 @@
-use assembly_fdb::{
-    common::Latin1String, common::ValueType, core::Field, hash::FdbHash, mem::Database, store,
-};
+use assembly_fdb::{common::Latin1String, common::ValueType, core::Field, mem::Database, store};
+use assembly_fdb_core::FdbHash;
 use color_eyre::eyre::{self, eyre, WrapErr};
 use mapr::Mmap;
 use rusqlite::{types::ValueRef, Connection};

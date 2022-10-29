@@ -1,6 +1,6 @@
 use crate::file::FDBFieldData;
 
-use super::{Context, Value, UnknownValueType, ValueType};
+use super::{Context, UnknownValueType, Value, ValueType};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 /// The `common::Context` for used to make `file::FDBFieldValue`

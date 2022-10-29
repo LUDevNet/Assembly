@@ -12,7 +12,7 @@ use assembly_data::{
         quick::Reader,
     },
 };
-use assembly_fdb::hash::FdbHash;
+use assembly_fdb::FdbHash;
 use color_eyre::eyre::WrapErr;
 use std::{
     collections::HashMap,
