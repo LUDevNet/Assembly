@@ -26,8 +26,8 @@ fn main() -> color_eyre::Result<()> {
     let file = PackIndexFile::try_from(file)?;
 
     if args.pack_files {
-        for pack in file.archives {
-            println!("'{}'", pack.path);
+        for (index, pack) in file.archives.iter().enumerate() {
+            println!("{:>3} {}", index, pack.path);
         }
         Ok(())
     } else if args.files {
@@ -35,7 +35,10 @@ fn main() -> color_eyre::Result<()> {
             let pack_index = file_ref.pack_file as usize;
             match file.archives.get(pack_index) {
                 Some(pack_ref) => {
-                    println!("{:>10} {:08x} {}", key, file_ref.category, pack_ref.path);
+                    println!(
+                        "{:>10} {:08x} {:03} {}",
+                        key, file_ref.category, pack_index, pack_ref.path
+                    );
                 }
                 None => println!("Pack ID {} out of bounds", pack_index),
             }
