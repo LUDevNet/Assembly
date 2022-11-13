@@ -1,8 +1,8 @@
 use std::{fs::File, io::BufWriter, path::PathBuf, time::Instant};
 
+use argh::FromArgs;
 use assembly_fdb::{mem, store, value::owned::Field};
 use mapr::Mmap;
-use argh::FromArgs;
 
 use color_eyre::eyre::{self, WrapErr};
 

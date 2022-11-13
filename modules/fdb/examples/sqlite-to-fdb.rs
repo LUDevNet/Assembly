@@ -15,7 +15,7 @@ use structopt::{clap::ArgGroup, StructOpt};
 #[derive(FromArgs)]
 /// Convert an SQLite database to FDB. By default, type information from the SQLite DB is used; if unavailable, you can specify the target
 /// datatypes through a 'template' FDB file with `--template` (see template-fdb.rs).
-/// 
+///
 /// Author: zaop
 struct Options {
     /// input SQLite file
@@ -44,11 +44,15 @@ fn main() -> eyre::Result<()> {
     let mut opts: Options = argh::from_env();
 
     match (opts.force, opts.interactive, opts.no_clobber) {
-        (false, false, false) => { opts.force = true },
-        (true, false, false) => { /* explicit --force */ },
-        (false, true, false) => { /* explicit --interactive */ },
-        (false, false, true) => { /* explicit --no-clobber */ },
-        _ => return Err(eyre!("--force, --interactive, and --no-clobber are mutually exclusive")),
+        (false, false, false) => opts.force = true,
+        (true, false, false) => { /* explicit --force */ }
+        (false, true, false) => { /* explicit --interactive */ }
+        (false, false, true) => { /* explicit --no-clobber */ }
+        _ => {
+            return Err(eyre!(
+                "--force, --interactive, and --no-clobber are mutually exclusive"
+            ))
+        }
     }
 
     let start = Instant::now();
