@@ -5,15 +5,17 @@ use std::{
     path::PathBuf,
 };
 
+use argh::FromArgs;
 use assembly_fdb::mem::{Database, Row, RowHeaderIter, Table, Tables};
 use color_eyre::eyre::{eyre, WrapErr};
 use latin1str::Latin1Str;
 use mapr::Mmap;
-use structopt::StructOpt;
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, FromArgs)]
+/// Analyze the behavior data
 struct Options {
-    /// Path to the CDClient
+    /// path to the CDClient
+    #[argh(positional)]
     file: PathBuf,
 }
 
@@ -135,7 +137,7 @@ impl<'a> Iterator for RowFinder<'a> {
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    let opts = Options::from_args();
+    let opts: Options = argh::from_env();
 
     // Load the database file
     let file = File::open(&opts.file)

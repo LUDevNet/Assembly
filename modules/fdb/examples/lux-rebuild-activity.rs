@@ -1,3 +1,4 @@
+use argh::FromArgs;
 use assembly_fdb::mem::{Database, Row, Table, Tables};
 use color_eyre::eyre::{eyre, WrapErr};
 use mapr::Mmap;
@@ -6,10 +7,12 @@ use std::{
     fs::File,
     path::PathBuf,
 };
-use structopt::StructOpt;
 
-#[derive(StructOpt)]
+#[derive(FromArgs)]
+/// Check rebuild activities
 struct Options {
+    /// the path to CDClient.fdb
+    #[argh(positional)]
     fdb: PathBuf,
 }
 
@@ -43,7 +46,7 @@ impl<'a> RebuildComponent<'a> {
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    let opts = Options::from_args();
+    let opts: Options = argh::from_env();
 
     // Load the database file
     let file = File::open(&opts.fdb)

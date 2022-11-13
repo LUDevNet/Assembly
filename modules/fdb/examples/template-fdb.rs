@@ -1,21 +1,23 @@
+use argh::FromArgs;
 use assembly_fdb::{mem::Database, store};
 use color_eyre::eyre::{self, WrapErr};
 use mapr::Mmap;
 use std::{fs::File, io::BufWriter, path::PathBuf, time::Instant};
-use structopt::StructOpt;
 
-#[derive(StructOpt)]
+#[derive(FromArgs)]
 /// Creates a FDB file with the same table structure as the input file, but without any rows
 struct Options {
     /// Input FDB file
+    #[argh(positional)]
     src: PathBuf,
     /// Destination for template file
+    #[argh(positional)]
     dest: PathBuf,
 }
 
 fn main() -> eyre::Result<()> {
     color_eyre::install()?;
-    let opts = Options::from_args();
+    let opts: Options = argh::from_env();
     let start = Instant::now();
 
     let src_file = File::open(&opts.src)

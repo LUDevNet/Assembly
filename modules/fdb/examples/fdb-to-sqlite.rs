@@ -1,23 +1,25 @@
 use std::{fs::File, path::PathBuf, time::Instant};
 
+use argh::FromArgs;
 use assembly_fdb::{mem::Database, sqlite::try_export_db};
 use color_eyre::eyre::WrapErr;
 use mapr::Mmap;
 use rusqlite::Connection;
-use structopt::StructOpt;
 
-#[derive(StructOpt)]
+#[derive(FromArgs)]
 /// Turns an FDB file into an equivalent SQLite file
 struct Options {
-    /// The FD source file
+    /// the FD source file
+    #[argh(positional)]
     src: PathBuf,
-    /// The SQLite destination file
+    /// the SQLite destination file
+    #[argh(positional)]
     dest: PathBuf,
 }
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    let opts = Options::from_args();
+    let opts: Options = argh::from_env();
     let start = Instant::now();
 
     let src_file = File::open(&opts.src)

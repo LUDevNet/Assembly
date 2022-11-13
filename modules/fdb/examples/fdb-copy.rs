@@ -1,23 +1,25 @@
 use std::{fs::File, io::BufWriter, path::PathBuf, time::Instant};
 
-use assembly_fdb::{core::Field, mem, store};
+use assembly_fdb::{mem, store, value::owned::Field};
 use mapr::Mmap;
-use structopt::StructOpt;
+use argh::FromArgs;
 
 use color_eyre::eyre::{self, WrapErr};
 
-#[derive(StructOpt)]
+#[derive(FromArgs)]
 /// Reads an FDB file an creates another one with the same content
 struct Options {
-    /// The FDB file to copy from
+    /// the FDB file to copy from
+    #[argh(positional)]
     src: PathBuf,
-    /// The FDB file to create
+    /// the FDB file to create
+    #[argh(positional)]
     dest: PathBuf,
 }
 
 fn main() -> eyre::Result<()> {
     color_eyre::install()?;
-    let opts = Options::from_args();
+    let opts: Options = argh::from_env();
     let start = Instant::now();
 
     let src_file = File::open(&opts.src)

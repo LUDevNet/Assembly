@@ -1,3 +1,4 @@
+use argh::FromArgs;
 use assembly_fdb::{
     mem::Database,
     store,
@@ -11,48 +12,44 @@ use rusqlite::{types::ValueRef, Connection};
 use std::{fmt::Write, fs::File, io::BufWriter, io::Write as _, path::PathBuf, time::Instant};
 use structopt::{clap::ArgGroup, StructOpt};
 
-#[derive(StructOpt)]
-#[structopt(name = "sqlite-to-fdb")]
-#[structopt(author = "zaop")]
-#[structopt(group = ArgGroup::with_name("overwrite_policy").required(false))]
+#[derive(FromArgs)]
 /// Convert an SQLite database to FDB. By default, type information from the SQLite DB is used; if unavailable, you can specify the target
 /// datatypes through a 'template' FDB file with `--template` (see template-fdb.rs).
+/// 
+/// Author: zaop
 struct Options {
-    /// Input SQLite file
+    /// input SQLite file
+    #[argh(positional)]
     src: PathBuf,
-    /// Output FDB file
+    /// output FDB file
+    #[argh(positional)]
     dest: PathBuf,
     /// Optional: an FDB file containing tables with correct columns but no rows used to determine type information
-    #[structopt(long)]
+    #[argh(option)]
     template: Option<PathBuf>,
 
-    #[allow(dead_code)]
-    #[structopt(
-        short = "f",
-        long = "force",
-        help = "Do not prompt before overwriting existing files (default)",
-        group = "overwrite_policy"
-    )]
+    /// do not prompt before overwriting existing files (default)
+    #[argh(switch, short = 'f')]
     force: bool,
-    #[structopt(
-        short = "i",
-        long = "interactive",
-        help = "Prompt before overwriting existing files",
-        group = "overwrite_policy"
-    )]
+    /// prompt before overwriting existing files
+    #[argh(switch, short = "i")]
     interactive: bool,
-    #[structopt(
-        short = "n",
-        long = "no-clobber",
-        help = "Do not overwrite existing files",
-        group = "overwrite_policy"
-    )]
+    /// do not overwrite existing files
+    #[argh(switch, short = 'n', long = "no-clobber")]
     no_clobber: bool,
 }
 
 fn main() -> eyre::Result<()> {
     color_eyre::install()?;
-    let opts = Options::from_args();
+    let mut opts: Options = argh::from_env();
+
+    match (opts.force, opts.interactive, opts.no_clobber) {
+        (false, false, false) => { opts.force = true },
+        (true, false, false) => { /* explicit --force */ },
+        (false, true, false) => { /* explicit --interactive */ },
+        (false, false, true) => { /* explicit --no-clobber */ },
+        _ => return Err(eyre!("--force, --interactive, and --no-clobber are mutually exclusive")),
+    }
 
     let start = Instant::now();
 

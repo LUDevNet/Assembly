@@ -1,3 +1,4 @@
+use argh::FromArgs;
 use assembly_fdb::mem::{Database, Tables};
 use assembly_fdb_core::value::mem;
 use assembly_fdb_core::value::ValueType;
@@ -10,7 +11,6 @@ use std::{
     iter::FromIterator,
     path::PathBuf,
 };
-use structopt::StructOpt;
 
 #[derive(Serialize)]
 pub struct Spec<'a> {
@@ -29,18 +29,19 @@ pub struct ColumnSpec<'a> {
     nullable: bool,
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, FromArgs)]
 /// Prints the names of all tables and their columns
 struct Options {
-    /// The FDB file
+    /// the FDB file
+    #[argh(positional)]
     file: PathBuf,
 }
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    let opt = Options::from_args();
+    let opts: Options = argh::from_env();
 
-    let file = File::open(&opt.file)?;
+    let file = File::open(&opts.file)?;
     let mmap = unsafe { Mmap::map(&file)? };
     let buffer: &[u8] = &mmap;
 

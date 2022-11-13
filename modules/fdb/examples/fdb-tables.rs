@@ -1,22 +1,23 @@
+use argh::FromArgs;
 use assembly_fdb::mem::Database;
 use mapr::Mmap;
 use prettytable::{Cell as PCell, Row as PRow, Table as PTable};
 use std::fs::File;
-use structopt::StructOpt;
 
 /// Shows all tables in an FDB file
-#[derive(StructOpt)]
+#[derive(FromArgs)]
 struct Options {
-    /// A database file in FDB format
+    /// a database file in FDB format
+    #[argh(positional)]
     file: String,
 }
 
 pub fn main() -> color_eyre::Result<()> {
     // Load the options
-    let opt = Options::from_args();
+    let opts: Options = argh::from_env();
     assembly_core::time(|| {
         // load the file
-        let file = File::open(&opt.file)?;
+        let file = File::open(&opts.file)?;
         let mmap = unsafe { Mmap::map(&file)? };
         let buffer: &[u8] = &mmap;
 

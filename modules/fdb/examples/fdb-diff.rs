@@ -1,23 +1,25 @@
 use std::{fs::File, path::PathBuf, time::Instant};
 
+use argh::FromArgs;
 use assembly_fdb::mem;
 use mapr::Mmap;
-use structopt::StructOpt;
 
 use color_eyre::eyre::{self, WrapErr};
 
-#[derive(StructOpt)]
+#[derive(FromArgs)]
 /// Finds differences in FDB files
 struct Options {
-    /// The 'left' FDB file
+    /// the 'left' FDB file
+    #[argh(positional)]
     left: PathBuf,
-    /// The 'right' FDB file
+    /// the 'right' FDB file
+    #[argh(positional)]
     right: PathBuf,
 }
 
 fn main() -> eyre::Result<()> {
     color_eyre::install()?;
-    let opts = Options::from_args();
+    let opts: Options = argh::from_env();
     let start = Instant::now();
 
     // load left file

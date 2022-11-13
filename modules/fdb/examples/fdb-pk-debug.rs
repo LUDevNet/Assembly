@@ -1,21 +1,23 @@
+use argh::FromArgs;
 use assembly_fdb::mem::{Database, Table};
 use color_eyre::eyre::{eyre, WrapErr};
 use mapr::Mmap;
 use std::{fs::File, path::PathBuf};
-use structopt::StructOpt;
 
-#[derive(StructOpt)]
+#[derive(FromArgs)]
 /// Shows all rows for a single key in a table
 struct Options {
-    /// The FDB file
+    /// the FDB file
+    #[argh(positional)]
     file: PathBuf,
-    /// The table to use
+    /// the table to use
+    #[argh(positional)]
     table: String,
 }
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    let opts = Options::from_args();
+    let opts: Options = argh::from_env();
 
     // Load the database file
     let file = File::open(&opts.file)

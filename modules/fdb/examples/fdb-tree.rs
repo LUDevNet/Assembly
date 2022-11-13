@@ -1,21 +1,22 @@
+use argh::FromArgs;
 use assembly_fdb::mem::{Database, Tables};
 use mapr::Mmap;
 use std::{fs::File, path::PathBuf, time::Instant};
-use structopt::StructOpt;
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, FromArgs)]
 /// Prints the names of all tables and their columns
 struct Options {
-    /// The FDB file
+    /// the FDB file
+    #[argh(positional)]
     file: PathBuf,
 }
 
 fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
-    let opt = Options::from_args();
+    let opts: Options = argh::from_env();
     let start = Instant::now();
 
-    let file = File::open(&opt.file)?;
+    let file = File::open(&opts.file)?;
     let mmap = unsafe { Mmap::map(&file)? };
     let buffer: &[u8] = &mmap;
 
