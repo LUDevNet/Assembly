@@ -60,7 +60,7 @@ pub trait FsVisitor {
 /// - *read*: the real path of the directory
 /// - *recurse*: Whether to recurse into subdirectories
 pub fn scan_dir<V: FsVisitor>(visitor: &mut V, path: String, real: &Path, recurse: bool) {
-    let rd = match std::fs::read_dir(&real) {
+    let rd = match std::fs::read_dir(real) {
         Ok(rd) => rd,
         Err(e) => {
             visitor.failed_read_dir(real, e);

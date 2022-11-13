@@ -140,7 +140,7 @@ impl Config {
             let has_entries = !crc_set.is_empty();
             for crc in crc_set {
                 files.entry(crc).or_insert(FileRef {
-                    category: if pack_file.compressed { 1 } else { 0 },
+                    category: u32::from(pack_file.compressed),
                     pack_file: index,
                 });
             }

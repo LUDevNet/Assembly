@@ -92,7 +92,7 @@ impl PKHandle {
         let end = buf.seek(SeekFrom::Current(0))?;
         assert!(end <= u32::MAX.into());
 
-        let is_compressed = if is_compressed { 0x01 } else { 0x00 };
+        let is_compressed = u32::from(is_compressed);
         self.directory.insert(
             crc,
             PKEntryData {

@@ -137,7 +137,7 @@ impl<P: PathData> ZoneFile<P> {
     }
 }
 
-pub type ParsePathErr = (ZoneFile<Vec<u8>>, (usize, ErrorKind));
+pub type ParsePathErr = Box<(ZoneFile<Vec<u8>>, (usize, ErrorKind))>;
 
 impl ZoneFile<Vec<u8>> {
     pub fn parse_paths(self) -> Result<ZoneFile<ZonePaths>, ParsePathErr> {
@@ -147,7 +147,7 @@ impl ZoneFile<Vec<u8>> {
                 Err(e) => {
                     let len = path_data.offset(e.input);
                     let code = e.code;
-                    Err((self, (len, code)))
+                    Err(Box::new((self, (len, code))))
                 }
             }
         } else {
