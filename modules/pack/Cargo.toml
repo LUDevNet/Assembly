@@ -9,7 +9,8 @@ license = "MIT"
 readme = "README.md"
 
 [features]
-default = []
+default = ["log"]
+log = ["dep:log"]
 common-parser = ["dep:nom"]
 sd0 = ["dep:flate2", "dep:adler32"]
 pk = ["sd0", "common-parser", "dep:nom"]
