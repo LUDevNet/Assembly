@@ -16,7 +16,7 @@ fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     let args: Args = argh::from_env();
 
-    let file = File::open(&args.file)?;
+    let file = File::open(args.file)?;
     let mut reader = BufReader::new(file);
     let mut pack = PackFile::open(&mut reader);
 

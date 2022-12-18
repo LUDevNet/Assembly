@@ -48,7 +48,7 @@ impl FsVisitor for Visitor {
         let path = info.path();
         let crc = calculate_crc(path.as_bytes());
 
-        let mut output = self.output.join(&crc.to_string());
+        let mut output = self.output.join(crc.to_string());
         output.set_extension("sd0");
         let line = self
             .conv

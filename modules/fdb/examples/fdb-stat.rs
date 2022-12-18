@@ -16,7 +16,7 @@ fn main() -> color_eyre::Result<()> {
     let opts: Options = argh::from_env();
     let start = Instant::now();
 
-    let file = File::open(&opts.file)?;
+    let file = File::open(opts.file)?;
     let mmap = unsafe { Mmap::map(&file)? };
     let buffer: &[u8] = &mmap;
 

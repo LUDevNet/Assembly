@@ -156,7 +156,7 @@ impl FileLine {
             hash: raw.hash,
             compressed_filesize: compressed.size,
             compressed_hash: compressed.hash,
-            line_hash: MD5Sum(md5::compute(&text).0),
+            line_hash: MD5Sum(md5::compute(text).0),
         }
     }
 }

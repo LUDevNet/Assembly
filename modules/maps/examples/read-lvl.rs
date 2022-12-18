@@ -12,7 +12,7 @@ struct Opt {
 fn main() -> Result<()> {
     let opt = Opt::from_args();
 
-    let file = File::open(&opt.file)?;
+    let file = File::open(opt.file)?;
     let br = BufReader::new(file);
     let mut lvl = LevelReader::new(br);
 

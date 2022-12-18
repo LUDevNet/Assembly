@@ -24,7 +24,7 @@ fn main() -> color_eyre::Result<()> {
     let filename = args.pki_file;
     let crc = args.crc;
 
-    let file = File::open(&filename)?;
+    let file = File::open(filename)?;
     let pki = PackIndexFile::try_from(file)?;
 
     match pki.files.get(&crc) {

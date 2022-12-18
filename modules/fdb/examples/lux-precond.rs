@@ -141,7 +141,7 @@ fn main() -> color_eyre::Result<()> {
         let prec = prec_loader.load(row);
         let string = serde_json::to_string(&prec)?;
         if let Some(out) = &opts.out {
-            let path = out.join(&format!("{}.json", prec.id));
+            let path = out.join(format!("{}.json", prec.id));
             std::fs::write(path, string)?;
         } else {
             println!("{}", string);
