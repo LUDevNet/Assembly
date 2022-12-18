@@ -1,10 +1,12 @@
+#![cfg(feature = "md5sum")]
+
 use std::{
     fs::File,
     io::{self, Read},
     path::Path,
 };
 
-use crate::txt::FileMeta;
+use crate::common::FileMeta;
 
 use super::io::IOSum;
 

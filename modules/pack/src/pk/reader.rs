@@ -4,8 +4,7 @@ use super::file::{PKEntry, PKEntryData, PKTrailer};
 use super::parser;
 
 use crate::common::{CRCTree, CRCTreeCollector, CRCTreeVisitor};
-use crate::sd0;
-use crate::sd0::read::SegmentedDecoder;
+use crate::sd0::{self, read::SegmentedDecoder};
 use nom::{Finish, IResult, Offset};
 
 use std::cmp::Ordering;

@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-use crate::{common::CRCTree, txt::FileMeta};
+use crate::common::{CRCTree, FileMeta};
 
 use super::{
     file::{PKEntryData, PKTrailer, MAGIC_SEP, MAGIC_START},

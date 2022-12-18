@@ -13,8 +13,8 @@ pub use flate2::Compression;
 use flate2::FlushCompress;
 
 use crate::{
+    common::{FileMeta, FileMetaPair},
     md5::{io::IOSum, MD5Sum},
-    txt::{FileLine, FileMeta},
 };
 
 use super::{
@@ -36,7 +36,7 @@ const CHUNK_BOUND: usize = compress_bound(CHUNK_LEN);
 
 impl Converter {
     /// Convert a file to sd0
-    pub fn convert_file(&self, input: &Path, output: &Path) -> io::Result<FileLine> {
+    pub fn convert_file(&self, input: &Path, output: &Path) -> io::Result<FileMetaPair> {
         let mut input_file = IOSum::new(File::open(input)?);
         let mut output_file = IOSum::new(File::create(output)?);
 
@@ -135,6 +135,9 @@ impl Converter {
             writer.write_all(&index_data)?;
         }
 
-        Ok(FileLine::new(raw_meta, compressed_meta))
+        Ok(FileMetaPair {
+            raw: raw_meta,
+            compressed: compressed_meta,
+        })
     }
 }

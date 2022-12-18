@@ -8,21 +8,80 @@ description = "Packages module for the assembly crate"
 license = "MIT"
 readme = "README.md"
 
+[features]
+default = []
+common-parser = ["dep:nom"]
+sd0 = ["dep:flate2", "dep:adler32"]
+pk = ["sd0", "common-parser", "dep:nom"]
+pki = ["dep:nom", "common-parser"]
+pki-gen-txt = ["pki"]
+async = ["dep:futures-util"]
+manifest = ["dep:nom", "dep:nom-supreme"]
+md5sum = ["dep:md5"]
+
 [dependencies]
-adler32 = "1.2"
-bincode = "1.3"
+adler32 = { version = "1.2", optional = true }
 crc = "2.0"
-flate2 = "1.0"
-futures-util = "0.3"
-log = "0.4.14"
-md5 = "0.7"
-nom = "7.0"
-nom-supreme = "0.6"
+flate2 = { version = "1.0", optional = true }
+futures-util = { version = "0.3", optional = true }
+log = { version = "0.4.14", optional = true }
+md5 = { version = "0.7", optional = true }
+nom = { version = "7.0", optional = true }
+nom-supreme = { version = "0.6", optional = true }
 serde = { version = "1", features = ["derive"] }
 thiserror = "1"
 
 [dev-dependencies]
 argh = "0.1.4"
+bincode = "1.3" # for md5sum
 color-eyre = "0.5"
 serde_json = "1"
 lipsum = "0.8"
+
+[[example]]
+name = "lux-pack"
+required-features = ["pk", "pki", "manifest"]
+
+[[example]]
+name = "lux-manifest"
+required-features = ["sd0", "manifest"]
+
+[[example]]
+name = "md5-sum"
+required-features = ["md5sum"]
+
+[[example]]
+name = "mf-sort"
+required-features = ["manifest"]
+
+[[example]]
+name = "pk-file"
+required-features = ["pk"]
+
+[[example]]
+name = "pk-info"
+required-features = ["pk"]
+
+[[example]]
+name = "pk-entries"
+required-features = ["pk"]
+
+[[example]]
+name = "pki-find"
+required-features = ["pki"]
+
+[[example]]
+name = "pki-gen"
+required-features = ["pki-gen-txt", "pki"]
+
+[[example]]
+name = "pki-list"
+required-features = ["pki"]
+
+[[example]]
+name = "sd0-encode"
+required-features = ["sd0"]
+
+[[example]]
+name = "sd0-decode"
+required-features = ["sd0"]

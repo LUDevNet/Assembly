@@ -80,6 +80,7 @@ impl<'c, 'f> FsVisitor for Visitor<'c, 'f> {
         if self.filter.matches(info.name()) {
             let new_path = info.path();
             let crc = calculate_crc(new_path.as_bytes());
+            #[cfg(feature = "log")]
             log::debug!("dir-file {}", new_path);
             match self.effect {
                 ArgEffect::Include => {
@@ -113,6 +114,7 @@ impl Config {
                 match &arg.kind {
                     ArgKind::File => {
                         let crc = calculate_crc(path.as_bytes());
+                        #[cfg(feature = "log")]
                         log::debug!("file {}", path);
                         match arg.effect {
                             ArgEffect::Include => {

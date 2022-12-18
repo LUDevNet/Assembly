@@ -20,8 +20,8 @@ fn main() -> color_eyre::Result<()> {
     println!("{}", mf.version);
 
     println!("[files]");
-    for (k, v) in mf.files {
-        println!("{},{}", k, v);
+    for (k, (meta, hash)) in mf.files {
+        println!("{},{},{}", k, meta, hash);
     }
 
     Ok(())

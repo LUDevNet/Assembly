@@ -42,12 +42,16 @@ pub trait FsVisitor {
     fn visit_file(&mut self, info: FileInfo);
 
     /// Called when read-dir fails
+    #[allow(unused_variables)]
     fn failed_read_dir(&mut self, real: &Path, e: io::Error) {
+        #[cfg(feature = "log")]
         log::error!("Failed to read_dir {}: {}", real.display(), e);
     }
 
     /// Called when read-dir fails
+    #[allow(unused_variables)]
     fn failed_next_dir_entry(&mut self, real: &Path, e: io::Error) {
+        #[cfg(feature = "log")]
         log::error!("Failed next dir entry {}: {}", real.display(), e);
     }
 }

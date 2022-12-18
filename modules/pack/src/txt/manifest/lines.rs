@@ -3,6 +3,10 @@ use std::{
     str::FromStr,
 };
 
+use crate::{
+    common::{FileMeta, FileMetaPair},
+    md5::MD5Sum,
+};
 use nom::{
     bytes::complete::{take, take_while},
     character::complete::char,
@@ -11,8 +15,6 @@ use nom::{
     IResult,
 };
 use nom_supreme::final_parser::{final_parser, Location};
-
-use crate::md5::MD5Sum;
 
 /*
 fn from_hex(input: &str) -> Result<u8, std::num::ParseIntError> {
@@ -96,97 +98,37 @@ pub(crate) fn version_line(input: &str) -> Result<VersionLine, nom::error::Error
     final_parser(_version_line)(input)
 }
 
-/// Metadata for a single file
-pub struct FileMeta {
-    /// Size of the file
-    pub size: u32,
-    /// md5sum of the file
-    pub hash: MD5Sum,
-}
-
-/// One line in the `[files]` section
 ///
-/// This doesn't include the path, which is a key
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FileLine {
-    /// Size of the file
-    pub filesize: u32,
-    /// md5sum of the file
-    pub hash: MD5Sum,
-    /// Size of the compressed file
-    pub compressed_filesize: u32,
-    /// md5sum of the compressed file
-    pub compressed_hash: MD5Sum,
-    /// Hash of the comma separated line
-    pub line_hash: MD5Sum,
+pub type FileLine = (FileMetaPair, MD5Sum);
+
+fn file_meta(input: &str) -> IResult<&str, FileMeta> {
+    map(
+        tuple((decimal, preceded(char(','), md5))),
+        |(size, hash)| FileMeta { size, hash },
+    )(input)
 }
 
-impl fmt::Display for FileLine {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{},{},{},{},{}",
-            self.filesize,
-            self.hash,
-            self.compressed_filesize,
-            self.compressed_hash,
-            self.line_hash
-        )
-    }
-}
-
-impl FileLine {
-    /// Get the (relative) patcher URL for this file
-    pub fn to_path(&self) -> String {
-        let hash = format!("{:?}", self.hash);
-        let mut chars = hash.chars();
-        let c1 = chars.next().unwrap();
-        let c2 = chars.next().unwrap();
-        format!("{}/{}/{}.sd0", c1, c2, hash)
-    }
-
-    /// Create a new file line
-    pub fn new(raw: FileMeta, compressed: FileMeta) -> Self {
-        let text = format!(
-            "{},{},{},{}",
-            raw.size, raw.hash, compressed.size, compressed.hash
-        );
-        Self {
-            filesize: raw.size,
-            hash: raw.hash,
-            compressed_filesize: compressed.size,
-            compressed_hash: compressed.hash,
-            line_hash: MD5Sum(md5::compute(text).0),
-        }
-    }
-}
-
-fn _file_line(input: &str) -> IResult<&str, (&str, FileLine)> {
+fn _file_line(input: &str) -> IResult<&str, (&str, FileMetaPair, MD5Sum)> {
     map(
         tuple((
             take_while(|c: char| c != ','),
-            preceded(char(','), decimal),
-            preceded(char(','), md5),
-            preceded(char(','), decimal),
-            preceded(char(','), md5),
+            preceded(char(','), file_meta),
+            preceded(char(','), file_meta),
             preceded(char(','), md5),
         )),
-        |(filename, filesize, hash, compressed_filesize, compressed_hash, line_hash)| {
+        |(filename, raw_meta, compressed_meta, line_hash)| {
             (
                 filename,
-                FileLine {
-                    filesize,
-                    hash,
-                    compressed_filesize,
-                    compressed_hash,
-                    line_hash,
-                },
+                FileMetaPair::new(raw_meta, compressed_meta),
+                line_hash,
             )
         },
     )(input)
 }
 
-pub(crate) fn file_line(input: &str) -> Result<(&str, FileLine), nom::error::Error<Location>> {
+pub(crate) fn file_line(
+    input: &str,
+) -> Result<(&str, FileMetaPair, MD5Sum), nom::error::Error<Location>> {
     final_parser(_file_line)(input)
 }
 

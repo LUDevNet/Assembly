@@ -5,12 +5,16 @@
 use std::{
     borrow::{Borrow, BorrowMut},
     collections::BTreeMap,
+    fmt,
     ops::{ControlFlow, Deref, DerefMut},
 };
 
 use serde::{Deserialize, Serialize};
 
+use crate::md5::MD5Sum;
+
 pub mod fs;
+#[cfg(feature = "common-parser")]
 pub mod parser;
 pub mod writer;
 
@@ -95,5 +99,51 @@ impl<T> CRCTreeVisitor<T> for CRCTreeCollector<T> {
     fn visit(&mut self, crc: u32, data: T) -> ControlFlow<Self::Break> {
         self.inner.insert(crc, data);
         ControlFlow::Continue(())
+    }
+}
+
+/// Metadata for a single file
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct FileMeta {
+    /// Size of the file
+    pub size: u32,
+    /// md5sum of the file
+    pub hash: MD5Sum,
+}
+
+impl fmt::Display for FileMeta {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{},{}", self.size, self.hash)
+    }
+}
+
+/// Metadata for a file, raw and compressed
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct FileMetaPair {
+    /// The raw metadata
+    pub raw: FileMeta,
+    /// The compressed metadata
+    pub compressed: FileMeta,
+}
+
+impl FileMetaPair {
+    /// Create a new File-Meta pair
+    pub fn new(raw: FileMeta, compressed: FileMeta) -> Self {
+        Self { raw, compressed }
+    }
+
+    /// Get the (relative) patcher URL for this file
+    pub fn to_path(&self) -> String {
+        let hash = format!("{:?}", self.raw.hash);
+        let mut chars = hash.chars();
+        let c1 = chars.next().unwrap();
+        let c2 = chars.next().unwrap();
+        format!("{}/{}/{}.sd0", c1, c2, hash)
+    }
+}
+
+impl fmt::Display for FileMetaPair {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{},{}", self.raw, self.compressed)
     }
 }

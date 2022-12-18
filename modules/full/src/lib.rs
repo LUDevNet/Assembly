@@ -14,9 +14,9 @@ pub use assembly_data::xml;
 pub use assembly_maps::luz;
 #[cfg(feature = "maps")]
 pub use assembly_maps::lvl;
-#[cfg(feature = "pack")]
+#[cfg(feature = "pk")]
 pub use assembly_pack::pk;
-#[cfg(feature = "pack")]
+#[cfg(feature = "pki")]
 pub use assembly_pack::pki;
-#[cfg(feature = "pack")]
+#[cfg(feature = "sd0")]
 pub use assembly_pack::sd0;

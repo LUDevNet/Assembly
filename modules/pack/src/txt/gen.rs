@@ -206,6 +206,7 @@ pub fn parse_line(line: &str) -> Option<Command> {
         }
         "end_pack" => return Some(Command::EndPack),
         _ => {
+            #[cfg(feature = "log")]
             log::error!("Invalid command {} w/ arg {:?}", cmd, arg)
         }
     }

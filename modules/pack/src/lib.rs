@@ -7,7 +7,10 @@
 pub mod common;
 pub mod crc;
 pub mod md5;
+#[cfg(feature = "pk")]
 pub mod pk;
+#[cfg(feature = "pki")]
 pub mod pki;
+#[cfg(feature = "sd0")]
 pub mod sd0;
 pub mod txt;

@@ -5,9 +5,11 @@ use std::{fmt, io::Write, str::FromStr};
 use serde::{ser::SerializeTuple, Deserialize, Serialize};
 
 mod fs;
+#[cfg(feature = "md5sum")]
 pub mod io;
 pub mod padded;
 
+#[cfg(feature = "md5sum")]
 pub use fs::md5sum;
 
 /// # MD5 hashsum of a file
@@ -22,6 +24,7 @@ pub struct MD5Sum(pub [u8; 16]);
 
 impl MD5Sum {
     /// Compute an MD5 Sum
+    #[cfg(feature = "md5sum")]
     pub fn compute<B: AsRef<[u8]> + ?Sized>(data: &B) -> Self {
         Self(md5::compute(data).0)
     }

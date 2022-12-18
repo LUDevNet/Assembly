@@ -15,6 +15,9 @@ core = ["assembly-core"]
 data = ["assembly-data"]
 maps = ["assembly-maps"]
 pack = ["assembly-pack"]
+pk = ["pack", "assembly-pack/pk"]
+pki = ["pack", "assembly-pack/pki"]
+sd0 = ["pack", "assembly-pack/sd0"]
 serde-derives = [
     "assembly-core/serde-derives",
     "assembly-maps/serde-derives"
