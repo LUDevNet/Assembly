@@ -21,7 +21,7 @@ pub struct FileRef {
 }
 
 /// The entire data in a PKI file
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct PackIndexFile {
     /// The list of PK archive paths
     pub archives: Vec<PackFileRef>,
