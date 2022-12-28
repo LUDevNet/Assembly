@@ -13,6 +13,7 @@ use std::{
 use displaydoc::Display;
 use quick_xml::{events::Event as XmlEvent, Error as XmlError, Reader as XmlReader};
 use thiserror::Error;
+use tinystr::TinyStrError;
 
 use crate::common::exact::{expect_child_or_end, expect_text_or_end};
 
@@ -25,6 +26,14 @@ pub enum LocaleError {
     Io(#[from] io::Error),
     /// Xml
     Xml(#[from] Error),
+    /// TinyStr
+    TinyStr(TinyStrError),
+}
+
+impl From<TinyStrError> for LocaleError {
+    fn from(value: TinyStrError) -> Self {
+        Self::TinyStr(value)
+    }
 }
 
 impl From<XmlError> for LocaleError {
@@ -32,6 +41,10 @@ impl From<XmlError> for LocaleError {
         Self::Xml(Error::Xml(e))
     }
 }
+
+/// A key for [LocaleNode] children
+pub type Key = tinystr::TinyAsciiStr<24>;
+
 #[derive(Debug, Default)]
 /// A node in the locale tree
 pub struct LocaleNode {
@@ -40,7 +53,7 @@ pub struct LocaleNode {
     /// The (optional) children with a numeric key
     pub int_children: BTreeMap<u32, LocaleNode>,
     /// The (optional) children with a non-numeric key
-    pub str_children: BTreeMap<String, LocaleNode>,
+    pub str_children: BTreeMap<Key, LocaleNode>,
 }
 
 impl LocaleNode {
@@ -50,7 +63,7 @@ impl LocaleNode {
     pub fn get_keys(&self) -> BTreeMap<String, String> {
         let mut keys = BTreeMap::new();
         for (key, value) in &self.str_children {
-            value.add_keys(&mut keys, key.clone());
+            value.add_keys(&mut keys, key.to_string());
         }
         for (key, value) in &self.int_children {
             value.add_keys(&mut keys, key.to_string());
@@ -166,7 +179,8 @@ pub fn load_locale(path: &Path) -> Result<LocaleNode, LocaleError> {
             if let Ok(num) = comp.parse::<u32>() {
                 node = node.int_children.entry(num).or_default();
             } else {
-                node = node.str_children.entry(comp.to_owned()).or_default();
+                let key = Key::from_str(comp)?;
+                node = node.str_children.entry(key).or_default();
             }
         }
         if let Some(translation) = translation {

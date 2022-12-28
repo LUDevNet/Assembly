@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use assembly_xml::localization::load_locale;
+use assembly_xml::localization::{load_locale, Key};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -20,7 +20,10 @@ fn main() -> color_eyre::Result<()> {
         for part in opt.prefix.split('_') {
             node_ref = match part.parse() {
                 Ok(i) => node_ref.int_children.get(&i),
-                Err(_) => node_ref.str_children.get(part),
+                Err(_) => match Key::from_str(part) {
+                    Ok(key) => node_ref.str_children.get(&key),
+                    Err(_) => None,
+                },
             }
             .unwrap();
         }
