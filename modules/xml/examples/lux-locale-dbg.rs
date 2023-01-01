@@ -1,6 +1,6 @@
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 
-use assembly_xml::localization::{load_locale, LocaleNode};
+use assembly_xml::localization::{load_locale, Interner, Key, LocaleNodeRef};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -8,23 +8,48 @@ struct Options {
     path: PathBuf,
 }
 
-fn max_str_key_len(node: &LocaleNode) -> usize {
-    let mut max = 0;
-    for (k, v) in node.str_children.iter() {
-        max = max.max(k.len()).max(max_str_key_len(v))
+#[derive(Default, Debug)]
+struct Hist {
+    by_key: BTreeMap<Key, usize>,
+}
+
+impl Hist {
+    fn process(&mut self, node: LocaleNodeRef) {
+        for (k, v) in node.str_child_iter() {
+            self.process(v);
+            *self.by_key.entry(k.key()).or_default() += 1;
+        }
+        for (_k, v) in node.int_child_iter() {
+            self.process(v);
+        }
     }
-    for v in node.int_children.values() {
-        max = max.max(max_str_key_len(v))
+
+    fn lengths(&self, strs: &Interner) -> BTreeMap<usize, usize> {
+        let mut hist = BTreeMap::new();
+        for key in self.by_key.keys() {
+            let string = strs.lookup(*key);
+            *hist.entry(string.len()).or_default() += 1;
+        }
+        hist
     }
-    max
 }
 
 fn main() -> color_eyre::Result<()> {
     let opt = Options::from_args();
 
-    let locale_node = load_locale(&opt.path)?;
-    let max = max_str_key_len(&locale_node);
-    println!("max key length: {}", max);
+    let locale_root = load_locale(&opt.path)?;
+    println!("Done Loading");
+    let mut hist = Hist::default();
+    hist.process(locale_root.as_ref());
+    let lengths = hist.lengths(locale_root.strs());
+
+    //println! {"{:#?}", lengths};
+    println!("{:#?}", &lengths);
+    println!("#strings: {}", lengths.values().copied().sum::<usize>());
+    println!(
+        "#strings: {}",
+        lengths.iter().map(|(l, r)| l * r).sum::<usize>()
+    );
 
     Ok(())
 }

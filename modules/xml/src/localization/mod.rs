@@ -4,9 +4,10 @@
 //! - the `locale/locale.xml` file
 
 use std::{
-    collections::BTreeMap,
+    collections::{btree_map, BTreeMap},
     fs::File,
     io::{self, BufReader},
+    ops::Deref,
     path::Path,
 };
 
@@ -15,9 +16,11 @@ use quick_xml::{events::Event as XmlEvent, Error as XmlError, Reader as XmlReade
 use thiserror::Error;
 use tinystr::TinyStrError;
 
+use super::common::exact::{expect_attribute, expect_end, expect_start, expect_text, Error};
 use crate::common::exact::{expect_child_or_end, expect_text_or_end};
 
-use super::common::exact::{expect_attribute, expect_end, expect_start, expect_text, Error};
+mod interner;
+pub use interner::Interner;
 
 #[derive(Debug, Display, Error)]
 /// Some problem with loading a locale file
@@ -43,7 +46,7 @@ impl From<XmlError> for LocaleError {
 }
 
 /// A key for [LocaleNode] children
-pub type Key = tinystr::TinyAsciiStr<24>;
+pub type Key = interner::StringKey; //inystr::TinyAsciiStr<24>;
 
 #[derive(Debug, Default)]
 /// A node in the locale tree
@@ -60,29 +63,174 @@ impl LocaleNode {
     /// Return all keys that correspond to this node
     ///
     /// This returns a flat map of locale values
-    pub fn get_keys(&self) -> BTreeMap<String, String> {
+    pub fn get_keys(&self, strs: &Interner) -> BTreeMap<String, String> {
         let mut keys = BTreeMap::new();
         for (key, value) in &self.str_children {
-            value.add_keys(&mut keys, key.to_string());
+            value.add_keys(&mut keys, strs.lookup(*key).to_string(), strs);
         }
         for (key, value) in &self.int_children {
-            value.add_keys(&mut keys, key.to_string());
+            value.add_keys(&mut keys, key.to_string(), strs);
         }
         keys
     }
 
-    fn add_keys(&self, keys: &mut BTreeMap<String, String>, prefix: String) {
+    fn add_keys(&self, keys: &mut BTreeMap<String, String>, prefix: String, strs: &Interner) {
         for (key, value) in &self.str_children {
-            let inner = format!("{}_{}", prefix, key);
-            value.add_keys(keys, inner);
+            let inner = format!("{}_{}", prefix, strs.lookup(*key));
+            value.add_keys(keys, inner, strs);
         }
         for (key, value) in &self.int_children {
             let inner = format!("{}_{}", prefix, key);
-            value.add_keys(keys, inner);
+            value.add_keys(keys, inner, strs);
         }
         if let Some(v) = &self.value {
             keys.insert(prefix, v.clone());
         }
+    }
+}
+
+#[derive(Debug)]
+/// The root of a loaded locale XML
+pub struct LocaleRoot {
+    /// The inner root node
+    root_node: LocaleNode,
+    /// The string interner
+    strs: Interner,
+}
+
+impl LocaleRoot {
+    /// Turn root into a reference
+    pub fn as_ref(&self) -> LocaleNodeRef<'_, '_> {
+        LocaleNodeRef {
+            node: &self.root_node,
+            strs: &self.strs,
+        }
+    }
+
+    /// Get the string interner in this tree
+    pub fn strs(&self) -> &Interner {
+        &self.strs
+    }
+}
+
+/// Iterator over String subkeys
+pub struct StrKey<'s> {
+    key: Key,
+    strs: &'s Interner,
+}
+
+impl<'s> StrKey<'s> {
+    fn new(key: Key, strs: &'s Interner) -> Self {
+        Self { key, strs }
+    }
+
+    /// Get the interner [Key] for this value
+    pub fn key(&self) -> Key {
+        self.key
+    }
+}
+
+impl<'s> Deref for StrKey<'s> {
+    type Target = str;
+    fn deref(&self) -> &Self::Target {
+        self.strs.lookup(self.key)
+    }
+}
+
+/// Iterator over String subkeys
+pub struct StrNodeMap<'a, 's> {
+    iter: btree_map::Iter<'a, Key, LocaleNode>,
+    strs: &'s Interner,
+}
+
+impl<'a, 's> Iterator for StrNodeMap<'a, 's> {
+    type Item = (StrKey<'s>, LocaleNodeRef<'a, 's>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|(key, node)| {
+            let k = StrKey::new(*key, self.strs);
+            let r = LocaleNodeRef::new(node, self.strs);
+            (k, r)
+        })
+    }
+}
+
+/// Iterator over int subkeys
+pub struct IntNodeMap<'a, 's> {
+    iter: btree_map::Iter<'a, u32, LocaleNode>,
+    strs: &'s Interner,
+}
+
+impl<'a, 's> Iterator for IntNodeMap<'a, 's> {
+    type Item = (u32, LocaleNodeRef<'a, 's>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|(key, node)| {
+            let r = LocaleNodeRef {
+                node,
+                strs: self.strs,
+            };
+            (*key, r)
+        })
+    }
+}
+
+/// Reference to a [LocaleNode] with an [Interner]
+pub struct LocaleNodeRef<'a, 's> {
+    node: &'a LocaleNode,
+    strs: &'s Interner,
+}
+
+impl<'a, 's> LocaleNodeRef<'a, 's> {
+    /// Get the string interner in this tree
+    pub fn strs(&self) -> &'s Interner {
+        self.strs
+    }
+
+    /// Get the actual node
+    pub fn node(&self) -> &'a LocaleNode {
+        self.node
+    }
+
+    /// Get the value of this [LocaleNode]
+    pub fn value(&self) -> Option<&str> {
+        self.node.value.as_deref()
+    }
+
+    /// Get the string children of this [LocaleNode]
+    pub fn str_child_iter(&self) -> StrNodeMap {
+        StrNodeMap {
+            iter: self.node.str_children.iter(),
+            strs: self.strs,
+        }
+    }
+
+    /// Get an integer child
+    pub fn get_int(&self, key: u32) -> Option<Self> {
+        if let Some(node) = self.node.int_children.get(&key) {
+            return Some(Self::new(node, self.strs));
+        }
+        None
+    }
+
+    /// Get an integer child
+    pub fn get_str(&self, key: Key) -> Option<LocaleNodeRef<'a, 's>> {
+        if let Some(node) = self.node.str_children.get(&key) {
+            return Some(LocaleNodeRef::new(node, self.strs));
+        }
+        None
+    }
+
+    /// Get the integer children of this [LocaleNode]
+    pub fn int_child_iter(&self) -> IntNodeMap {
+        IntNodeMap {
+            iter: self.node.int_children.iter(),
+            strs: self.strs,
+        }
+    }
+
+    fn new(node: &'a LocaleNode, strs: &'s Interner) -> Self {
+        Self { node, strs }
     }
 }
 
@@ -100,15 +248,16 @@ const ATTR_ID: &str = "id";
 const LOCALE_EN_US: &str = "en_US";
 
 /// Load a locale file
-pub fn load_locale(path: &Path) -> Result<LocaleNode, LocaleError> {
+pub fn load_locale(path: &Path) -> Result<LocaleRoot, LocaleError> {
     let file = File::open(path)?;
     let file = BufReader::new(file);
 
-    let mut root = LocaleNode {
+    let mut root_node = LocaleNode {
         value: None,
         int_children: BTreeMap::new(),
         str_children: BTreeMap::new(),
     };
+    let mut strs = Interner::with_capacity(0x4000);
 
     let mut reader = XmlReader::from_reader(file);
     reader.trim_text(true);
@@ -174,12 +323,12 @@ pub fn load_locale(path: &Path) -> Result<LocaleNode, LocaleError> {
         }
         buf.clear();
 
-        let mut node = &mut root;
+        let mut node = &mut root_node;
         for comp in id.split('_') {
             if let Ok(num) = comp.parse::<u32>() {
                 node = node.int_children.entry(num).or_default();
             } else {
-                let key = Key::from_str(comp)?;
+                let key = strs.intern(comp); // Key::from_str(comp)?;
                 node = node.str_children.entry(key).or_default();
             }
         }
@@ -199,5 +348,5 @@ pub fn load_locale(path: &Path) -> Result<LocaleNode, LocaleError> {
         );
     }
 
-    Ok(root)
+    Ok(LocaleRoot { root_node, strs })
 }
