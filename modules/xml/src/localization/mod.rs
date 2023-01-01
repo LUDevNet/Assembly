@@ -5,6 +5,7 @@
 
 use std::{
     collections::{btree_map, BTreeMap},
+    fmt,
     fs::File,
     io::{self, BufReader},
     ops::Deref,
@@ -119,6 +120,12 @@ pub struct StrKey<'s> {
     strs: &'s Interner,
 }
 
+impl fmt::Display for StrKey<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.deref().fmt(f)
+    }
+}
+
 impl<'s> StrKey<'s> {
     fn new(key: Key, strs: &'s Interner) -> Self {
         Self { key, strs }
@@ -138,6 +145,7 @@ impl<'s> Deref for StrKey<'s> {
 }
 
 /// Iterator over String subkeys
+#[derive(Clone)]
 pub struct StrNodeMap<'a, 's> {
     iter: btree_map::Iter<'a, Key, LocaleNode>,
     strs: &'s Interner,
@@ -156,6 +164,7 @@ impl<'a, 's> Iterator for StrNodeMap<'a, 's> {
 }
 
 /// Iterator over int subkeys
+#[derive(Clone)]
 pub struct IntNodeMap<'a, 's> {
     iter: btree_map::Iter<'a, u32, LocaleNode>,
     strs: &'s Interner,
@@ -176,6 +185,7 @@ impl<'a, 's> Iterator for IntNodeMap<'a, 's> {
 }
 
 /// Reference to a [LocaleNode] with an [Interner]
+#[derive(Clone)]
 pub struct LocaleNodeRef<'a, 's> {
     node: &'a LocaleNode,
     strs: &'s Interner,
