@@ -207,8 +207,13 @@ impl<'a, 's> LocaleNodeRef<'a, 's> {
         self.node.value.as_deref()
     }
 
+    /// Call [`LocaleNode::get_keys`] with the [`Interner`]
+    pub fn get_keys(&self) -> BTreeMap<String, String> {
+        self.node.get_keys(self.strs)
+    }
+
     /// Get the string children of this [LocaleNode]
-    pub fn str_child_iter(&self) -> StrNodeMap {
+    pub fn str_child_iter(&self) -> StrNodeMap<'a, 's> {
         StrNodeMap {
             iter: self.node.str_children.iter(),
             strs: self.strs,
@@ -232,7 +237,7 @@ impl<'a, 's> LocaleNodeRef<'a, 's> {
     }
 
     /// Get the integer children of this [LocaleNode]
-    pub fn int_child_iter(&self) -> IntNodeMap {
+    pub fn int_child_iter(&self) -> IntNodeMap<'a, 's> {
         IntNodeMap {
             iter: self.node.int_children.iter(),
             strs: self.strs,
