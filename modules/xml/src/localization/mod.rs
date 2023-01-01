@@ -15,7 +15,6 @@ use std::{
 use displaydoc::Display;
 use quick_xml::{events::Event as XmlEvent, Error as XmlError, Reader as XmlReader};
 use thiserror::Error;
-use tinystr::TinyStrError;
 
 use super::common::exact::{expect_attribute, expect_end, expect_start, expect_text, Error};
 use crate::common::exact::{expect_child_or_end, expect_text_or_end};
@@ -30,14 +29,6 @@ pub enum LocaleError {
     Io(#[from] io::Error),
     /// Xml
     Xml(#[from] Error),
-    /// TinyStr
-    TinyStr(TinyStrError),
-}
-
-impl From<TinyStrError> for LocaleError {
-    fn from(value: TinyStrError) -> Self {
-        Self::TinyStr(value)
-    }
 }
 
 impl From<XmlError> for LocaleError {
