@@ -5,6 +5,8 @@ pub struct StringKey(u32);
 
 #[derive(Debug)]
 /// A simple string interner
+/// 
+/// Source: <https://matklad.github.io/2020/03/22/fast-simple-rust-interner.html>
 pub struct Interner {
     map: HashMap<&'static str, u32>,
     vec: Vec<&'static str>,
