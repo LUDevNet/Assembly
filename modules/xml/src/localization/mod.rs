@@ -103,6 +103,11 @@ impl LocaleRoot {
     pub fn strs(&self) -> &Interner {
         &self.strs
     }
+
+    /// Get a mutable reference to the string interner in this tree
+    pub fn strs_mut(&mut self) -> &mut Interner {
+        &mut self.strs
+    }
 }
 
 /// Iterator over String subkeys
