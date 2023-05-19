@@ -1,11 +1,16 @@
 //! # Tools to handle a file system
-use std::{collections::BTreeMap, io, path::Path};
+use std::{
+    fs::{DirEntry, Metadata},
+    io,
+    path::Path,
+};
 
 /// Information on a file
 pub struct FileInfo<'a> {
     _path: &'a str,
     _name: String,
     _real: &'a Path,
+    _entry: DirEntry,
 }
 
 impl<'a> FileInfo<'a> {
@@ -22,6 +27,11 @@ impl<'a> FileInfo<'a> {
     /// Return the "real" path
     pub fn real(&self) -> &Path {
         self._real
+    }
+
+    /// Return the metadata for this file
+    pub fn metadata(&self) -> io::Result<Metadata> {
+        self._entry.metadata()
     }
 }
 
@@ -73,38 +83,36 @@ pub fn scan_dir<V: FsVisitor>(visitor: &mut V, path: String, real: &Path, recurs
     };
 
     // collect all entries
-    let mut entries = BTreeMap::new();
     for e in rd {
         match e {
-            Ok(e) => {
-                let new_real_path = e.path();
+            Ok(_entry) => {
+                let new_real_path = _entry.path();
                 let name = new_real_path
                     .file_name()
-                    .unwrap()
+                    .expect("file_name on dir entry path")
                     .to_string_lossy()
                     .into_owned();
-                entries.insert(name, (new_real_path, e));
+                match _entry.file_type() {
+                    Ok(t) => {
+                        if t.is_file() {
+                            visitor.visit_file(FileInfo {
+                                _path: &path,
+                                _name: name,
+                                _real: &new_real_path,
+                                _entry,
+                            });
+                        } else if t.is_dir() && recurse {
+                            let new_path = win_join(&path, &name);
+                            scan_dir(visitor, new_path, &new_real_path, recurse);
+                        }
+                    }
+                    Err(e) => visitor.failed_next_dir_entry(&new_real_path, e),
+                }
             }
             Err(e) => {
                 visitor.failed_next_dir_entry(real, e);
                 return;
             }
         };
-    }
-
-    // loop over entries
-    for (name, (new_real_path, e)) in entries {
-        let t = e.file_type().unwrap();
-
-        if t.is_file() {
-            visitor.visit_file(FileInfo {
-                _path: &path,
-                _name: name,
-                _real: &new_real_path,
-            });
-        } else if t.is_dir() && recurse {
-            let new_path = win_join(&path, &name);
-            scan_dir(visitor, new_path, &new_real_path, recurse);
-        }
     }
 }

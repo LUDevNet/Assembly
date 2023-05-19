@@ -1,6 +1,6 @@
 [package]
 name = "assembly-pack"
-version = "0.5.1"
+version = "0.5.2"
 edition = "2018"
 homepage = "https://assembly.lu-dev.net/"
 repository = "https://github.com/xiphoseer/assembly_rs"
