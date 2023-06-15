@@ -14,14 +14,14 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: nightly
           override: true
 
       - name: Generate Documentation 📚
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --all --no-deps
+          args: --all --no-deps --all-features
 
       - name: Add static files 🏷️
         run: cp .gh-pages/* target/doc

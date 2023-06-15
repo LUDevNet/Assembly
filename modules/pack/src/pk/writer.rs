@@ -8,7 +8,7 @@ use super::file::{PKEntryData, PKTrailer};
 
 /// Write the directory of a PK file.
 ///
-/// This function takes a [Write] implementation and a CRCTree<PKEntryData>
+/// This function takes a [Write] implementation and a `CRCTree<PKEntryData>`
 /// and writes the tree part of the PK directory to disk
 pub fn write_pk_directory_tree<W: Write>(
     writer: &mut W,

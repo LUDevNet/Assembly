@@ -1,3 +1,4 @@
+#![cfg(feature = "pk")]
 //! # The pack (`*.pk`) files
 //!
 //! The game stores most of its resources in custom zip file variants

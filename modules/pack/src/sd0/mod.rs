@@ -1,3 +1,4 @@
+#![cfg(feature = "sd0")]
 //! # The segmented (`*.sd0`) compression format
 //!
 //! This format is used to deflate (zlib) the data served from the server to the client,
