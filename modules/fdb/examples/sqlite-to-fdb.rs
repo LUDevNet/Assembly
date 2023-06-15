@@ -10,7 +10,6 @@ use latin1str::Latin1String;
 use mapr::Mmap;
 use rusqlite::{types::ValueRef, Connection};
 use std::{fmt::Write, fs::File, io::BufWriter, io::Write as _, path::PathBuf, time::Instant};
-use structopt::{clap::ArgGroup, StructOpt};
 
 #[derive(FromArgs)]
 /// Convert an SQLite database to FDB. By default, type information from the SQLite DB is used; if unavailable, you can specify the target
@@ -24,7 +23,7 @@ struct Options {
     /// output FDB file
     #[argh(positional)]
     dest: PathBuf,
-    /// Optional: an FDB file containing tables with correct columns but no rows used to determine type information
+    /// optional: an FDB file containing tables with correct columns but no rows used to determine type information
     #[argh(option)]
     template: Option<PathBuf>,
 
@@ -32,7 +31,7 @@ struct Options {
     #[argh(switch, short = 'f')]
     force: bool,
     /// prompt before overwriting existing files
-    #[argh(switch, short = "i")]
+    #[argh(switch, short = 'i')]
     interactive: bool,
     /// do not overwrite existing files
     #[argh(switch, short = 'n', long = "no-clobber")]

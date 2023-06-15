@@ -3,7 +3,7 @@
 use std::{io::BufRead, todo};
 
 use displaydoc::Display;
-use quick_xml::{events::Event, Reader};
+use quick_xml::{events::{Event, attributes::AttrError}, Reader};
 use thiserror::Error;
 
 pub mod exact;
@@ -13,6 +13,8 @@ pub mod exact;
 pub enum XmlError {
     /// Failed to read the next XML event
     Reader(#[from] quick_xml::Error),
+    /// XML Attribute parsing error
+    XmlAttr(#[from] AttrError),
     /// Reached EOF while searching for {0}
     EofWhileExpecting(&'static str),
     /// Expected <?xml declaration

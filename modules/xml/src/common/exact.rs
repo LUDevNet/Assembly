@@ -8,6 +8,7 @@ use {
 };
 
 use displaydoc::Display;
+use quick_xml::events::attributes::AttrError;
 use thiserror::Error;
 
 /// The kind of an XML event
@@ -58,6 +59,8 @@ impl From<&XmlEvent<'_>> for XmlEventKind {
 pub enum Error {
     /// Malformed XML
     Xml(#[from] XmlError),
+    /// Malformed XML Attribute
+    XmlAttr(#[from] AttrError),
     /// Generic
     Generic(#[from] Box<dyn StdError + Send + Sync>),
     /// Expected tag `{0}`, found `{1:?}`

@@ -7,10 +7,10 @@ use std::{fs::File, io::BufWriter, path::PathBuf, time::Instant};
 #[derive(FromArgs)]
 /// Creates a FDB file with the same table structure as the input file, but without any rows
 struct Options {
-    /// Input FDB file
+    /// input FDB file
     #[argh(positional)]
     src: PathBuf,
-    /// Destination for template file
+    /// destination for template file
     #[argh(positional)]
     dest: PathBuf,
 }
