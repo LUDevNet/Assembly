@@ -47,7 +47,7 @@ impl Interner {
         StringKey(id)
     }
 
-    /// Lookup a [StringKey] to return a reference to [str]
+    /// Lookup a [`super::Key`] to return a reference to [str]
     pub fn lookup(&self, id: StringKey) -> &str {
         self.vec[id.0 as usize]
     }

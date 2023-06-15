@@ -37,7 +37,7 @@ pub struct Mission {
 
     #[serde(default, rename = "sv")]
     /// For achievements like collecting flags, there is one of this that has the displayed
-    /// progress N, and N other <sv> elements that seem to have a bitflag in the id?
+    /// progress N, and N other `<sv>` elements that seem to have a bitflag in the id?
     sub_value: Vec<MissionSubValue>,
 }
 

@@ -34,7 +34,7 @@ pub enum FileError {
 
 /// Trait to hand over a parse error past a buffer
 pub trait ParseAt<T>: Sized {
-    /// Call this after a <IResult as Finish>::finish
+    /// Call this after a `<IResult as Finish>::finish`
     fn at(self, addr: u64, slice: &[u8]) -> Result<T, FileError>;
 }
 

@@ -17,7 +17,7 @@ pub enum XmlEventKind {
     Start,
     /// End Tag `</tag>`
     End,
-    /// Empty tag ``<tag/>`
+    /// Empty tag `<tag/>`
     Empty,
     /// Plain Text
     Text,
