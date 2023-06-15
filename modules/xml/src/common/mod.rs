@@ -3,7 +3,10 @@
 use std::{io::BufRead, todo};
 
 use displaydoc::Display;
-use quick_xml::{events::{Event, attributes::AttrError}, Reader};
+use quick_xml::{
+    events::{attributes::AttrError, Event},
+    Reader,
+};
 use thiserror::Error;
 
 pub mod exact;
