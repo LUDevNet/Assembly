@@ -119,9 +119,9 @@ fn check_end<'a, B: BufRead>(
 }
 
 /// Expect an opening tag and return it
-pub fn expect_start<'a, 'b, 'c, B: BufRead>(
-    key: &'a str,
-    reader: &'b mut XmlReader<B>,
+pub fn expect_start<'c, B: BufRead>(
+    key: &str,
+    reader: &mut XmlReader<B>,
     buf: &'c mut Vec<u8>,
 ) -> Result<XmlBytesStart<'c>> {
     if let Ok(XmlEvent::Start(e)) = reader.read_event(buf) {
@@ -132,9 +132,9 @@ pub fn expect_start<'a, 'b, 'c, B: BufRead>(
 }
 
 /// Expect a closing tag and return it
-pub fn expect_end<'a, 'b, 'c, B: BufRead>(
-    key: &'a str,
-    reader: &'b mut XmlReader<B>,
+pub fn expect_end<'c, B: BufRead>(
+    key: &str,
+    reader: &mut XmlReader<B>,
     buf: &'c mut Vec<u8>,
 ) -> Result<XmlBytesEnd<'c>> {
     if let Ok(XmlEvent::End(e)) = reader.read_event(buf) {
