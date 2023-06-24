@@ -6,33 +6,18 @@ use std::{
 };
 
 /// Information on a file
-pub struct FileInfo<'a> {
-    _path: &'a str,
-    _name: String,
-    _real: &'a Path,
-    _entry: DirEntry,
-}
-
-impl<'a> FileInfo<'a> {
+pub trait FileInfo {
     /// Return just the filename
-    pub fn name(&self) -> &str {
-        self._name.as_ref()
-    }
+    fn name(&self) -> &str;
 
-    /// return the full "local" path
-    pub fn path(&self) -> String {
-        win_join(self._path, &self._name)
-    }
+    /// Return the full "local" path
+    fn path(&self) -> String;
 
     /// Return the "real" path
-    pub fn real(&self) -> &Path {
-        self._real
-    }
+    fn real(&self) -> &Path;
 
     /// Return the metadata for this file
-    pub fn metadata(&self) -> io::Result<Metadata> {
-        self._entry.metadata()
-    }
+    fn metadata(&self) -> io::Result<Metadata>;
 }
 
 // Join a windows path to a prefix
@@ -49,7 +34,7 @@ fn win_join(base: &str, name: &str) -> String {
 /// A trait to scan a directory of files
 pub trait FsVisitor {
     /// Called when a file is visited
-    fn visit_file(&mut self, info: FileInfo);
+    fn visit_file<F: FileInfo>(&mut self, info: F);
 
     /// Called when read-dir fails
     #[allow(unused_variables)]
@@ -63,6 +48,32 @@ pub trait FsVisitor {
     fn failed_next_dir_entry(&mut self, real: &Path, e: io::Error) {
         #[cfg(feature = "log")]
         log::error!("Failed next dir entry {}: {}", real.display(), e);
+    }
+}
+
+/// Information on a file used by [`scan_dir`]
+struct ScanFileInfo<'a> {
+    _path: &'a str,
+    _name: String,
+    _real: &'a Path,
+    _entry: DirEntry,
+}
+
+impl<'a> FileInfo for ScanFileInfo<'a> {
+    fn name(&self) -> &str {
+        self._name.as_ref()
+    }
+
+    fn path(&self) -> String {
+        win_join(self._path, &self._name)
+    }
+
+    fn real(&self) -> &Path {
+        self._real
+    }
+
+    fn metadata(&self) -> io::Result<Metadata> {
+        self._entry.metadata()
     }
 }
 
@@ -95,7 +106,7 @@ pub fn scan_dir<V: FsVisitor>(visitor: &mut V, path: String, real: &Path, recurs
                 match _entry.file_type() {
                     Ok(t) => {
                         if t.is_file() {
-                            visitor.visit_file(FileInfo {
+                            visitor.visit_file(ScanFileInfo {
                                 _path: &path,
                                 _name: name,
                                 _real: &new_real_path,

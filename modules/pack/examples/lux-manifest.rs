@@ -39,7 +39,7 @@ struct Visitor {
 }
 
 impl FsVisitor for Visitor {
-    fn visit_file(&mut self, info: FileInfo) {
+    fn visit_file<F: FileInfo>(&mut self, info: F) {
         let input = info.real();
         if self.ignore_pk && input.extension() == Some(OsStr::new("pk")) {
             return;

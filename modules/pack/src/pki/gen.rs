@@ -76,7 +76,7 @@ struct Visitor<'c, 'f> {
 }
 
 impl<'c, 'f> FsVisitor for Visitor<'c, 'f> {
-    fn visit_file(&mut self, info: FileInfo) {
+    fn visit_file<F: FileInfo>(&mut self, info: F) {
         if self.filter.matches(info.name()) {
             let new_path = info.path();
             let crc = calculate_crc(new_path.as_bytes());
