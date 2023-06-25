@@ -126,7 +126,7 @@ fn main() -> color_eyre::Result<()> {
                 };
 
                 let mut writer = Writer { path: &path };
-                pk.put_file(crc, &mut writer, meta.raw, meta.compressed, is_compressed)?;
+                pk.put_file(crc, &mut writer, meta, is_compressed)?;
             }
         }
     }

@@ -2,7 +2,10 @@
 
 use std::convert::TryInto;
 
-use crate::{common::parser::parse_crc_node, md5::MD5Sum};
+use crate::{
+    common::{parser::parse_crc_node, FileMeta, FileMetaPair},
+    md5::MD5Sum,
+};
 
 use super::file::*;
 use nom::{
@@ -39,23 +42,28 @@ fn parse_compressed(i: &[u8]) -> IResult<&[u8], u32> {
     Ok((i, u32::from_le_bytes(bytes)))
 }
 
+fn parse_file_meta(input: &[u8]) -> IResult<&[u8], FileMeta> {
+    let (input, size) = le_u32(input)?;
+    let (input, hash) = parse_hash(input)?;
+    let (input, _padding) = take(4usize)(input)?;
+    Ok((input, FileMeta { size, hash }))
+}
+
+fn parse_file_meta_pair(input: &[u8]) -> IResult<&[u8], FileMetaPair> {
+    let (input, raw) = parse_file_meta(input)?;
+    let (input, compressed) = parse_file_meta(input)?;
+    Ok((input, FileMetaPair { raw, compressed }))
+}
+
 /// Parse a file list entry
 pub fn parse_pk_entry_data(input: &[u8]) -> IResult<&[u8], PKEntryData> {
-    let (input, orig_file_size) = le_u32(input)?;
-    let (input, orig_file_hash) = parse_hash(input)?;
-    let (input, _ofh_padding) = take(4usize)(input)?;
-    let (input, compr_file_size) = le_u32(input)?;
-    let (input, compr_file_hash) = parse_hash(input)?;
-    let (input, _cfh_padding) = take(4usize)(input)?;
+    let (input, meta) = parse_file_meta_pair(input)?;
     let (input, file_data_addr) = le_u32(input)?;
     let (input, is_compressed) = parse_compressed(input)?;
     Ok((
         input,
         PKEntryData {
-            orig_file_size,
-            orig_file_hash,
-            compr_file_size,
-            compr_file_hash,
+            meta,
             file_data_addr,
             is_compressed,
         },
@@ -142,10 +150,16 @@ mod tests {
                     left: 100,
                     right: 200,
                     data: PKEntryData {
-                        orig_file_size: 4444,
-                        orig_file_hash: MD5Sum(ARR),
-                        compr_file_size: 8888,
-                        compr_file_hash: MD5Sum(ARR2),
+                        meta: FileMetaPair {
+                            raw: FileMeta {
+                                size: 4444,
+                                hash: MD5Sum(ARR)
+                            },
+                            compressed: FileMeta {
+                                size: 8888,
+                                hash: MD5Sum(ARR2)
+                            }
+                        },
                         file_data_addr: 5678,
                         is_compressed: 1,
                     }

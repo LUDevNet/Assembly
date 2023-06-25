@@ -103,11 +103,12 @@ impl<T> CRCTreeVisitor<T> for CRCTreeCollector<T> {
 }
 
 /// Metadata for a single file
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileMeta {
     /// Size of the file
     pub size: u32,
     /// md5sum of the file
+    #[serde(with = "crate::md5::padded")]
     pub hash: MD5Sum,
 }
 
@@ -118,7 +119,7 @@ impl fmt::Display for FileMeta {
 }
 
 /// Metadata for a file, raw and compressed
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FileMetaPair {
     /// The raw metadata
     pub raw: FileMeta,

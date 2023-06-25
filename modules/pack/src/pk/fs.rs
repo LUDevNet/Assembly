@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-use crate::common::{CRCTree, FileMeta};
+use crate::common::{CRCTree, FileMetaPair};
 
 use super::{
     file::{PKEntryData, PKTrailer, MAGIC_SEP, MAGIC_START},
@@ -79,8 +79,7 @@ impl PKHandle {
         &mut self,
         crc: u32,
         writer: &mut W,
-        raw: FileMeta,
-        compressed: FileMeta,
+        meta: FileMetaPair,
         is_compressed: bool,
     ) -> io::Result<()> {
         let mut buf = BufWriter::new(&mut self.file);
@@ -96,10 +95,7 @@ impl PKHandle {
         self.directory.insert(
             crc,
             PKEntryData {
-                orig_file_size: raw.size,
-                orig_file_hash: raw.hash,
-                compr_file_size: compressed.size,
-                compr_file_hash: compressed.hash,
+                meta,
                 file_data_addr: start as u32,
                 is_compressed,
             },

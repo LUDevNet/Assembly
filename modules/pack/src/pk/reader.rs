@@ -192,12 +192,11 @@ where
     /// Get a boxed reader for the file stream
     pub fn get_file_stream<'b>(&'b mut self, entry: PKEntry) -> PackStreamReader<'b, T> {
         let base_addr = entry.file_data_addr;
-        let size = if (entry.is_compressed & 0xff) == 0 {
-            entry.orig_file_size
-        } else {
-            entry.compr_file_size
-            //entry.orig_file_size
-        };
+        let size = match entry.is_compressed & 0xff {
+            0 => entry.meta.raw,
+            _ => entry.meta.compressed,
+        }
+        .size;
         //println!("{:?}", entry);
         PackStreamReader::<'b, T> {
             file: self,

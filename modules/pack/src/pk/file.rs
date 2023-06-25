@@ -1,7 +1,7 @@
 //! # The structures as the appear in the file
 use serde::{Deserialize, Serialize};
 
-use crate::{common::CRCTreeNode, md5::MD5Sum};
+use crate::common::{CRCTreeNode, FileMetaPair};
 
 /// Magic bytes at the start of a PK file
 pub const MAGIC_START: [u8; 7] = [b'n', b'd', b'p', b'k', 0x01, 0xff, 0x00];
@@ -23,18 +23,8 @@ pub type PKEntry = CRCTreeNode<PKEntryData>;
 /// Payload of the [`PKEntry`]
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PKEntryData {
-    /// Size of the decompressed file
-    pub orig_file_size: u32,
-    /// MD5sum of the decompressed file
-    #[serde(with = "crate::md5::padded")]
-    pub orig_file_hash: MD5Sum,
-
-    /// Size of the compressed file
-    pub compr_file_size: u32,
-    /// MD5sum of the compressed file
-    #[serde(with = "crate::md5::padded")]
-    pub compr_file_hash: MD5Sum,
-
+    /// File Metadata
+    pub meta: FileMetaPair,
     /// Offset of the file data within the PK archive
     pub file_data_addr: u32,
     /// TODO: figure out

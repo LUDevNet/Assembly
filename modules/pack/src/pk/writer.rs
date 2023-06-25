@@ -2,7 +2,7 @@
 
 use std::io::{self, Seek, SeekFrom, Write};
 
-use crate::common::{writer::write_crc_tree, CRCTree};
+use crate::common::{writer::write_crc_tree, CRCTree, FileMeta};
 
 use super::file::{PKEntryData, PKTrailer};
 
@@ -46,12 +46,16 @@ pub fn write_pk_directory<W: Write + Seek>(
     Ok(())
 }
 
+fn write_file_meta<W: Write>(writer: &mut W, meta: &FileMeta) -> io::Result<()> {
+    writer.write_all(&meta.size.to_le_bytes())?;
+    write!(writer, "{}\0\0\0\0", &meta.hash)?;
+    Ok(())
+}
+
 /// Write out a [PKEntryData]
 fn write_pk_entry_data<W: Write>(writer: &mut W, entry: &PKEntryData) -> io::Result<()> {
-    writer.write_all(&entry.orig_file_size.to_le_bytes())?;
-    write!(writer, "{}\0\0\0\0", &entry.orig_file_hash)?;
-    writer.write_all(&entry.compr_file_size.to_le_bytes())?;
-    write!(writer, "{}\0\0\0\0", &entry.compr_file_hash)?;
+    write_file_meta(writer, &entry.meta.raw)?;
+    write_file_meta(writer, &entry.meta.compressed)?;
     writer.write_all(&entry.file_data_addr.to_le_bytes())?;
     writer.write_all(&entry.is_compressed.to_le_bytes())?;
     Ok(())
@@ -60,6 +64,7 @@ fn write_pk_entry_data<W: Write>(writer: &mut W, entry: &PKEntryData) -> io::Res
 #[cfg(test)]
 mod tests {
     use crate::{
+        common::{FileMeta, FileMetaPair},
         md5::MD5Sum,
         pk::{file::PKEntryData, parser::parse_pk_entry_data, writer::write_pk_entry_data},
     };
@@ -67,15 +72,19 @@ mod tests {
     #[test]
     fn test_write_pk_entry() {
         let mut out: Vec<u8> = vec![];
-        let orig_file_hash = MD5Sum([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
-        let compr_file_hash = MD5Sum([
-            32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-        ]);
         let pke = PKEntryData {
-            orig_file_size: 100,
-            orig_file_hash,
-            compr_file_size: 101,
-            compr_file_hash,
+            meta: FileMetaPair {
+                raw: FileMeta {
+                    size: 100,
+                    hash: MD5Sum([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]),
+                },
+                compressed: FileMeta {
+                    size: 101,
+                    hash: MD5Sum([
+                        32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
+                    ]),
+                },
+            },
             file_data_addr: 50,
             is_compressed: 256,
         };

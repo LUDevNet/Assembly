@@ -36,10 +36,10 @@ impl CRCTreeVisitor<PKEntryData> for PrintVisitor {
         println!(
             "{:10} {:9} {:9} {} {} {:08x} {:08x}",
             crc,
-            data.orig_file_size,
-            data.compr_file_size,
-            data.orig_file_hash,
-            data.compr_file_hash,
+            data.meta.raw.size,
+            data.meta.compressed.size,
+            data.meta.raw.hash,
+            data.meta.compressed.hash,
             data.is_compressed,
             data.file_data_addr,
         );
