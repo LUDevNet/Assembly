@@ -12,7 +12,7 @@ use std::{
 
 use argh::FromArgs;
 use assembly_pack::{
-    crc::calculate_crc,
+    crc::CRC,
     pk::fs::{PKHandle, PKWriter},
     pki::core::PackIndexFile,
     txt::manifest::Manifest,
@@ -103,7 +103,7 @@ fn main() -> color_eyre::Result<()> {
     let mut pack_files = BTreeMap::new();
 
     for (name, (meta, _hash)) in manifest.files {
-        let crc = calculate_crc(name.as_bytes());
+        let crc = CRC::from_path(&name);
 
         if let Some(lookup) = pack_index.files.get(&crc) {
             // File is to be packed

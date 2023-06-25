@@ -6,7 +6,10 @@ use std::{
     path::Path,
 };
 
-use crate::common::{CRCTree, FileMetaPair};
+use crate::{
+    common::{CRCTree, FileMetaPair},
+    crc::CRC,
+};
 
 use super::{
     file::{PKEntryData, PKTrailer, MAGIC_SEP, MAGIC_START},
@@ -77,7 +80,7 @@ impl PKHandle {
     /// Put a file into the PK
     pub fn put_file<W: PKWriter>(
         &mut self,
-        crc: u32,
+        crc: CRC,
         writer: &mut W,
         meta: FileMetaPair,
         is_compressed: bool,

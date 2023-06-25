@@ -1,7 +1,10 @@
 //! # Parsers for parts of the file
-use crate::common::{
-    parser::{parse_crc_node, parse_u32_string},
-    CRCTreeNode,
+use crate::{
+    common::{
+        parser::{parse_crc_node, parse_u32_string},
+        CRCTreeNode,
+    },
+    crc::CRC,
 };
 
 use super::core::*;
@@ -19,7 +22,7 @@ use std::convert::TryFrom;
 
 type FileRefData = CRCTreeNode<FileRef>;
 
-fn extend_map(mut map: BTreeMap<u32, FileRef>, data: FileRefData) -> BTreeMap<u32, FileRef> {
+fn extend_map(mut map: BTreeMap<CRC, FileRef>, data: FileRefData) -> BTreeMap<CRC, FileRef> {
     map.insert(data.crc, data.data);
     map
 }

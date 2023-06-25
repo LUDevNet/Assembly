@@ -10,6 +10,8 @@ use nom::{
     IResult, Parser,
 };
 
+use crate::crc::CRC;
+
 use super::CRCTreeNode;
 
 /// Parse a CRC node
@@ -21,7 +23,7 @@ where
     E: ParseError<&'r [u8]>,
 {
     move |input: &'r [u8]| -> IResult<&[u8], CRCTreeNode<D>, E> {
-        let (input, crc) = le_u32(input)?;
+        let (input, crc) = map(le_u32, CRC::from_raw)(input)?;
         let (input, left) = le_i32(input)?;
         let (input, right) = le_i32(input)?;
         let (input, data) = parser.parse(input)?;

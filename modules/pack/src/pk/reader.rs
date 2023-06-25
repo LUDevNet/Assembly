@@ -4,6 +4,7 @@ use super::file::{PKEntry, PKEntryData, PKTrailer};
 use super::parser;
 
 use crate::common::{CRCTree, CRCTreeCollector, CRCTreeVisitor};
+use crate::crc::CRC;
 use crate::sd0::{self, read::SegmentedDecoder};
 use nom::{Finish, IResult, Offset};
 
@@ -333,7 +334,7 @@ where
     fn find_entry_recursive(
         &mut self,
         parent: Option<PKEntry>,
-        crc: u32,
+        crc: CRC,
     ) -> io::Result<Option<PKEntry>> {
         let data = match parent {
             Some(x) => x,
@@ -353,7 +354,7 @@ where
     }
 
     /// Find an entry given a CRC
-    pub fn find_entry(&mut self, crc: u32) -> io::Result<Option<PKEntry>> {
+    pub fn find_entry(&mut self, crc: CRC) -> io::Result<Option<PKEntry>> {
         let root = self.get_root_entry()?;
         self.find_entry_recursive(root, crc)
     }

@@ -1,5 +1,6 @@
 use argh::FromArgs;
 use assembly_pack::common::CRCTreeVisitor;
+use assembly_pack::crc::CRC;
 use assembly_pack::pk::file::PKEntryData;
 use assembly_pack::pk::reader::{PackEntryAccessor, PackFile};
 use serde::ser::SerializeMap;
@@ -19,7 +20,7 @@ where
 {
     type Break = serde_json::Error;
 
-    fn visit(&mut self, key: u32, value: PKEntryData) -> ControlFlow<Self::Break> {
+    fn visit(&mut self, key: CRC, value: PKEntryData) -> ControlFlow<Self::Break> {
         match self.0.serialize_entry(&key, &value) {
             Ok(()) => ControlFlow::Continue(()),
             Err(e) => ControlFlow::Break(e),
@@ -32,7 +33,7 @@ struct PrintVisitor;
 impl CRCTreeVisitor<PKEntryData> for PrintVisitor {
     type Break = ();
 
-    fn visit(&mut self, crc: u32, data: PKEntryData) -> ControlFlow<()> {
+    fn visit(&mut self, crc: CRC, data: PKEntryData) -> ControlFlow<()> {
         println!(
             "{:10} {:9} {:9} {} {} {:08x} {:08x}",
             crc,

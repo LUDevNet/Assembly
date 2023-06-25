@@ -6,13 +6,15 @@ use std::{
     ops::Range,
 };
 
+use crate::crc::CRC;
+
 /// Write a CRC tree to file
 ///
 /// This function recursively subdivides the given `range` to implement a depth first tree-order traversal
 ///
 /// For every leaf it calls [`Iterator::next`] and writes out the CRC key, left and right subindices
 /// and then the payload using `write_value`.
-fn write_crc_tree_recursive<V, W: Write, I: Iterator<Item = (u32, V)>>(
+fn write_crc_tree_recursive<V, W: Write, I: Iterator<Item = (CRC, V)>>(
     writer: &mut W,
     iterator: &mut I,
     range: Range<u32>,
@@ -43,7 +45,7 @@ fn write_crc_tree_recursive<V, W: Write, I: Iterator<Item = (u32, V)>>(
             write_crc_tree_recursive(writer, iterator, left_range, write_value)?;
 
             let (crc, data) = iterator.next().unwrap();
-            writer.write_all(&crc.to_le_bytes())?;
+            writer.write_all(&crc.to_raw().to_le_bytes())?;
             writer.write_all(&left_ptr.to_le_bytes())?;
             writer.write_all(&right_ptr.to_le_bytes())?;
             write_value(writer, data)?;
@@ -58,7 +60,7 @@ fn write_crc_tree_recursive<V, W: Write, I: Iterator<Item = (u32, V)>>(
 /// Write a CRC tree to a writer
 pub fn write_crc_tree<V, W: Write>(
     writer: &mut W,
-    tree: &BTreeMap<u32, V>,
+    tree: &BTreeMap<CRC, V>,
     write_value: fn(&mut W, &V) -> io::Result<()>,
 ) -> io::Result<()> {
     let len = tree.len() as u32;

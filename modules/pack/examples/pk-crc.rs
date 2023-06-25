@@ -1,6 +1,6 @@
 use std::env;
 
-use assembly_pack::crc::calculate_crc;
+use assembly_pack::crc::CRC;
 
 #[derive(Debug)]
 enum MainError {}
@@ -18,7 +18,7 @@ fn main() -> Result<(), MainError> {
         Ok(())
     } else {
         let filename = args[1].clone();
-        let crc = calculate_crc(filename.as_str().as_bytes());
+        let crc = CRC::from_path(&filename);
         println!("{:10} {}", crc, filename);
         Ok(())
     }

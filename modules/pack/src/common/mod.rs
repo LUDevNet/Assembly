@@ -11,7 +11,7 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::md5::MD5Sum;
+use crate::{crc::CRC, md5::MD5Sum};
 
 pub mod fs;
 #[cfg(feature = "common-parser")]
@@ -22,7 +22,7 @@ pub mod writer;
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CRCTreeNode<D> {
     /// The [CRC][`crate::crc`] value of this file
-    pub crc: u32,
+    pub crc: CRC,
     /// Binary tree node to the left
     pub left: i32,
     /// Binary tree node to the right
@@ -62,7 +62,7 @@ impl<D> DerefMut for CRCTreeNode<D> {
 /// Within the file, the trees are sorted by CRC value and organised in
 /// binary tree. This is not necessarily the same as the Rust B-Tree, but
 /// the ordering is good enough for what we need.
-pub type CRCTree<T> = BTreeMap<u32, T>;
+pub type CRCTree<T> = BTreeMap<CRC, T>;
 
 /// A trait to visit a CRC tree from a reader
 pub trait CRCTreeVisitor<T> {
@@ -70,7 +70,7 @@ pub trait CRCTreeVisitor<T> {
     type Break;
 
     /// Called once for every
-    fn visit(&mut self, crc: u32, data: T) -> ControlFlow<Self::Break>;
+    fn visit(&mut self, crc: CRC, data: T) -> ControlFlow<Self::Break>;
 }
 
 /// Simple visitor that collects a CRC tree to an instance of []
@@ -96,7 +96,7 @@ impl<T> CRCTreeCollector<T> {
 impl<T> CRCTreeVisitor<T> for CRCTreeCollector<T> {
     type Break = ();
 
-    fn visit(&mut self, crc: u32, data: T) -> ControlFlow<Self::Break> {
+    fn visit(&mut self, crc: CRC, data: T) -> ControlFlow<Self::Break> {
         self.inner.insert(crc, data);
         ControlFlow::Continue(())
     }

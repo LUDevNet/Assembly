@@ -1,7 +1,7 @@
 use argh::FromArgs;
 use assembly_pack::{
     common::fs::{scan_dir, FileInfo, FsVisitor},
-    crc::calculate_crc,
+    crc::CRC,
     sd0::fs::Converter,
     txt::VersionLine,
 };
@@ -46,7 +46,7 @@ impl FsVisitor for Visitor {
         }
 
         let path = info.path();
-        let crc = calculate_crc(path.as_bytes());
+        let crc = CRC::from_path(&path);
 
         let mut output = self.output.join(crc.to_string());
         output.set_extension("sd0");

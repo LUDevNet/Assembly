@@ -82,6 +82,8 @@ pub fn parse_pk_entry_list(input: &[u8]) -> IResult<&[u8], Vec<PKEntry>> {
 
 #[cfg(test)]
 mod tests {
+    use crate::crc::CRC;
+
     use super::*;
 
     const EMPTY: &[u8] = &[];
@@ -146,7 +148,7 @@ mod tests {
             Ok((
                 EMPTY,
                 PKEntry {
-                    crc: 1234,
+                    crc: CRC::from_raw(1234),
                     left: 100,
                     right: 200,
                     data: PKEntryData {

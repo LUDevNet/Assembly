@@ -2,6 +2,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+use crate::crc::CRC;
+
 /// The data for a single pack file
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PackFileRef {
@@ -26,5 +28,5 @@ pub struct PackIndexFile {
     /// The list of PK archive paths
     pub archives: Vec<PackFileRef>,
     /// The map from CRC to file metadata
-    pub files: BTreeMap<u32, FileRef>,
+    pub files: BTreeMap<CRC, FileRef>,
 }

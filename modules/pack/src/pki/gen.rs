@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     common::fs::{scan_dir, FileInfo, FsVisitor},
-    crc::calculate_crc,
+    crc::CRC,
 };
 
 use super::core::{FileRef, PackFileRef, PackIndexFile};
@@ -72,14 +72,14 @@ impl<'a> From<&'a str> for Filter<'a> {
 struct Visitor<'c, 'f> {
     filter: Filter<'f>,
     effect: ArgEffect,
-    crc_set: &'c mut HashSet<u32>,
+    crc_set: &'c mut HashSet<CRC>,
 }
 
 impl<'c, 'f> FsVisitor for Visitor<'c, 'f> {
     fn visit_file<F: FileInfo>(&mut self, info: F) {
         if self.filter.matches(info.name()) {
             let new_path = info.path();
-            let crc = calculate_crc(new_path.as_bytes());
+            let crc = CRC::from_path(&new_path);
             #[cfg(feature = "log")]
             log::debug!("dir-file {}", new_path);
             match self.effect {
@@ -103,7 +103,7 @@ impl Config {
 
         let mut index = 0u32;
         for pack_file in self.pack_files.iter() {
-            let mut crc_set = HashSet::<u32>::new();
+            let mut crc_set = HashSet::<CRC>::new();
 
             for arg in &pack_file.args {
                 let path = {
@@ -113,7 +113,7 @@ impl Config {
                 };
                 match &arg.kind {
                     ArgKind::File => {
-                        let crc = calculate_crc(path.as_bytes());
+                        let crc = CRC::from_path(&path);
                         #[cfg(feature = "log")]
                         log::debug!("file {}", path);
                         match arg.effect {

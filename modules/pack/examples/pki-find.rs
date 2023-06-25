@@ -1,4 +1,5 @@
 use argh::FromArgs;
+use assembly_pack::crc::CRC;
 use assembly_pack::pki::core::PackIndexFile;
 use color_eyre::eyre::eyre;
 use std::convert::TryFrom;
@@ -27,7 +28,7 @@ fn main() -> color_eyre::Result<()> {
     let file = File::open(filename)?;
     let pki = PackIndexFile::try_from(file)?;
 
-    match pki.files.get(&crc) {
+    match pki.files.get(&CRC::from_raw(crc)) {
         Some(file_ref) => {
             let pack_index = usize::try_from(file_ref.pack_file)?;
             match pki.archives.get(pack_index) {
