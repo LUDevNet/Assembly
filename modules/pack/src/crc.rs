@@ -21,6 +21,14 @@ fn normalize_char(b: u8) -> u8 {
 const ALG: Crc<u32> = Crc::<u32>::new(&CRC_32_MPEG_2);
 
 /// Hash-Value for a relative path
+///
+/// ```
+/// # use assembly_pack::crc::CRC;
+/// #
+/// let expected = CRC::from_raw(3741100517);
+/// assert_eq!(CRC::from_path("client/res/CDClient.fdb"), expected);
+/// assert_eq!(CRC::from_path("client\\res\\cdclient.fdb"), expected);
+/// ```
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct CRC(u32);
