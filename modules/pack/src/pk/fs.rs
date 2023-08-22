@@ -2,7 +2,7 @@
 
 use std::{
     fs::{File, OpenOptions},
-    io::{self, BufReader, BufWriter, Seek, SeekFrom, Write},
+    io::{self, BufReader, BufWriter, Seek, Write},
     path::Path,
 };
 
@@ -86,12 +86,12 @@ impl PKHandle {
         is_compressed: bool,
     ) -> io::Result<()> {
         let mut buf = BufWriter::new(&mut self.file);
-        let start = buf.seek(SeekFrom::Current(0))?;
+        let start = buf.stream_position()?;
         assert!(start <= u32::MAX.into());
 
         writer.write(&mut buf)?;
         buf.write_all(&MAGIC_SEP)?;
-        let end = buf.seek(SeekFrom::Current(0))?;
+        let end = buf.stream_position()?;
         assert!(end <= u32::MAX.into());
 
         let is_compressed = u32::from(is_compressed);

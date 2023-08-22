@@ -30,3 +30,40 @@ pub struct PackIndexFile {
     /// The map from CRC to file metadata
     pub files: BTreeMap<CRC, FileRef>,
 }
+
+impl PackIndexFile {
+    /// Add a new pack to this PKI
+    pub fn add_pack(&mut self, path: String, compressed: bool) -> PackIndexHandle<'_> {
+        let index = self.archives.len() as u32;
+        self.archives.push(PackFileRef { path });
+        PackIndexHandle {
+            pki: self,
+            index,
+            compressed,
+        }
+    }
+}
+
+/// Handle to a specific pack file
+pub struct PackIndexHandle<'a> {
+    pki: &'a mut PackIndexFile,
+    index: u32,
+    compressed: bool,
+}
+
+impl<'a> PackIndexHandle<'a> {
+    /// add more files to this pack file
+    pub fn add_files<I: Iterator<Item = CRC>>(&mut self, crcs: I) {
+        for crc in crcs {
+            self.add_file(crc)
+        }
+    }
+
+    /// add one file to this pack file
+    pub fn add_file(&mut self, crc: CRC) {
+        self.pki.files.entry(crc).or_insert(FileRef {
+            category: u32::from(self.compressed),
+            pack_file: self.index,
+        });
+    }
+}

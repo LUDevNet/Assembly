@@ -1,6 +1,6 @@
 //! # Write PK files
 
-use std::io::{self, Seek, SeekFrom, Write};
+use std::io::{self, Seek, Write};
 
 use crate::common::{writer::write_crc_tree, CRCTree, FileMeta};
 
@@ -32,7 +32,7 @@ pub fn write_pk_directory<W: Write + Seek>(
     writer: &mut W,
     tree: &CRCTree<PKEntryData>,
 ) -> io::Result<()> {
-    let file_list_base_addr = writer.seek(SeekFrom::Current(0))? as u32;
+    let file_list_base_addr = writer.stream_position()? as u32;
     let num_compressed = tree
         .iter()
         .filter(|(_, &x)| x.is_compressed & 0xFF > 0)

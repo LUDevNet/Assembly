@@ -10,7 +10,7 @@ use crate::{
     crc::CRC,
 };
 
-use super::core::{FileRef, PackFileRef, PackIndexFile};
+use super::core::PackIndexFile;
 
 /// Config for creating a pack file
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -30,6 +30,14 @@ pub struct Config {
 fn extend_path_buf(mut p: PathBuf, e: &str) -> PathBuf {
     p.push(e);
     p
+}
+
+fn join_with_str(base: &Path, e: &str) -> PathBuf {
+    e.split('\\').fold(base.to_owned(), extend_path_buf)
+}
+
+fn path_locale(path: &str) -> Option<&str> {
+    path.split('\\').skip_while(|x| *x != "_loc").nth(1)
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -72,23 +80,39 @@ impl<'a> From<&'a str> for Filter<'a> {
 struct Visitor<'c, 'f> {
     filter: Filter<'f>,
     effect: ArgEffect,
-    crc_set: &'c mut HashSet<CRC>,
+    state: &'c mut RunState,
 }
 
 impl<'c, 'f> FsVisitor for Visitor<'c, 'f> {
     fn visit_file<F: FileInfo>(&mut self, info: F) {
         if self.filter.matches(info.name()) {
-            let new_path = info.path();
-            let crc = CRC::from_path(&new_path);
-            #[cfg(feature = "log")]
-            log::debug!("dir-file {}", new_path);
-            match self.effect {
-                ArgEffect::Include => {
-                    self.crc_set.insert(crc);
-                }
-                ArgEffect::Exclude => {
-                    self.crc_set.remove(&crc);
-                }
+            self.state.on_file(&info.path(), self.effect)
+        }
+    }
+}
+
+#[derive(Default)]
+struct RunState {
+    crc_set: HashSet<CRC>,
+    _loc_map: BTreeMap<String, HashSet<CRC>>,
+}
+
+impl RunState {
+    fn on_file(&mut self, path: &str, effect: ArgEffect) {
+        let crc = CRC::from_path(path);
+        let _loc = path_locale(path);
+        #[cfg(feature = "log")]
+        log::debug!("file {}", path);
+        let crc_set = match _loc {
+            Some(_loc) => self._loc_map.entry(_loc.to_ascii_lowercase()).or_default(),
+            None => &mut self.crc_set,
+        };
+        match effect {
+            ArgEffect::Include => {
+                crc_set.insert(crc);
+            }
+            ArgEffect::Exclude => {
+                crc_set.remove(&crc);
             }
         }
     }
@@ -98,12 +122,13 @@ impl Config {
     /// Run the given config
     pub fn run(&self) -> PackIndexFile {
         let root: &Path = self.directory.as_ref();
-        let mut archives = Vec::with_capacity(self.pack_files.len());
-        let mut files = BTreeMap::new();
+        let mut pki = PackIndexFile {
+            archives: Vec::with_capacity(self.pack_files.len()),
+            files: BTreeMap::new(),
+        };
 
-        let mut index = 0u32;
         for pack_file in self.pack_files.iter() {
-            let mut crc_set = HashSet::<CRC>::new();
+            let mut state = RunState::default();
 
             for arg in &pack_file.args {
                 let path = {
@@ -112,50 +137,39 @@ impl Config {
                     p
                 };
                 match &arg.kind {
-                    ArgKind::File => {
-                        let crc = CRC::from_path(&path);
-                        #[cfg(feature = "log")]
-                        log::debug!("file {}", path);
-                        match arg.effect {
-                            ArgEffect::Include => {
-                                crc_set.insert(crc);
-                            }
-                            ArgEffect::Exclude => {
-                                crc_set.remove(&crc);
-                            }
-                        }
-                    }
+                    ArgKind::File => state.on_file(&path, arg.effect),
                     ArgKind::Dir { recurse, filter } => {
-                        let real_path = arg.name.split('\\').fold(root.to_owned(), extend_path_buf);
+                        let real_path = join_with_str(root, &arg.name);
 
                         let filter = Filter::from(filter.as_ref());
                         let mut visitor = Visitor {
                             filter,
                             effect: arg.effect,
-                            crc_set: &mut crc_set,
+                            state: &mut state,
                         };
                         scan_dir(&mut visitor, path, &real_path, *recurse);
                     }
                 }
             }
 
-            let has_entries = !crc_set.is_empty();
-            for crc in crc_set {
-                files.entry(crc).or_insert(FileRef {
-                    category: u32::from(pack_file.compressed),
-                    pack_file: index,
-                });
+            let path = format!("{}{}", self.prefix, &pack_file.name);
+            let components = path.rsplit_once('\\');
+            for (_loc, crc_set) in &state._loc_map {
+                // insert _loc\{_loc}\ before the filename, after any prefix
+                let path = match components {
+                    Some((base, filename)) => format!("{base}\\_loc\\{_loc}\\{filename}"),
+                    None => format!("_loc\\{_loc}\\{path}"),
+                };
+                pki.add_pack(path, pack_file.compressed)
+                    .add_files(crc_set.iter().copied());
             }
-
-            if has_entries {
-                archives.push(PackFileRef {
-                    path: format!("{}{}", self.prefix, &pack_file.name),
-                });
-                index += 1;
+            if !state.crc_set.is_empty() {
+                pki.add_pack(path, pack_file.compressed)
+                    .add_files(state.crc_set.iter().copied());
             }
         }
 
-        PackIndexFile { archives, files }
+        pki
     }
 }
 
@@ -202,4 +216,15 @@ pub struct PackFileArg {
     pub name: String,
     /// The kind of the argument
     pub kind: ArgKind,
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_locale() {
+        assert_eq!(
+            super::path_locale("texture\\_loc\\de_DE\\test.txt"),
+            Some("de_DE")
+        )
+    }
 }
