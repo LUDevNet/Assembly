@@ -23,7 +23,10 @@ version = "7"
 
 [dev-dependencies]
 anyhow = "1.0"
-getopts = "0.2"
+#getopts = "0.2"
+mapr = "0.8"
+argh = "0.1.9"
+color-eyre = "0.5"
 
 [dev-dependencies.assembly-fdb]
 path = "../fdb"
