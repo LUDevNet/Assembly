@@ -12,7 +12,8 @@ use displaydoc::Display;
 use ms_oforms::controls::form::parse_form_control;
 use ms_oforms::controls::form::Site;
 use ms_oforms::controls::ole_site_concrete::Clsid;
-use nom::error::ErrorKind;
+use nom::error::{ErrorKind, VerboseError, VerboseErrorKind};
+use nom::InputLength;
 use std::borrow::Cow;
 use thiserror::Error;
 
@@ -35,10 +36,14 @@ pub enum LoadError {
     MissingStream(String),
     /// Parsing incomplete
     Incomplete,
-    /// Nom parsing error: {0:?}
-    ParseError(ErrorKind),
-    /// Nom parsing failure: {0:?}
-    ParseFailure(ErrorKind),
+    /// Nom parsing error: {0:?} at -{1}
+    ParseError(ErrorKind, usize),
+    /// Nom parsing failure: {0:?} at -{1}
+    ParseFailure(ErrorKind, usize),
+    /// Nom parsing error: {0:#?}
+    ParseErrorVerbose(Vec<(VerboseErrorKind, usize)>),
+    /// Nom parsing failure: {0:#?}
+    ParseFailureVerbose(Vec<(VerboseErrorKind, usize)>),
     /// String encoding error: {0:?}
     StringEncoding(String),
 }
@@ -71,13 +76,34 @@ where
     fn try_from_cfb(buf: T) -> Result<Self, Self::Error>;
 }
 
-impl<I> From<nom::Err<nom::error::Error<I>>> for LoadError {
+impl<I: InputLength> From<nom::Err<nom::error::Error<I>>> for LoadError {
     fn from(e: nom::Err<nom::error::Error<I>>) -> LoadError {
         match e {
             // Need to translate the error here, as this lives longer than the input
             nom::Err::Incomplete(_) => LoadError::Incomplete,
-            nom::Err::Error(e) => LoadError::ParseError(e.code),
-            nom::Err::Failure(e) => LoadError::ParseFailure(e.code),
+            nom::Err::Error(e) => LoadError::ParseError(e.code, e.input.input_len()),
+            nom::Err::Failure(e) => LoadError::ParseFailure(e.code, e.input.input_len()),
+        }
+    }
+}
+
+impl<I: InputLength> From<nom::Err<VerboseError<I>>> for LoadError {
+    fn from(e: nom::Err<VerboseError<I>>) -> LoadError {
+        match e {
+            // Need to translate the error here, as this lives longer than the input
+            nom::Err::Incomplete(_) => LoadError::Incomplete,
+            nom::Err::Error(e) => LoadError::ParseErrorVerbose(
+                e.errors
+                    .into_iter()
+                    .map(|e| (e.1, e.0.input_len()))
+                    .collect(),
+            ),
+            nom::Err::Failure(e) => LoadError::ParseFailureVerbose(
+                e.errors
+                    .into_iter()
+                    .map(|e| (e.1, e.0.input_len()))
+                    .collect(),
+            ),
         }
     }
 }
@@ -95,8 +121,9 @@ impl<T: Read + Seek> TryFromCfb<T> for SysDiagram {
     fn try_from_cfb(buf: T) -> LoadResult<Self> {
         let mut reader = CompoundFile::open(buf).map_err(LoadError::Cfb)?;
         let entries = reader.read_storage("/").map_err(LoadError::Cfb)?;
+        eprintln!("CFB Streams:");
         for entry in entries {
-            println!("{}: {}", entry.name(), entry.path().display());
+            println!("- {:?}: {}", entry.name(), entry.path().display());
         }
 
         let form_control = if reader.is_stream("/f") {
@@ -104,11 +131,14 @@ impl<T: Read + Seek> TryFromCfb<T> for SysDiagram {
             let f_stream_len = usize::try_from(f_stream.len()).map_err(LoadError::StreamTooLong)?;
             let mut bytes: Vec<u8> = Vec::with_capacity(f_stream_len);
             f_stream.read_to_end(&mut bytes).map_err(LoadError::Cfb)?;
-            let (_rest, form_control) = parse_form_control(&bytes[..]).map_err(LoadError::from)?;
+            eprintln!("Form Control has {} bytes: {:?}", bytes.len(), &bytes[..4]);
+            let (_rest, form_control) =
+                parse_form_control::<VerboseError<&[u8]>>(&bytes[..]).map_err(LoadError::from)?;
             Ok(form_control)
         } else {
             Err(LoadError::MissingStream("f".to_string()))
         }?;
+        eprintln!("form_control: {:#?}", form_control);
 
         let dsref_schema_contents = if reader.is_stream("/DSREF-SCHEMA-CONTENTS") {
             let mut r_stream = reader

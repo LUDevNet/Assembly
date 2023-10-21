@@ -14,7 +14,7 @@ cli = ["dep:assembly-fdb", "dep:anyhow", "dep:mapr", "dep:argh"]
 
 [dependencies]
 assembly-core = { path = "../core", version = "0.3.0" }
-ms-oforms = { git = "https://github.com/Xiphoseer/rust-ms-oforms.git", rev = "d66c584"}
+ms-oforms = { git = "https://github.com/Xiphoseer/rust-ms-oforms.git", rev = "9937cd5"}
 base64 = "0.10"
 cfb = "0.3.1"
 encoding = "0.2"
