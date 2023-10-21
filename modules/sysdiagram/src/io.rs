@@ -9,7 +9,7 @@ use base64::decode as base64_decode;
 use base64::DecodeError as Base64DecodeError;
 use cfb::CompoundFile;
 use displaydoc::Display;
-use ms_oforms::controls::form::parser::parse_form_control;
+use ms_oforms::controls::form::parse_form_control;
 use ms_oforms::controls::form::Site;
 use ms_oforms::controls::ole_site_concrete::Clsid;
 use nom::error::ErrorKind;
@@ -71,24 +71,13 @@ where
     fn try_from_cfb(buf: T) -> Result<Self, Self::Error>;
 }
 
-impl From<nom::Err<(&[u8], ErrorKind)>> for LoadError {
-    fn from(e: nom::Err<(&[u8], ErrorKind)>) -> LoadError {
+impl<I> From<nom::Err<nom::error::Error<I>>> for LoadError {
+    fn from(e: nom::Err<nom::error::Error<I>>) -> LoadError {
         match e {
             // Need to translate the error here, as this lives longer than the input
             nom::Err::Incomplete(_) => LoadError::Incomplete,
-            nom::Err::Error((_, k)) => LoadError::ParseError(k),
-            nom::Err::Failure((_, k)) => LoadError::ParseFailure(k),
-        }
-    }
-}
-
-impl From<nom::Err<(&str, ErrorKind)>> for LoadError {
-    fn from(e: nom::Err<(&str, ErrorKind)>) -> LoadError {
-        match e {
-            // Need to translate the error here, as this lives longer than the input
-            nom::Err::Incomplete(_) => LoadError::Incomplete,
-            nom::Err::Error((_, k)) => LoadError::ParseError(k),
-            nom::Err::Failure((_, k)) => LoadError::ParseFailure(k),
+            nom::Err::Error(e) => LoadError::ParseError(e.code),
+            nom::Err::Failure(e) => LoadError::ParseFailure(e.code),
         }
     }
 }

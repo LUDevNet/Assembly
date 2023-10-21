@@ -11,13 +11,15 @@ readme = "README.md"
 
 [dependencies]
 assembly-core = { path = "../core", version = "0.3.0" }
-ms-oforms = { version = "0.3.0-alpha1" }
-nom = "5.0"
+ms-oforms = { git = "https://github.com/Xiphoseer/rust-ms-oforms.git", rev = "d66c584"}
 base64 = "0.10"
 cfb = "0.3.1"
 encoding = "0.2"
 displaydoc = "0.1"
 thiserror = "1.0"
+
+[dependencies.nom]
+version = "7"
 
 [dev-dependencies]
 anyhow = "1.0"

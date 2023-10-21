@@ -3,7 +3,7 @@ use assembly_fdb::core::{
     loader::{LoaderConfigImpl, SchemaLoader},
     Field,
 };
-use assembly_sysdiagram::core::SysDiagram;
+use assembly_sysdiagram::SysDiagram;
 use getopts::Options;
 use std::convert::TryFrom;
 use std::env;
