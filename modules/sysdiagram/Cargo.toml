@@ -9,6 +9,9 @@ description = "Library for files/resources for LU related software"
 license = "MIT"
 readme = "README.md"
 
+[features]
+cli = ["dep:assembly-fdb", "dep:anyhow", "dep:mapr", "dep:argh"]
+
 [dependencies]
 assembly-core = { path = "../core", version = "0.3.0" }
 ms-oforms = { git = "https://github.com/Xiphoseer/rust-ms-oforms.git", rev = "d66c584"}
@@ -17,18 +20,19 @@ cfb = "0.3.1"
 encoding = "0.2"
 displaydoc = "0.1"
 thiserror = "1.0"
+anyhow = { version = "1.0", optional = true }
+mapr = { version = "0.8", optional = true }
+argh = { version = "0.1.9", optional = true }
 
 [dependencies.nom]
 version = "7"
 
-[dev-dependencies]
-anyhow = "1.0"
-#getopts = "0.2"
-mapr = "0.8"
-argh = "0.1.9"
-color-eyre = "0.5"
-
-[dev-dependencies.assembly-fdb]
+[dependencies.assembly-fdb]
 path = "../fdb"
+optional = true
 version = "0.1.0"
 features = ["core-loader"]
+
+[[bin]]
+name = "fdb-sysdiagram"
+required-features = ["cli"]
