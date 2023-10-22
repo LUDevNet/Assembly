@@ -5,10 +5,10 @@ use ms_oforms::properties::types::{parse_position, parse_size};
 use nom::branch::alt;
 use nom::bytes::complete::{escaped, is_not, tag, take, take_until};
 use nom::character::complete::one_of;
-use nom::combinator::{eof, map, map_res, recognize, success};
-use nom::multi::{count, fold_many0, many_till};
+use nom::combinator::{eof, map, map_res, recognize, success, verify};
+use nom::multi::{count, fold_many0, length_value, many_till};
 use nom::number::complete::{le_u16, le_u32, le_u8};
-use nom::sequence::{delimited, separated_pair};
+use nom::sequence::{delimited, pair, separated_pair};
 use nom::IResult;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -25,6 +25,10 @@ fn parse_wstring_nt(input: &[u8]) -> IResult<&[u8], String> {
 
 fn decode_utf16(input: &[u8]) -> Result<String, Cow<'static, str>> {
     UTF_16LE.decode(input, DecoderTrap::Strict)
+}
+
+fn le_u32_2(input: &[u8]) -> IResult<&[u8], (u32, u32)> {
+    pair(le_u32, le_u32)(input)
 }
 
 fn parse_u32_bytes_wstring_nt(input: &[u8]) -> IResult<&[u8], String> {
@@ -159,15 +163,15 @@ pub fn parse_control1(input: &[u8]) -> IResult<&[u8], Control1> {
 }
 
 pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
-    let (input, d1) = le_u32(input)?;
+    let (input, d1) = verify(le_u32, |x| *x == 0x1234_4321)(input)?;
     let (input, d2) = le_u32(input)?;
     let (input, size1) = parse_size(input)?;
-    let (input, d3) = le_u32(input)?;
+    let (input, d3) = verify(le_u32, |x| *x == 0x1234_5678)(input)?;
     let (input, d4) = le_u32(input)?;
-    let (input, buf_len) = map_res(le_u32, usize::try_from)(input)?;
-    let (input, name) = parse_wstring_nt(input)?;
-    let (input, _) = take(buf_len - name.len() * 2 - 2)(input)?;
-    let (input, _d5) = take(6usize * 4)(input)?;
+    let (input, name) = length_value(le_u32, parse_wstring_nt)(input)?;
+    let (input, d5_1) = le_u32_2(input)?;
+    let (input, d5_2) = le_u32_2(input)?;
+    let (input, d5_3) = le_u32_2(input)?;
     let (input, d6) = le_u32(input)?;
     let (input, _d7) = take(16usize * 4)(input)?;
     let (input, size2) = parse_size(input)?;
@@ -176,7 +180,7 @@ pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
     let (input, _d10) = take(16usize * 4)(input)?;
     let (input, _d11) = take(11usize * 4)(input)?;
     let (input, d12) = le_u32(input)?;
-    let (input, _d13) = take(2usize * 4)(input)?;
+    let (input, d13) = le_u32_2(input)?;
     let (input, some_len) = map_res(le_u32, usize::try_from)(input)?;
     let (input, d14) = count(le_u32, some_len)(input)?;
     let (input, schema) = parse_u32_wstring_nt(input)?;
@@ -186,14 +190,18 @@ pub fn parse_sch_grid(input: &[u8]) -> IResult<&[u8], SchGrid> {
         SchGrid {
             d1,
             d2,
+            size1,
             d3,
             d4,
-            /*d5,*/ d6,
+            name,
+            d5_1,
+            d5_2,
+            d5_3,
+            d6,
             /*d7, d8,*/ d9,
             /*d10, d11,*/ d12,
-            /*d13,*/ d14,
-            size1,
-            name,
+            d13,
+            d14,
             size2,
             schema,
             table,

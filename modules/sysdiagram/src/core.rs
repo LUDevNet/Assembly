@@ -7,9 +7,13 @@ use std::collections::HashMap;
 pub struct SchGrid {
     pub d1: u32,
     pub d2: u32,
+    pub size1: Size,
     pub d3: u32,
     pub d4: u32,
-    //pub d5: [u32; 6],
+    pub name: String,
+    pub d5_1: (u32, u32),
+    pub d5_2: (u32, u32), // pos/size?
+    pub d5_3: (u32, u32),
     pub d6: u32,
     //pub d7: [u32;16],
     //pub d8: [u32;16],
@@ -17,11 +21,9 @@ pub struct SchGrid {
     //pub d10: [u32;16],
     //pub d11: [u32;11],
     pub d12: u32,
-    //pub d13: [u32;2],
-    pub d14: Vec<u32>,
-    pub size1: Size,
+    pub d13: (u32, u32), // border width? 1,1
+    pub d14: Vec<u32>,   // 0 - 10
     pub size2: Size,
-    pub name: String,
     pub table: String,
     pub schema: String,
 }

@@ -131,14 +131,12 @@ impl<T: Read + Seek> TryFromCfb<T> for SysDiagram {
             let f_stream_len = usize::try_from(f_stream.len()).map_err(LoadError::StreamTooLong)?;
             let mut bytes: Vec<u8> = Vec::with_capacity(f_stream_len);
             f_stream.read_to_end(&mut bytes).map_err(LoadError::Cfb)?;
-            eprintln!("Form Control has {} bytes: {:?}", bytes.len(), &bytes[..4]);
             let (_rest, form_control) =
                 parse_form_control::<VerboseError<&[u8]>>(&bytes[..]).map_err(LoadError::from)?;
             Ok(form_control)
         } else {
             Err(LoadError::MissingStream("f".to_string()))
         }?;
-        eprintln!("form_control: {:#?}", form_control);
 
         let dsref_schema_contents = if reader.is_stream("/DSREF-SCHEMA-CONTENTS") {
             let mut r_stream = reader

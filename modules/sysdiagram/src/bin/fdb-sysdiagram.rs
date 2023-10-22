@@ -14,6 +14,18 @@ struct Options {
     /// path to the FDB file
     #[argh(positional)]
     file: PathBuf,
+
+    #[argh(switch)]
+    /// print relationships
+    relationships: bool,
+
+    #[argh(switch)]
+    /// print settings
+    settings: bool,
+
+    #[argh(switch)]
+    /// print tables
+    tables: bool,
 }
 
 fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
@@ -40,17 +52,24 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
             Some(Value::Text(text)) => {
                 let text = text.decode();
                 let sysdiagram = SysDiagram::try_from(text.as_ref())?;
-                for table in sysdiagram.tables {
-                    println!("{}.{}", table.sch_grid.schema, table.sch_grid.name);
+                if opts.tables {
+                    for table in sysdiagram.tables {
+                        println!("{}.{}", table.sch_grid.schema, table.sch_grid.name);
+                        eprintln!("{:#?}", table.sch_grid);
+                    }
                 }
-                for relationship in sysdiagram.relationships {
-                    println!(
-                        "{:60} {:25} {:25}",
-                        relationship.name, relationship.from, relationship.to
-                    );
+                if opts.relationships {
+                    for relationship in sysdiagram.relationships {
+                        println!(
+                            "{:60} {:25} {:25}",
+                            relationship.name, relationship.from, relationship.to
+                        );
+                    }
                 }
-                for (key, value) in sysdiagram.dsref_schema_contents.settings.iter() {
-                    println!("{:25}: {}", key, value);
+                if opts.settings {
+                    for (key, value) in sysdiagram.dsref_schema_contents.settings.iter() {
+                        println!("{:25}: {}", key, value);
+                    }
                 }
             }
             data => println!("Wrong data: {:?}", data),
