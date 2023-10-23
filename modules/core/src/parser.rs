@@ -83,7 +83,7 @@ where
 
 fn map_wstring(val: &[u8]) -> Result<String, ()> {
     let iter = val.chunks_exact(2);
-    if let [] = iter.remainder() {
+    if iter.remainder().is_empty() {
         let iter = iter.map(|s| (s[0] as u16) + ((s[1] as u16) << 8));
         decode_utf16(iter).map(|r| r.or(Err(()))).collect()
     } else {
