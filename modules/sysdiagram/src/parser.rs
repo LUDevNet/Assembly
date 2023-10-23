@@ -1,20 +1,15 @@
-use displaydoc::Display;
 use encoding::{all::UTF_16LE, DecoderTrap, Encoding};
 use ms_oforms::properties::types::{parse_position, parse_size};
-
-use nom::branch::alt;
-use nom::bytes::complete::{escaped, is_not, tag, take, take_until};
-use nom::character::complete::one_of;
-use nom::combinator::{eof, map, map_res, recognize, success, verify};
-use nom::multi::{count, fold_many0, length_value, many_till};
-use nom::number::complete::{le_u16, le_u32, le_u8};
-use nom::sequence::{delimited, pair, separated_pair};
+use nom::bytes::complete::{tag, take, take_until};
+use nom::combinator::{map_res, recognize, verify};
+use nom::multi::{count, length_value, many_till};
+use nom::number::complete::{le_u16, le_u32};
+use nom::sequence::pair;
 use nom::IResult;
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::convert::TryFrom;
 
-use super::core::*;
+use crate::{Control1, SchGrid};
 
 fn parse_wstring_nt(input: &[u8]) -> IResult<&[u8], String> {
     map_res(
@@ -31,14 +26,14 @@ fn le_u32_2(input: &[u8]) -> IResult<&[u8], (u32, u32)> {
     pair(le_u32, le_u32)(input)
 }
 
-fn parse_u32_bytes_wstring_nt(input: &[u8]) -> IResult<&[u8], String> {
+pub(crate) fn parse_u32_bytes_wstring_nt(input: &[u8]) -> IResult<&[u8], String> {
     let (input, len) = le_u32(input)?;
     let (input, string) = map_res(take(len - 2), decode_utf16)(input)?;
     let (input, _) = tag([0x00, 0x00])(input)?;
     Ok((input, string))
 }
 
-fn parse_u32_wstring_nt(input: &[u8]) -> IResult<&[u8], String> {
+pub(crate) fn parse_u32_wstring_nt(input: &[u8]) -> IResult<&[u8], String> {
     let (input, len) = le_u32(input)?;
     let (input, string) = map_res(take(len * 2 - 2), decode_utf16)(input)?;
     let (input, _) = tag([0x00, 0x00])(input)?;
@@ -53,84 +48,6 @@ pub fn parse_relationship(input: &str) -> IResult<&str, (String, String, String)
     let (input, _) = tag("' and '")(input)?;
     let (input, to) = take_until("'")(input)?;
     Ok((input, (name.to_string(), from.to_string(), to.to_string())))
-}
-
-fn parse_entry(input: &[u8]) -> IResult<&[u8], DSRefSchemaEntry> {
-    let (input, k1) = le_u32(input)?;
-    let (input, table) = parse_u32_bytes_wstring_nt(input)?;
-    let (input, schema) = parse_u32_bytes_wstring_nt(input)?;
-    Ok((input, DSRefSchemaEntry { k1, table, schema }))
-}
-
-fn parse_setting(input: &str) -> IResult<&str, (String, String)> {
-    map(
-        separated_pair(
-            is_not::<_, &str, _>("="),
-            tag("="),
-            alt((
-                delimited(
-                    tag("\""),
-                    escaped(is_not("\""), '\\', one_of("\"\\")),
-                    tag("\""),
-                ),
-                is_not(";"),
-            )),
-        ),
-        |(x, y)| (x.to_string(), y.to_string()),
-    )(input)
-}
-
-//pub type StringMap = Vec<(String, String)>;
-pub type StringMap = HashMap<String, String>;
-
-fn parse_connection_setting(input: &str) -> IResult<&str, (String, String)> {
-    let (input, set) = parse_setting(input)?;
-    let (input, _) = alt((tag(";"), eof))(input)?;
-    Ok((input, set))
-}
-
-fn parse_connection_string(input: &str) -> IResult<&str, StringMap> {
-    fold_many0(
-        parse_connection_setting,
-        HashMap::new,
-        |mut acc: StringMap, (key, value): (String, String)| {
-            acc.insert(key, value);
-            acc
-        },
-    )(input)
-}
-
-#[derive(Debug, Display)]
-/// Failed to load settings from connection string
-pub struct SettingsError;
-impl std::error::Error for SettingsError {}
-
-pub fn get_settings(val: String) -> Result<StringMap, SettingsError> {
-    parse_connection_string(val.as_str())
-        .map(|y| y.1)
-        .map_err(|_| SettingsError)
-}
-
-pub fn parse_dsref_schema_contents(input: &[u8]) -> IResult<&[u8], DSRefSchemaContents> {
-    let (input, _d1) = take(25usize)(input)?;
-    let (input, len) = map(le_u8, usize::from)(input)?;
-    let (input, _d2) = take(26usize)(input)?;
-    let (input, connection) = parse_u32_bytes_wstring_nt(input)?;
-    let (input, settings) = map_res(success(connection.clone()), get_settings)(input)?;
-    let (input, _d3) = le_u32(input)?;
-    let (input, name) = parse_u32_bytes_wstring_nt(input)?;
-    let (input, tables) = count(parse_entry, len)(input)?;
-    let (input, _d4) = take(22usize)(input)?;
-    let (input, guid) = parse_u32_bytes_wstring_nt(input)?;
-    Ok((
-        input,
-        DSRefSchemaContents {
-            name,
-            guid,
-            tables,
-            settings,
-        },
-    ))
 }
 
 pub fn parse_control1(input: &[u8]) -> IResult<&[u8], Control1> {

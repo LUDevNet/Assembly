@@ -3,7 +3,7 @@ use assembly_fdb::{
     mem::{Database, Table},
     value::Value,
 };
-use assembly_sysdiagram::SysDiagram;
+use assembly_sysdiagram::{get_settings, SysDiagram};
 use mapr::Mmap;
 use std::fs::File;
 use std::{convert::TryFrom, path::PathBuf};
@@ -22,6 +22,10 @@ struct Options {
     #[argh(switch)]
     /// print settings
     settings: bool,
+
+    #[argh(switch)]
+    /// print dsref
+    dsref: bool,
 
     #[argh(switch)]
     /// print tables
@@ -67,9 +71,21 @@ fn load_database(opts: &Options) -> Result<(), anyhow::Error> {
                     }
                 }
                 if opts.settings {
-                    for (key, value) in sysdiagram.dsref_schema_contents.settings.iter() {
-                        println!("{:25}: {}", key, value);
+                    if let Ok(settings) =
+                        get_settings(sysdiagram.dsref_schema_contents.connection.clone())
+                    {
+                        for (key, value) in &settings {
+                            println!("{:25}: {}", key, value);
+                        }
+                    } else {
+                        eprintln!(
+                            "Failed to parse connection string:\n{}",
+                            sysdiagram.dsref_schema_contents.connection
+                        );
                     }
+                }
+                if opts.dsref {
+                    eprintln!("{:#?}", sysdiagram.dsref_schema_contents);
                 }
             }
             data => println!("Wrong data: {:?}", data),

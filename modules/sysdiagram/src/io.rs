@@ -1,4 +1,6 @@
 //! IO functions
+use crate::parse_dsref_schema_contents;
+
 use super::core::{Relationship, SysDiagram, Table};
 use super::parser;
 use std::convert::TryFrom;
@@ -145,7 +147,7 @@ impl<T: Read + Seek> TryFromCfb<T> for SysDiagram {
             let r_stream_len = usize::try_from(r_stream.len()).map_err(LoadError::StreamTooLong)?;
             let mut bytes: Vec<u8> = Vec::with_capacity(r_stream_len);
             r_stream.read_to_end(&mut bytes).map_err(LoadError::Cfb)?;
-            let (_, dsref_schema_contents) = parser::parse_dsref_schema_contents(&bytes[..])?;
+            let (_, dsref_schema_contents) = parse_dsref_schema_contents(&bytes[..])?;
             Ok(dsref_schema_contents)
         } else {
             Err(LoadError::MissingStream(

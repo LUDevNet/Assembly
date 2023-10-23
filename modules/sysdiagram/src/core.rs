@@ -1,7 +1,8 @@
 #![allow(clippy::upper_case_acronyms)]
 //! # Data definitions for sysdiagrams
 use ms_oforms::properties::types::{Position, Size};
-use std::collections::HashMap;
+
+use crate::DSRefSchemaContents;
 
 #[derive(Debug)]
 pub struct SchGrid {
@@ -41,21 +42,6 @@ pub struct Control1 {
     pub d7: u32,
     //pub d8: [u8; 6],
     pub d9: u32,
-}
-
-#[derive(Debug, Clone)]
-pub struct DSRefSchemaEntry {
-    pub k1: u32,
-    pub table: String,
-    pub schema: String,
-}
-
-#[derive(Debug)]
-pub struct DSRefSchemaContents {
-    pub name: String,
-    pub guid: String,
-    pub tables: Vec<DSRefSchemaEntry>,
-    pub settings: HashMap<String, String>,
 }
 
 #[derive(Debug)]
