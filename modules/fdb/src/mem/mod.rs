@@ -201,6 +201,7 @@ struct InnerTable<'a> {
 }
 
 #[derive(Copy, Clone)]
+#[repr(C)]
 /// Reference to a single table
 pub struct Table<'a> {
     inner: Handle<'a, InnerTable<'a>>,
@@ -228,6 +229,14 @@ impl<'a> Table<'a> {
             b.row_iter()
                 .filter(move |r| r.field_at(0) == Some(Field::Integer(id as i32)))
         })
+    }
+
+    /// Get a list of all rows in the bucket of a given index
+    pub fn bucket_index_iter(&self, id: u32) -> TableRowIter<'a> {
+        let bucket: usize = id as usize % self.bucket_count();
+        TableRowIter::new(BucketIter::new(
+            &self.inner.map_val(|r| &r.buckets[bucket..bucket + 1]),
+        ))
     }
 
     /// Get the column at the index
