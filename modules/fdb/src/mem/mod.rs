@@ -231,6 +231,14 @@ impl<'a> Table<'a> {
         })
     }
 
+    /// Get a list of all rows in the bucket of a given index
+    pub fn bucket_index_iter(&self, id: u32) -> TableRowIter<'a> {
+        let bucket: usize = id as usize % self.bucket_count();
+        TableRowIter::new(BucketIter::new(
+            &self.inner.map_val(|r| &r.buckets[bucket..bucket + 1]),
+        ))
+    }
+
     /// Get the column at the index
     ///
     /// **Note**: This does some computation, call only once per colum if possible
