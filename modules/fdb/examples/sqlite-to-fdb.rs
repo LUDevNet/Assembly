@@ -156,6 +156,7 @@ fn convert_without_template(
 
     for table_name in table_names {
         let table_name = table_name?;
+        println!("Converting {}", table_name);
 
         // Query used for getting column info and the actual data
         let select_query = format!("select * from {}", &table_name);
@@ -255,6 +256,7 @@ fn convert_with_template(
     for template_table in template_db.tables()?.iter() {
         let template_table = template_table?;
         let table_name = template_table.name();
+        println!("Converting {}", table_name);
 
         // Find number of unique values in first column of source table
         let unique_key_count = conn.query_row::<u32, _, _>(
