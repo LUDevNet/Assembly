@@ -98,7 +98,7 @@ pub(crate) fn version_line(input: &str) -> Result<VersionLine, nom::error::Error
     final_parser(_version_line)(input)
 }
 
-///
+/// Line in a manifest file
 pub type FileLine = (FileMetaPair, MD5Sum);
 
 fn file_meta(input: &str) -> IResult<&str, FileMeta> {

@@ -161,10 +161,9 @@ impl<'a> Tables<'a> {
     }
 }
 
-#[allow(clippy::needless_lifetimes)] // <- clippy gets this wrong, presumably because of impl trait?
 fn map_column_header<'a>(
     buf: &'a [u8],
-) -> impl Fn(&'a FDBColumnHeaderC) -> Column<'a> + Copy + Clone {
+) -> impl Fn(&'a FDBColumnHeaderC) -> Column<'a> + Copy {
     move |header: &FDBColumnHeaderC| {
         let column_header = header.extract();
         let name = get_latin1_str(buf, column_header.column_name_addr);

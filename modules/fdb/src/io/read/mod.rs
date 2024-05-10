@@ -229,24 +229,18 @@ where
         let bytes = data.value;
         match ValueType::try_from(data.data_type)? {
             ValueType::Nothing => Ok(Field::Nothing),
-            ValueType::Integer => Ok(bytes).map(i32::from_le_bytes).map(Field::Integer),
-            ValueType::Float => Ok(bytes)
-                .map(u32::from_le_bytes)
-                .map(f32::from_bits)
-                .map(Field::Float),
-            ValueType::Text => Ok(bytes)
-                .map(u32::from_le_bytes)
+            ValueType::Integer => Ok(Field::Integer(i32::from_le_bytes(bytes))),
+            ValueType::Float => Ok(Field::Float(f32::from_bits(u32::from_le_bytes(bytes)))),
+            ValueType::Text => Ok(u32::from_le_bytes(bytes))
                 .and_then(|addr| self.get_string(addr))
                 .map(Field::Text)
                 .map_err(Into::into),
             ValueType::Boolean => Ok(bytes).map(|v| v != [0; 4]).map(Field::Boolean),
-            ValueType::BigInt => Ok(bytes)
-                .map(u32::from_le_bytes)
+            ValueType::BigInt => Ok(u32::from_le_bytes(bytes))
                 .and_then(|addr| self.get_i64(addr))
                 .map(Field::BigInt)
                 .map_err(Into::into),
-            ValueType::VarChar => Ok(bytes)
-                .map(u32::from_le_bytes)
+            ValueType::VarChar => Ok(u32::from_le_bytes(bytes))
                 .and_then(|addr| self.get_string(addr))
                 .map(Field::VarChar)
                 .map_err(Into::into),

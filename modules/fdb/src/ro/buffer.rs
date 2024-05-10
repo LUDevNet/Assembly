@@ -120,12 +120,12 @@ pub fn table_data_ref(buf: &[u8], header: FDBTableHeader) -> Res<&FDBTableDataHe
 
 /// Get the table definition header
 pub fn table_definition(buf: &[u8], header: FDBTableHeader) -> Res<FDBTableDefHeader> {
-    table_definition_ref(buf, header).map(|x| *x)
+    table_definition_ref(buf, header).copied()
 }
 
 /// Get the table data header
 pub fn table_data(buf: &[u8], header: FDBTableHeader) -> Res<FDBTableDataHeader> {
-    table_data_ref(buf, header).map(|x| *x)
+    table_data_ref(buf, header).copied()
 }
 
 /// Compares the name given by `bytes` with the one referenced in `table_header`

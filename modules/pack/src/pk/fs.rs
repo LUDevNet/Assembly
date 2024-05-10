@@ -41,6 +41,7 @@ impl PKHandle {
     pub fn open(path: &Path) -> io::Result<PKHandle> {
         let mut file = OpenOptions::new()
             .create(true)
+            .truncate(false)
             .write(true)
             .read(true)
             .open(path)?;
