@@ -9,11 +9,11 @@ use std::{
 use argh::FromArgs;
 use color_eyre::eyre::WrapErr;
 use quick_xml::{events::Event as XmlEvent, Reader as XmlReader};
-use rusqlite::Connection;
+use rusqlite::{Connection, Transaction, TransactionBehavior};
 
 use assembly_xml::common::exact::{
     expect_attribute, expect_child_or_end, expect_end, expect_start, expect_text,
-    expect_text_or_end, Error,
+    expect_text_or_end,
 };
 
 const TAG_LOCALIZATION: &str = "localization";
@@ -27,6 +27,22 @@ const ATTR_COUNT: &str = "count";
 const ATTR_LOCALE: &str = "locale";
 const ATTR_ID: &str = "id";
 
+fn find_primary_keys(tx: &Transaction) -> rusqlite::Result<HashMap<String, String>> {
+    let mut table_pk = HashMap::new();
+    let mut stmt = tx.prepare("SELECT name, sql from sqlite_master")?;
+    let mut rows = stmt.query([])?;
+    while let Some(row) = rows.next()? {
+        let name = row.get::<usize, String>(0)?;
+        let sql = row.get::<usize, String>(1)?;
+        if let Some((_, rest)) = sql.split_once('[') {
+            if let Some((pk, _)) = rest.split_once(']') {
+                table_pk.insert(name, pk.to_owned());
+            }
+        }
+    }
+    Ok(table_pk)
+}
+
 /// Try to add locale info to an existing converted cdclient SQLite file
 ///
 /// This function does the following:
@@ -39,11 +55,10 @@ const ATTR_ID: &str = "id";
 pub fn try_add_locale(
     conn: &mut Connection,
     mut reader: XmlReader<BufReader<File>>,
-) -> Result<(), Error> {
+) -> color_eyre::Result<()> {
     // All data we will be inserting will be strings, so disable the check for string type for better performance
-    conn.execute("PRAGMA ignore_check_constraints=ON", rusqlite::params![])
-        .unwrap();
-    conn.execute("BEGIN", rusqlite::params![]).unwrap();
+    conn.pragma_update(None, "ignore_check_constraints", true)?;
+    let tx = Transaction::new(conn, TransactionBehavior::Exclusive)?;
 
     let mut buf = Vec::new();
 
@@ -84,24 +99,7 @@ pub fn try_add_locale(
     buf.clear();
 
     let mut tables: HashMap<String, HashSet<String>> = HashMap::new();
-    let mut table_pk: HashMap<String, String> = HashMap::new();
-
-    let mut stmt = conn.prepare("SELECT name, sql from sqlite_master").unwrap();
-    let mut rows = stmt.query([]).unwrap();
-    while let Some(row) = rows.next().unwrap() {
-        let name = row.get::<usize, String>(0).unwrap();
-        let sql = row.get::<usize, String>(1).unwrap();
-        let start = match sql.find('[') {
-            None => continue,
-            Some(x) => x,
-        };
-        let end = match sql.find(']') {
-            None => continue,
-            Some(x) => x,
-        };
-        let pk = &sql[start + 1..end];
-        table_pk.insert(name, pk.to_string());
-    }
+    let table_pk = find_primary_keys(&tx)?;
 
     while let Some(e_phrase) = expect_child_or_end(TAG_PHRASE, TAG_PHRASES, &mut reader, &mut buf)?
     {
@@ -137,24 +135,21 @@ pub fn try_add_locale(
 
             let columns = match tables.get_mut(&table) {
                 Some(x) => x,
-                None => {
-                    tables.insert(table.to_string(), HashSet::new());
-                    tables.get_mut(&table).unwrap()
-                }
+                None => tables.entry(table.to_owned()).or_default(),
             };
             let col_loc = format!("{}_{}", column, locale);
             let update = format!(
-                "UPDATE \"{}\" SET \"{}\" = ? WHERE \"{}\" = ?",
+                r#"UPDATE "{}" SET "{}" = ? WHERE "{}" = ?"#,
                 table,
                 col_loc,
                 table_pk.get(&table).unwrap()
             );
             if !columns.contains(&col_loc) {
-                let sql = format!("ALTER TABLE \"{}\" ADD COLUMN \"{}\" TEXT4 CHECK (TYPEOF(\"{}\") in ('text', 'null'))", table, col_loc, col_loc);
-                conn.execute(&sql, rusqlite::params![]).unwrap();
+                let sql = format!(r#"ALTER TABLE "{}" ADD COLUMN "{}" TEXT4 CHECK (TYPEOF("{}") in ('text', 'null'))"#, table, col_loc, col_loc);
+                tx.execute(&sql, rusqlite::params![]).unwrap();
                 columns.insert(col_loc);
             }
-            conn.execute(&update, rusqlite::params![trans, pk]).unwrap();
+            tx.execute(&update, rusqlite::params![trans, pk]).unwrap();
             buf.clear();
         }
         buf.clear();
@@ -169,7 +164,7 @@ pub fn try_add_locale(
             phrase_count, real_phrase_count
         );
     }
-    conn.execute("COMMIT", rusqlite::params![]).unwrap();
+    tx.commit()?;
     Ok(())
 }
 
