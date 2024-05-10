@@ -34,7 +34,10 @@ fn find_primary_keys(tx: &Transaction) -> rusqlite::Result<HashMap<String, Strin
     while let Some(row) = rows.next()? {
         let name = row.get::<usize, String>(0)?;
         let sql = row.get::<usize, String>(1)?;
-        if let Some((_, rest)) = sql.split_once('[') {
+        if sql.contains("[uid]") {
+            // MissionTasks
+            table_pk.insert(name, "uid".to_owned());
+        } else if let Some((_, rest)) = sql.split_once('[') {
             if let Some((pk, _)) = rest.split_once(']') {
                 table_pk.insert(name, pk.to_owned());
             }
