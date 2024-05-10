@@ -34,6 +34,12 @@ impl Error {
 #[derive(Clone, Debug)]
 pub struct ZonePathsVersion(u32);
 
+impl ZonePathsVersion {
+    pub fn id(&self) -> u32 {
+        self.0
+    }
+}
+
 impl From<u32> for ZonePathsVersion {
     fn from(v: u32) -> Self {
         Self(v)

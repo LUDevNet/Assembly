@@ -159,6 +159,7 @@ where
 }
 
 /// Try from a handle
+#[allow(dead_code)]
 pub trait TryFromHandle<'a, T>: Sized {
     /// Error type
     type Error;
