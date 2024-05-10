@@ -116,12 +116,10 @@ pub fn try_add_locale(
 
             let mut splitn = id.splitn(3, '_');
             let table = match splitn.next() {
-                Some(x) => String::from(x),
+                Some(x) => x,
                 None => continue,
             };
-            if table.chars().all(|c| !c.is_ascii_lowercase())
-                || table.chars().all(|c| !c.is_ascii_uppercase())
-            {
+            if !table_pk.contains_key(table) {
                 continue;
             }
             let pk = match splitn.next() {
@@ -133,7 +131,7 @@ pub fn try_add_locale(
                 None => continue,
             };
 
-            let columns = match tables.get_mut(&table) {
+            let columns = match tables.get_mut(table) {
                 Some(x) => x,
                 None => tables.entry(table.to_owned()).or_default(),
             };
@@ -142,7 +140,7 @@ pub fn try_add_locale(
                 r#"UPDATE "{}" SET "{}" = ? WHERE "{}" = ?"#,
                 table,
                 col_loc,
-                table_pk.get(&table).unwrap()
+                table_pk.get(table).unwrap()
             );
             if !columns.contains(&col_loc) {
                 let sql = format!(r#"ALTER TABLE "{}" ADD COLUMN "{}" TEXT4 CHECK (TYPEOF("{}") in ('text', 'null'))"#, table, col_loc, col_loc);
