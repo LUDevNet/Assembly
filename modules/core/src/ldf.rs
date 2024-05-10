@@ -73,6 +73,7 @@ impl Debug for LDF {
 
 /// Error when parsing LDF
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct LDFError(u8, String);
 
 impl FromStr for LDF {

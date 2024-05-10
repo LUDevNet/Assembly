@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-pub use crate::handle::{BaseHandle, Handle, RefHandle};
+pub use crate::handle::{BaseHandle, Handle, RefHandle, TryFromHandle};
 
 pub mod buffer;
 pub mod handle;
