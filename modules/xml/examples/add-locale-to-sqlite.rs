@@ -143,7 +143,10 @@ pub fn try_add_locale(
                 table_pk.get(table).unwrap()
             );
             if !columns.contains(&col_loc) {
-                let sql = format!(r#"ALTER TABLE "{}" ADD COLUMN "{}" TEXT4 CHECK (TYPEOF("{}") in ('text', 'null'))"#, table, col_loc, col_loc);
+                let sql = format!(
+                    r#"ALTER TABLE "{}" ADD COLUMN "{}" TEXT4 CHECK (TYPEOF("{}") in ('text', 'null'))"#,
+                    table, col_loc, col_loc
+                );
                 tx.execute(&sql, rusqlite::params![]).unwrap();
                 columns.insert(col_loc);
             }
