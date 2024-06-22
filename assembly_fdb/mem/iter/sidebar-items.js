@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["BucketIter","FieldIter","RowHeaderIter","TableIter","TableRowIter"]};

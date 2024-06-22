@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ValueType"],"fn":["expect_column_or_end_columns","expect_columns","expect_database","expect_row_or_end_rows","expect_rows","expect_table"],"struct":["Column","Row","UnknownValueType"]};

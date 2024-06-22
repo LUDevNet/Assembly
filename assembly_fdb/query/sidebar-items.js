@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["PKFilterError"],"fn":["bigint_pk_filter","integer_pk_filter","pk_filter","text_pk_filter"],"struct":["PrimaryKeyFilter"]};

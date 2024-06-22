@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["BaseErrorKind"],"struct":["BaseError","FDBRowHeaderRef"],"type":["BaseResult","Database","Result"]};

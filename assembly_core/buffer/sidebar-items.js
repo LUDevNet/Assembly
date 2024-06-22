@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["CastError"],"fn":["cast","cast_slice","try_cast","try_cast_slice"],"struct":["LEI64","LEU16","LEU32"],"trait":["Buffer","MinimallyAligned","Repr"]};

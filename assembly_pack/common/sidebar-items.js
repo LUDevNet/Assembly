@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["fs","parser","writer"],"struct":["CRCTreeCollector","CRCTreeNode","FileMeta","FileMetaPair"],"trait":["CRCTreeVisitor"],"type":["CRCTree"]};
