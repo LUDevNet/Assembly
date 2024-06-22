@@ -27,23 +27,24 @@ const ATTR_COUNT: &str = "count";
 const ATTR_LOCALE: &str = "locale";
 const ATTR_ID: &str = "id";
 
-fn find_primary_keys(tx: &Transaction) -> rusqlite::Result<HashMap<String, String>> {
-    let mut table_pk = HashMap::new();
-    let mut stmt = tx.prepare("SELECT name, sql from sqlite_master")?;
+fn find_primary_keys(tx: &Transaction) -> rusqlite::Result<HashMap<String, Vec<String>>> {
+    let mut table_pks = HashMap::new();
+
+    let mut stmt = tx.prepare("SELECT t.name, c.name from sqlite_master t, pragma_table_info(t.name) c where t.type == 'table' and c.pk > 0")?;
     let mut rows = stmt.query([])?;
+    let mut last_table_name = String::new();
+    let mut pks = vec![];
     while let Some(row) = rows.next()? {
-        let name = row.get::<usize, String>(0)?;
-        let sql = row.get::<usize, String>(1)?;
-        if sql.contains("[uid]") {
-            // MissionTasks
-            table_pk.insert(name, "uid".to_owned());
-        } else if let Some((_, rest)) = sql.split_once('[') {
-            if let Some((pk, _)) = rest.split_once(']') {
-                table_pk.insert(name, pk.to_owned());
-            }
+        let table_name = row.get::<usize, String>(0)?;
+        let pk_name = row.get::<usize, String>(1)?;
+        if table_name != last_table_name {
+            table_pks.insert(last_table_name, pks);
+            last_table_name = table_name;
+            pks = vec![];
         }
+        pks.push(pk_name);
     }
-    Ok(table_pk)
+    Ok(table_pks)
 }
 
 /// Try to add locale info to an existing converted cdclient SQLite file
@@ -102,7 +103,15 @@ pub fn try_add_locale(
     buf.clear();
 
     let mut tables: HashMap<String, HashSet<String>> = HashMap::new();
-    let table_pk = find_primary_keys(&tx)?;
+    let table_pks = find_primary_keys(&tx)?;
+
+    if table_pks.is_empty() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "could not find PK info in DB - is your DB annotated?",
+        )
+        .into());
+    }
 
     while let Some(e_phrase) = expect_child_or_end(TAG_PHRASE, TAG_PHRASES, &mut reader, &mut buf)?
     {
@@ -117,21 +126,31 @@ pub fn try_add_locale(
 
             let trans = expect_text_or_end(TAG_TRANSLATION, &mut reader, &mut buf)?;
 
-            let mut splitn = id.splitn(3, '_');
-            let table = match splitn.next() {
-                Some(x) => x,
-                None => continue,
-            };
-            if !table_pk.contains_key(table) {
+            let (table, rest) = if let Some((table, rest)) = id.split_once("_") {
+                (table, rest)
+            } else {
                 continue;
-            }
-            let pk = match splitn.next() {
-                Some(x) => x,
-                None => continue,
             };
-            let column = match splitn.next() {
-                Some(x) => x,
-                None => continue,
+
+            let pks = if let Some(x) = table_pks.get(table) {
+                x
+            } else {
+                continue;
+            };
+
+            let mut parts = rest.splitn(pks.len() + 1, "_");
+            let mut params = vec![trans.as_ref()];
+            for _ in 0..pks.len() {
+                params.push(if let Some(x) = parts.next() {
+                    x
+                } else {
+                    continue;
+                });
+            }
+            let column = if let Some(x) = parts.next() {
+                x
+            } else {
+                continue;
             };
 
             let columns = match tables.get_mut(table) {
@@ -140,20 +159,24 @@ pub fn try_add_locale(
             };
             let col_loc = format!("{}_{}", column, locale);
             let update = format!(
-                r#"UPDATE "{}" SET "{}" = ? WHERE "{}" = ?"#,
+                r#"UPDATE "{}" SET "{}" = ? WHERE {}"#,
                 table,
                 col_loc,
-                table_pk.get(table).unwrap()
+                pks.into_iter()
+                    .map(|x| format!(r#""{}" = ?"#, x))
+                    .collect::<Vec<_>>()
+                    .join(" AND ")
             );
+
             if !columns.contains(&col_loc) {
                 let sql = format!(
                     r#"ALTER TABLE "{}" ADD COLUMN "{}" TEXT4 CHECK (TYPEOF("{}") in ('text', 'null'))"#,
                     table, col_loc, col_loc
                 );
-                tx.execute(&sql, rusqlite::params![]).unwrap();
+                tx.execute(&sql, rusqlite::params![])?;
                 columns.insert(col_loc);
             }
-            tx.execute(&update, rusqlite::params![trans, pk]).unwrap();
+            tx.execute(&update, rusqlite::params_from_iter(params))?;
             buf.clear();
         }
         buf.clear();
