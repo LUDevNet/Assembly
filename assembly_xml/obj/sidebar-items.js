@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["char","dest","flag","inv","lvl","mf","mis","pet","res"],"struct":["Object"]};

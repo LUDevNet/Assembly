@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["scan_dir"],"trait":["FileInfo","FsVisitor"]};

@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"assembly_core":[["impl&lt;'a, T&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/convert/trait.AsMut.html\" title=\"trait core::convert::AsMut\">AsMut</a>&lt;T&gt; for <a class=\"enum\" href=\"assembly_core/borrow/enum.Oom.html\" title=\"enum assembly_core::borrow::Oom\">Oom</a>&lt;'a, T&gt;"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["BufferError"],"fn":["cmp_table_header_name","get_at","get_slice_at","header","header_ref","table_data","table_data_ref","table_definition","table_definition_ref","table_headers"],"trait":["BufferExt"],"type":["Res"]};

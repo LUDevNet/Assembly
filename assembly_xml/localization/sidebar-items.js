@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["LocaleError"],"fn":["load_locale"],"struct":["IntNodeMap","Interner","LocaleNode","LocaleNodeRef","LocaleRoot","StrKey","StrNodeMap"],"type":["Key"]};

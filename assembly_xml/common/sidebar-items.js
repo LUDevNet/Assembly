@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["XmlError"],"fn":["expect_decl","expect_elem","expect_end","expect_named_elem"],"mod":["exact"],"type":["Result"]};

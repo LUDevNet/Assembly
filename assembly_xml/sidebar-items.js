@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["all_settings","behavior","block_library","common","credits","database","env_data","hud","lego_primitive","localization","modular_build","module_info","nduiml","obj","triggers","ui_settings","universe_config"]};

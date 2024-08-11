@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"assembly_pack":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/hash/trait.Hash.html\" title=\"trait core::hash::Hash\">Hash</a> for <a class=\"struct\" href=\"assembly_pack/crc/struct.CRC.html\" title=\"struct assembly_pack::crc::CRC\">CRC</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

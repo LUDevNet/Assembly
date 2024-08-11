@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["FileRef","PackFileRef","PackIndexFile","PackIndexHandle"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Section1_39"],"struct":["Chunk","Chunk2000Data","ChunkHeader","ChunkVersion","Color","Environment","EnvironmentChunkData","FileMetaChunkData","Level","Object","ObjectExtra","ObjectsChunkData","Section1","Section1_31","Section1_40","Section1_43","SkySection"],"type":["FileMetaChunk"]};

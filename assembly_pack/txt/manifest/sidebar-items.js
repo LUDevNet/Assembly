@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Error","Section"],"fn":["load_manifest"],"struct":["Manifest","VersionLine"],"type":["FileLine","Result"]};
