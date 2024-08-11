@@ -15,6 +15,9 @@ struct Options {
     /// the SQLite destination file
     #[argh(positional)]
     dest: PathBuf,
+    /// optional SQL schema to be used instead of FDB schema
+    #[argh(option)]
+    schema: Option<PathBuf>,
 }
 
 fn main() -> color_eyre::Result<()> {
@@ -32,7 +35,14 @@ fn main() -> color_eyre::Result<()> {
     let db = Database::new(buffer);
     let mut conn = Connection::open(opts.dest)?;
 
+    if let Some(path) = opts.schema {
+        let schema = std::fs::read_to_string(path)?;
+        conn.execute_batch(&schema)?;
+    }
+
+    conn.execute_batch("PRAGMA foreign_keys = off")?;
     try_export_db(&mut conn, db).wrap_err("Failed to export database to sqlite")?;
+    conn.execute_batch("PRAGMA foreign_keys = on")?;
 
     let duration = start.elapsed();
     println!(
