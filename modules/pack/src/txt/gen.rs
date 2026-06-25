@@ -88,7 +88,7 @@ pub fn push_command(config: &mut Config, cmd: Command) {
         Command::RemFile { filename } => {
             let pack = config.pack_files.iter_mut().next_back().unwrap();
             pack.args.push(PackFileArg {
-                effect: ArgEffect::Include,
+                effect: ArgEffect::Exclude,
                 name: filename,
                 kind: crate::pki::gen::ArgKind::File,
             })
