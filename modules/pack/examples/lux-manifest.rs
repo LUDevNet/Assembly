@@ -83,6 +83,7 @@ fn main() -> color_eyre::Result<()> {
     let mut visitor = Visitor {
         conv: Converter {
             generate_segment_index: false,
+            compression: None,
         },
         output,
         ignore_pk: !args.include_pk,

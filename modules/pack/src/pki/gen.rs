@@ -137,7 +137,20 @@ impl Config {
                     p
                 };
                 match &arg.kind {
-                    ArgKind::File => state.on_file(&path, arg.effect),
+                    ArgKind::File => {
+                        // Only include files that actually exist; a CRC for a
+                        // missing file can never be packed or cached, and a
+                        // pack made up entirely of such entries would be
+                        // listed in the PKI without ever existing on disk.
+                        if arg.effect == ArgEffect::Include
+                            && !join_with_str(root, &arg.name).is_file()
+                        {
+                            #[cfg(feature = "log")]
+                            log::warn!("skipping missing file {}", path);
+                            continue;
+                        }
+                        state.on_file(&path, arg.effect)
+                    }
                     ArgKind::Dir { recurse, filter } => {
                         let real_path = join_with_str(root, &arg.name);
 

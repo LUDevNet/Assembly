@@ -92,6 +92,8 @@ impl PKHandle {
 
         writer.write(&mut buf)?;
         buf.write_all(&MAGIC_SEP)?;
+        // A BufWriter ignores write errors when dropped (e.g. out of disk space)
+        buf.flush()?;
         let end = buf.stream_position()?;
         assert!(end <= u32::MAX.into());
 
@@ -116,6 +118,8 @@ impl PKHandle {
         let mut buf = BufWriter::new(&mut self.file);
         write_pk_directory_tree(&mut buf, &self.directory)?;
         write_pk_trailer(&mut buf, &self.trailer)?;
+        // A BufWriter ignores write errors when dropped (e.g. out of disk space)
+        buf.flush()?;
         // FIXME: truncate file if necessary
         Ok(())
     }

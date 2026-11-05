@@ -71,7 +71,24 @@ impl Converter {
                 break;
             }
 
-            cmp.compress_vec(&raw, &mut compressed, FlushCompress::Finish)?;
+            // compress_vec only writes into the vector's spare capacity and
+            // never grows it. CHUNK_BOUND is zlib's compressBound, but the
+            // miniz_oxide backend can exceed it on incompressible input at
+            // low compression levels; without the loop the stream was
+            // silently truncated at capacity, producing a corrupt chunk.
+            let mut input: &[u8] = &raw;
+            loop {
+                let before_in = cmp.total_in();
+                let status = cmp.compress_vec(input, &mut compressed, FlushCompress::Finish)?;
+                let consumed = (cmp.total_in() - before_in) as usize;
+                input = &input[consumed..];
+                match status {
+                    flate2::Status::StreamEnd => break,
+                    flate2::Status::Ok | flate2::Status::BufError => {
+                        compressed.reserve(CHUNK_LEN / 4);
+                    }
+                }
+            }
             cmp.reset();
 
             let compressed_size = compressed.len() as u32;
